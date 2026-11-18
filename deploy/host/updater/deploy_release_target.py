@@ -8,9 +8,10 @@ from .deploy_io import atomic, canonical
 
 MISMATCH = 'target-identity-differs'
 REFUSED = 'activation target database identity changed'
-BACKENDS_REFUSED = 'another activator session could not be ended'
+BACKEND_LEFT = 'leftover backend'
+DATABASE_LEFT = 'leftover database in use'
 CLOSED = "('activated','reverted','aborted','pruned')"
-STRAYS = f"""WITH protected(name) AS (
+UNPROTECTED = f"""WITH protected(name) AS (
  SELECT active_db FROM public.corpus_release
  UNION SELECT active_db FROM public.frameworks_release
  UNION SELECT db_name FROM public.retired_release WHERE retain_until > pg_catalog.now()
@@ -22,11 +23,17 @@ STRAYS = f"""WITH protected(name) AS (
   WHERE operation_id IS NULL AND step NOT IN {CLOSED}
   AND state NOT IN ('complete','done','activated','reverted','aborted','pruned')
 )
-SELECT pg_catalog.format('ALTER DATABASE %I IS_TEMPLATE false',d.datname),
- pg_catalog.format('DROP DATABASE %I',d.datname)
-FROM pg_catalog.pg_database d WHERE pg_catalog.pg_get_userbyid(d.datdba)=current_user
-AND NOT EXISTS (SELECT FROM protected p WHERE p.name=d.datname::pg_catalog.text) \\gexec
-"""
+SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_catalog.pg_get_userbyid(d.datdba)=current_user
+AND NOT EXISTS (SELECT FROM protected p WHERE p.name=d.datname::pg_catalog.text)"""
+STRAYS = ("\\set ON_ERROR_STOP off\n"
+          "SELECT pg_catalog.format('ALTER DATABASE %I IS_TEMPLATE false',s.datname),"
+          "pg_catalog.format('DROP DATABASE %I',s.datname) FROM (" + UNPROTECTED + ") s \\gexec\n"
+          "\\set ON_ERROR_STOP on\n"
+          "SELECT EXISTS(" + UNPROTECTED + ");\n")
+
+
+class Leftover(Exception):
+    pass
 
 
 def number(value):

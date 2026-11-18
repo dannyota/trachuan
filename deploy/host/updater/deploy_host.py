@@ -37,6 +37,12 @@ class Host:
     def warning(self, step, message):
         Result(self.paths.result, self.paths.log).append(dict(level='warning', step=step, message=message))
 
+    def note(self, step, message):
+        try:
+            self.warning(step, message)
+        except OSError:
+            pass
+
     def publish_user(self, path, data, mode=0o644):
         self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
@@ -120,10 +126,7 @@ class Host:
             self.prewarm_skipped('database has no pg_prewarm')
 
     def prewarm_skipped(self, reason):
-        try:
-            self.warning('prewarm', 'active corpus prewarm skipped: ' + reason)
-        except OSError:
-            pass
+        self.note('prewarm', 'active corpus prewarm skipped: ' + reason)
 
     def provision_activator(self):
         try:

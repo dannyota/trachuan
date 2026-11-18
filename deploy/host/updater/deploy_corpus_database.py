@@ -8,6 +8,7 @@ from .deploy_corpus_kind import LAW
 from .deploy_corpus_lock import AdvisoryLock
 from .deploy_corpus_verify import toc
 from .deploy_host import activator_arguments
+from .deploy_io import CommandError, interrupted
 
 
 class Database:
@@ -52,7 +53,11 @@ class Database:
     def target_oid(self, row):
         if row['mode'] != 'new':
             return None
-        return self.targets().read(row['operation_id'], row['database_name']) or self.remember_target(row)
+        stored = self.targets().read(row['operation_id'], row['database_name'])
+        if stored:
+            return stored
+        self.clear_leftovers()
+        return self.remember_target(row)
 
     def guarded(self, row, statements):
         oid = self.target_oid(row)
@@ -144,8 +149,19 @@ class Database:
             raise ValueError('activation advisory lock lost')
         lines = self.query(target.end_backends(self.backend)).splitlines()
         if not lines or lines[-1] != 'f':
-            raise ValueError(target.BACKENDS_REFUSED)
-        self.query(target.STRAYS)
+            raise target.Leftover(target.BACKEND_LEFT)
+        if self.query(target.STRAYS) != 'f':
+            raise target.Leftover(target.DATABASE_LEFT)
+
+    def tidy(self):
+        try:
+            self.clear_leftovers()
+        except target.Leftover as error:
+            self.host.note('leftovers', 'leftover sweep deferred: ' + str(error))
+        except (CommandError, ValueError) as error:
+            if interrupted(error):
+                raise
+            self.host.note('leftovers', 'leftover sweep deferred: command failed')
 
     def expired(self):
         return json.loads(self.query(self.sql.expired()))

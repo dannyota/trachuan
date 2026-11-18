@@ -45,7 +45,8 @@ def classify(args, text):
     if '/usr/local/bin/postgres-admin.sh' in args:
         return 'prewarm' if 'pg_prewarm' in text else 'configure' if 'ALTER DATABASE' in text else 'postgres'
     for word, name in (('pg_terminate_backend', 'end-backends'), ('DROP DATABASE %I', 'strays'),
-                       ('AS target_oid', 'target-oid'), ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
+                       ('AS target_oid', 'target-oid'), ('frameworks_before', 'check'),
+                       ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
                        ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'), ('frameworks_release WHERE active_db', 'protected'),
                        ("to_regclass('public.release')", 'restored'),
                        ('frameworks_before', 'check'), ('CREATE OR REPLACE', 'apply'),
@@ -69,7 +70,7 @@ class StepsFixture:
             restored=b'f\n', list=(HEADER + DATA + EXECUTABLE).encode(),
             validate=json.dumps(dict({key: self.m[key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
                                      kind='frameworks')).encode(),
-            check=b'ok\n',
+            check=b'ok\n', strays=b'f\n',
             **{'release-check': b'{"status":"ok","search_hits":1,"read_items":1}\n', 'end-backends': b'0\nf\n',
                'target-oid': b'16400\n'})
         def runner(args, **kwargs):

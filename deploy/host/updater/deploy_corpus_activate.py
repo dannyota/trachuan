@@ -1,6 +1,7 @@
 import uuid
 
 from .deploy_corpus_kind import LAW
+from .deploy_release_target import Leftover
 
 
 COMPLETE = frozenset(('activated', 'reverted', 'aborted', 'pruned'))
@@ -46,6 +47,7 @@ class Activation:
         self.db.append(row, 'aborted')
         self.abort_cleanup(row)
         self.db.remove_list(row['operation_id'])
+        self.db.tidy()
 
     def guarded(self, row):
         name = row['database_name']
@@ -105,9 +107,12 @@ class Activation:
                 if not self.guarded(row):
                     raise ValueError(self.kind.label + ' activation guard changed')
                 row = self.db.activate(row)
+                self.db.tidy()
             if row['step'] != 'activated':
                 raise ValueError('unknown ' + self.kind.label + ' activation step')
             return row
+        except Leftover:
+            raise
         except Exception:
             self.abort(row)
             raise

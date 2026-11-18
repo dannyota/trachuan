@@ -132,6 +132,52 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.phase.download.assert_not_called()
         self.assertFalse(self.db.rows)
 
+    def test_leftovers_are_cleared_under_the_lock_before_the_journal_starts(self):
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.db.sweeps[0], 0)
+        self.assertEqual(self.result()['status'], 'ok')
+
+    def test_retained_activation_starts_with_a_sweep(self):
+        self.db.retired[self.m['database']] = dict(dump_sha256=self.m['dump']['sha256'], live=True)
+        self.db.databases.add(self.m['database'])
+        self.m['previous'] = '20990105_1'
+        self.directory.joinpath('manifest.json').write_bytes(canonical(self.m))
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.result()['mode'], 'retained')
+        self.assertEqual(self.db.sweeps, [0])
+
+    def test_verification_never_sweeps(self):
+        self.assertTrue(self.run_phase('verify'))
+        self.assertEqual(self.result()['status'], 'verified')
+        self.assertEqual(self.db.sweeps, [])
+
+    def test_leftovers_wait_without_spending_the_manifest(self):
+        for reason in ('leftover database in use', 'leftover backend'):
+            self.db.leftover = reason
+            with self.subTest(reason=reason):
+                self.assertTrue(self.run_phase())
+                result = self.result()
+                self.assertEqual((result['status'], result['step'], result['message']), ('waiting', 'leftovers', reason))
+                self.assertFalse(self.db.rows)
+                self.phase.download.assert_not_called()
+                self.assertEqual(self.state.decision('corpus', result['manifest_hash'], self.m['sequence']), 'pending')
+        self.db.leftover = None
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.result()['status'], 'ok')
+
+    def test_leftover_during_the_operation_waits_and_the_next_run_resumes_it(self):
+        from updater import deploy_release_target as target
+        create = self.db.create
+        def refuse(row):
+            self.db.create = create
+            raise target.Leftover('leftover backend')
+        self.db.create = refuse
+        self.assertTrue(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['message']), ('waiting', 'leftover backend'))
+        self.assertEqual(self.db.operations()[0]['step'], 'creating')
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.result()['status'], 'ok')
+
     def test_another_superuser_waits_without_spending_the_manifest(self):
         self.db.superuser = True
         self.assertTrue(self.run_phase())

@@ -27,6 +27,7 @@ from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_host import Host
 from updater.deploy_io import command
+from updater.deploy_release_target import Leftover
 from updater.deploy_store import Paths
 c=json.load(sys.stdin)
 def translate(cmd):
@@ -64,6 +65,8 @@ for name in c['actions']:
         results.append(actions[name]())
     except ValueError as error:
         results.append('refused: '+str(error))
+    except Leftover as error:
+        results.append('waiting: '+str(error))
 print(json.dumps(results))
 `
 
@@ -216,6 +219,19 @@ func TestLawRestore_CreateEndsBackendsDropsStraysAndPinsTheTarget(t *testing.T) 
 			t.Fatal(err)
 		}
 		request := map[string]any{"kind": "law", "auth": auth.Config().Database, "row": row, "root": t.TempDir(), "backend": backend}
+		blockerConfig := admin.Config().Copy()
+		blockerConfig.Database = spare
+		blocker, err := pgx.ConnectConfig(ctx, blockerConfig)
+		if err != nil {
+			t.Fatal("connect another role to the stray")
+		}
+		t.Cleanup(func() { _ = blocker.Close(context.Background()) })
+		if got := lawActivationSteps(t, activatorConfig, psqlPath, request, "make"); !reflect.DeepEqual(got, []string{"waiting: leftover database in use"}) {
+			t.Fatalf("stray in use: %q", got)
+		}
+		if err = blocker.Close(ctx); err != nil {
+			t.Fatal(err)
+		}
 		if got := lawActivationSteps(t, activatorConfig, psqlPath, request, "make"); !reflect.DeepEqual(got, []string{"ok"}) {
 			t.Fatalf("create step: %q", got)
 		}

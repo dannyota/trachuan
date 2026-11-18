@@ -258,6 +258,7 @@ func TestLawRestore_HonestDumpMatchesSourceAndHostileObjectsAreRefused(t *testin
 		{"CREATE TRIGGER invented_trigger BEFORE UPDATE ON public.release FOR EACH ROW EXECUTE FUNCTION suppress_redundant_updates_trigger()", "DROP TRIGGER invented_trigger ON public.release", "trigger"},
 		{"GRANT INSERT ON public.release TO " + readerRole, "REVOKE INSERT ON public.release FROM " + readerRole, "access"},
 		{"GRANT UPDATE (rel) ON public.release TO " + readerRole, "REVOKE UPDATE (rel) ON public.release FROM " + readerRole, "access"},
+		{"GRANT CREATE ON DATABASE " + target + " TO " + readerRole, "REVOKE CREATE ON DATABASE " + target + " FROM " + readerRole, "access"},
 		{"GRANT CREATE ON SCHEMA public TO " + readerRole, "REVOKE CREATE ON SCHEMA public FROM " + readerRole, "access"},
 		{"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO " + readerRole, "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM " + readerRole, "access"},
 		{"CREATE TABLE public.pg_proc (oid oid, proname name, prokind \"char\", pronamespace oid); CREATE FUNCTION invented_shadowed() RETURNS integer LANGUAGE sql AS 'SELECT 1'", "DROP FUNCTION invented_shadowed(); DROP TABLE public.pg_proc", "function"},

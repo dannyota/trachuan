@@ -67,7 +67,9 @@ class FrameworksCheckTest(StepsFixture, unittest.TestCase):
         strict = check.executable(executable_sql(), self.m['extensions'])
         granted = check.executable(executable_sql(), self.m['extensions'], 'activator', 'corpus_reader', True)
         self.assertNotIn("'relation corpus_reader SELECT'", strict)
-        for allowed in ("'relation corpus_reader SELECT'", "'schema corpus_reader USAGE'"):
+        self.assertNotIn("'database corpus_reader CONNECT'", strict)
+        for allowed in ("'relation corpus_reader SELECT'", "'schema corpus_reader USAGE'",
+                        "'database corpus_reader CONNECT'"):
             self.assertIn(allowed, granted)
 
     def test_retained_extensions_are_compared_by_name_schema_and_owner(self):

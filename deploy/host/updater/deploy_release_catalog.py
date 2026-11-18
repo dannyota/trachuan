@@ -56,6 +56,10 @@ SNAPSHOT = f"""SELECT kind, identity, definition FROM (
    ORDER BY u.c COLLATE pg_catalog."C"),',')
   FROM pg_catalog.pg_db_role_setting s JOIN pg_catalog.pg_database d ON d.oid=s.setdatabase
   WHERE d.datname=pg_catalog.current_database()
+ UNION ALL SELECT 'access', 'database '||d.datname::text, 'database '||{ENTRY}
+  FROM pg_catalog.pg_database d
+  CROSS JOIN LATERAL pg_catalog.aclexplode(coalesce(d.datacl,pg_catalog.acldefault('d',d.datdba))) x
+  WHERE d.datname=pg_catalog.current_database() AND x.grantee<>d.datdba
  UNION ALL SELECT 'access', 'relation '||n.nspname::text||'.'||c.relname::text, 'relation '||{ENTRY}
   FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
   CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) x WHERE x.grantee<>c.relowner AND {USER}
@@ -90,7 +94,7 @@ def access_allowed(alias, reader, granted):
     role = plain(reader)
     if not granted:
         return 'FALSE'
-    allowed = ('relation ' + role + ' SELECT', 'schema ' + role + ' USAGE',
+    allowed = ('database ' + role + ' CONNECT', 'relation ' + role + ' SELECT', 'schema ' + role + ' USAGE',
                'default superuser public r ' + role + ' SELECT', 'default superuser public S ' + role + ' SELECT')
     return ('(' + alias + ".kind='access' AND " + alias + '.definition IN (' +
             ','.join(literal(value) for value in allowed) + '))')

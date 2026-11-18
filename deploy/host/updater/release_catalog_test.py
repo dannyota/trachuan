@@ -34,14 +34,17 @@ class LawCatalogTest(unittest.TestCase):
         self.assertIn('access', catalog.KINDS)
         for word in ('pg_catalog.aclexplode(c.relacl)', 'pg_catalog.aclexplode(a.attacl)',
                      'pg_catalog.aclexplode(n.nspacl)', 'pg_catalog.pg_default_acl d', 'x.grantee<>c.relowner',
+                     "pg_catalog.aclexplode(coalesce(d.datacl,pg_catalog.acldefault('d',d.datdba)))",
+                     'x.grantee<>d.datdba',
                      "x.privilege_type='USAGE'"):
             self.assertIn(word, catalog.SNAPSHOT)
         self.assertNotIn("'relation corpus_reader SELECT'", self.sql)
+        self.assertNotIn("'database corpus_reader CONNECT'", self.sql)
 
     def test_after_the_owner_grants_only_the_reader_grants_are_allowed(self):
         sql = catalog.law(manifest()['extensions'], 'corpus_reader', True)
         for allowed in ("'relation corpus_reader SELECT'", "'schema corpus_reader USAGE'",
-                        "'default superuser public r corpus_reader SELECT'",
+                        "'database corpus_reader CONNECT'", "'default superuser public r corpus_reader SELECT'",
                         "'default superuser public S corpus_reader SELECT'"):
             self.assertIn(allowed, sql)
         self.assertNotIn('INSERT', sql)

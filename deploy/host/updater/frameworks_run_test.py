@@ -68,6 +68,17 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
             return self.staging / 'frameworks.dump'
         self.phase.download = mock.Mock(side_effect=download)
 
+    def test_leftovers_wait_before_the_journal_starts(self):
+        self.db.leftover = 'leftover database in use'
+        self.assertTrue(self.run_phase())
+        result = json.loads(self.phase.result.path.read_bytes())
+        self.assertEqual((result['status'], result['step'], result['message']),
+                         ('waiting', 'leftovers', 'leftover database in use'))
+        self.assertFalse(self.db.rows)
+        self.db.leftover = None
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.db.sweeps[-1], 0)
+
     def test_another_superuser_waits_without_spending_the_manifest(self):
         self.db.superuser = True
         self.assertTrue(self.run_phase())

@@ -1,6 +1,8 @@
+import json
 import unittest
 
 from updater import deploy_corpus_sql as sql
+from updater.deploy_io import CommandError
 from updater.frameworks_check_test import UNQUALIFIED
 from updater.law_restore_test import LawFixture
 
@@ -42,6 +44,37 @@ class LawSmokeTest(LawFixture, unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '^corpus database function differs'):
             self.db.smoke(dict(self.row, mode='retained'), 'server-image')
         self.assertEqual(self.names(), ['check'])
+
+
+class LawTidyTest(LawFixture, unittest.TestCase):
+    def logged(self):
+        rows = [json.loads(line) for line in self.db.host.paths.log.read_text().splitlines()]
+        return [row['message'] for row in rows if row.get('step') == 'leftovers']
+
+    def setUp(self):
+        super().setUp()
+        self.db.host.paths.log.parent.mkdir(parents=True)
+
+    def test_tidy_sweeps_without_logging_when_nothing_is_left(self):
+        self.db.tidy()
+        self.assertEqual(self.names(), ['end-backends', 'strays'])
+        self.assertFalse(self.db.host.paths.log.exists())
+
+    def test_tidy_defers_leftovers_and_command_failures_to_the_next_sweep(self):
+        self.responses['strays'] = b't\n'
+        self.db.tidy()
+        self.responses['strays'] = b'f\n'
+        self.failures['strays'] = CommandError('command failed', detail='psql: exit 3: secret detail')
+        self.db.tidy()
+        self.assertEqual(self.logged(), ['leftover sweep deferred: leftover database in use',
+                                         'leftover sweep deferred: command failed'])
+
+    def test_tidy_does_not_hide_an_interruption(self):
+        error = CommandError('command failed')
+        error.__cause__ = InterruptedError('updater interrupted')
+        self.failures['strays'] = error
+        with self.assertRaises(CommandError):
+            self.db.tidy()
 
 
 class LawSessionTest(LawFixture, unittest.TestCase):

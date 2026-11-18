@@ -21,12 +21,7 @@ class AdvisoryLock:
             self.process.stdin.write(b"SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended('activation',0)),"
                                      b"pg_catalog.pg_backend_pid();\n")
             self.process.stdin.flush()
-            with selectors.DefaultSelector() as selector:
-                selector.register(self.process.stdout, selectors.EVENT_READ)
-                if not selector.select(10):
-                    raise CommandError('activation advisory lock timed out')
-                answer = os.read(self.process.stdout.fileno(), 16).strip()
-            held, _, backend = answer.partition(b'|')
+            held, _, backend = self.answer().partition(b'|')
             if held == b'f':
                 raise Busy('activation advisory lock busy')
             if held != b't' or not re.fullmatch(rb'[1-9][0-9]*', backend):
@@ -36,6 +31,21 @@ class AdvisoryLock:
         except BaseException:
             self.__exit__()
             raise
+
+    def answer(self):
+        data = b''
+        with selectors.DefaultSelector() as selector:
+            selector.register(self.process.stdout, selectors.EVENT_READ)
+            while b'\n' not in data and len(data) < 64:
+                if not selector.select(10):
+                    raise CommandError('activation advisory lock timed out')
+                chunk = os.read(self.process.stdout.fileno(), 64)
+                if not chunk:
+                    break
+                data += chunk
+        if data.count(b'\n') != 1 or not data.endswith(b'\n'):
+            raise CommandError('activation advisory lock failed')
+        return data[:-1]
 
     def __exit__(self, *args):
         self.db.holder, self.db.backend = None, None

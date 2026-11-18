@@ -5,6 +5,7 @@ import unittest
 from unittest import mock
 
 from updater import deploy_corpus_sql as sql
+from updater import deploy_release_target as target
 from updater.corpus_verify_test import manifest
 from updater.deploy_corpus_database import Database
 from updater.deploy_host import Host
@@ -39,9 +40,10 @@ def classify(args, text):
     if '/usr/local/bin/postgres-admin.sh' in args:
         return 'prepare' if 'CREATE EXTENSION' in text else 'postgres'
     for word, name in (('pg_terminate_backend', 'end-backends'), ('DROP DATABASE %I', 'strays'),
-                       ('AS target_oid', 'target-oid'), ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
+                       ('AS target_oid', 'target-oid'), ('pg_catalog.pg_event_trigger', 'check'),
+                       ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
                        ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'),
-                       ('corpus_release WHERE active_db', 'protected'), ('pg_catalog.pg_event_trigger', 'check'),
+                       ('corpus_release WHERE active_db', 'protected'),
                        ("to_regclass('public.release')", 'restored'), ('GRANT SELECT ON ALL TABLES', 'grants'),
                        ('FROM public.release WHERE singleton', 'validate'), ('public.pg_prewarm', 'prewarm'),
                        ('document_summary', 'projection'), ('release_target', 'verify'),
@@ -62,7 +64,7 @@ class LawFixture:
         self.responses = dict(extensions=json.dumps(self.m['extensions']).encode(), exists=b'f\n', protected=b'f\n',
                               owner=b'activator\n', prepare=b'configured\n', restored=b'f\n',
                               list=(HEADER + DATA).encode(), check=b'ok\n', prewarm=b'12\n',
-                              **{'end-backends': b'0\nf\n', 'target-oid': b'16400\n'},
+                              strays=b'f\n', **{'end-backends': b'0\nf\n', 'target-oid': b'16400\n'},
                               validate=json.dumps(release).encode())
         self.responses['release-check'] = b'{}\n'
         def runner(args, **kwargs):
@@ -162,12 +164,21 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertEqual(text.count('a.pid NOT IN (pg_catalog.pg_backend_pid(),77)'), 2)
         self.assert_activator(self.call('end-backends')[0], 'auth', 'pg_catalog,public')
 
-    def test_a_backend_that_survives_refuses_the_create(self):
-        self.responses['end-backends'] = b'1\nt\n'
-        with self.assertRaisesRegex(ValueError, '^another activator session could not be ended$'):
+    def assert_leftover(self, reason):
+        with self.assertRaises(target.Leftover) as caught:
             self.db.create(self.row)
-        for name in ('strays', 'createdb', 'prepare'):
+        self.assertEqual(str(caught.exception), reason)
+        for name in ('createdb', 'prepare'):
             self.assertNotIn(name, self.names())
+
+    def test_a_backend_that_survives_is_a_leftover(self):
+        self.responses['end-backends'] = b'1\nt\n'
+        self.assert_leftover('leftover backend')
+        self.assertNotIn('strays', self.names())
+
+    def test_a_stray_that_cannot_be_dropped_is_a_leftover(self):
+        self.responses['strays'] = b't\n'
+        self.assert_leftover('leftover database in use')
 
     def test_without_the_lock_backend_nothing_is_ended(self):
         self.db.backend = None
@@ -180,10 +191,12 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         text = self.sql('strays')
         for word in ('public.corpus_release', 'public.frameworks_release', 'public.retired_release',
                      'public.release_journal', 'retain_until > pg_catalog.now()', "mode <> 'prune'",
-                     'pg_catalog.pg_get_userbyid(d.datdba)=current_user', "format('DROP DATABASE %I',d.datname)",
-                     "format('ALTER DATABASE %I IS_TEMPLATE false',d.datname)", '\\gexec'):
+                     'pg_catalog.pg_get_userbyid(d.datdba)=current_user', "format('DROP DATABASE %I',s.datname)",
+                     "format('ALTER DATABASE %I IS_TEMPLATE false',s.datname)", '\\gexec'):
             self.assertIn(word, text)
         self.assertNotIn('corpus_kind', text)
+        order = ['\\set ON_ERROR_STOP off', '\\gexec', '\\set ON_ERROR_STOP on', 'SELECT EXISTS(WITH protected']
+        self.assertEqual([text.index(word) for word in order], sorted(text.index(word) for word in order))
         self.assertLess(self.names().index('strays'), self.names().index('createdb'))
 
     def test_target_identity_is_recorded_after_createdb_and_checked_first_in_the_postgres_step(self):
@@ -296,9 +309,17 @@ class LawRestoreTest(LawFixture, unittest.TestCase):
         self.db.targets().path(OPERATION).unlink()
         self.responses['target-oid'] = b'17002\n'
         self.db.validate(self.row)
-        self.assertEqual(self.names(), ['target-oid', 'validate'])
+        self.assertEqual(self.names(), ['end-backends', 'strays', 'target-oid', 'validate'])
         self.assertIn("='17002' AS release_target", self.sql('validate'))
         self.assertEqual(self.db.targets().read(OPERATION, self.name), '17002')
+
+    def test_a_target_is_not_adopted_while_leftovers_remain(self):
+        self.db.targets().path(OPERATION).unlink()
+        self.responses['strays'] = b't\n'
+        with self.assertRaisesRegex(target.Leftover, '^leftover database in use$'):
+            self.db.validate(self.row)
+        self.assertEqual(self.names(), ['end-backends', 'strays'])
+        self.assertIsNone(self.db.targets().read(OPERATION, self.name))
 
     def test_pg_restore_failure_removes_the_list_and_skips_the_check(self):
         self.failures['pg_restore'] = CommandError('command failed', detail='pg_restore: exit 1')
