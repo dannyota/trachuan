@@ -46,7 +46,8 @@ class CorpusEvidenceTest(unittest.TestCase):
                  (dict(EVIDENCE, FINDINGS_SHA256='1' * 64), fields)]
         for field in EVIDENCE:
             for bad in ('A' * 64, 'Ab' * 32, 'sha256:' + '1' * 64, '1' * 63, '1' * 65, 'g' * 64,
-                        ' ' + '1' * 63, '', None, 1, True, ['1' * 64], {'sha256': '1' * 64}):
+                        ' ' + '1' * 63, ' ' + '1' * 64, '1' * 64 + ' ', '1' * 64 + '\n', '\u0661' * 64,
+                        int('1' * 64), '', None, 1, True, ['1' * 64], {'sha256': '1' * 64}):
                 cases.append((dict(EVIDENCE, **{field: bad}), 'invalid evidence ' + field))
         for value, message in cases:
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, '^' + re.escape(message) + '$'):
@@ -54,22 +55,26 @@ class CorpusEvidenceTest(unittest.TestCase):
 
 
 class EvidenceActivationTest(fixture.ActivationFixture, unittest.TestCase):
-    def activate(self, m):
-        fixture.ActivationFixture.setUp(self)
-        directory = self.paths.state / 'corpus-fixture'
+    def build(self, m, name):
+        directory = self.paths.state / name
         directory.mkdir()
         directory.joinpath('manifest.json').write_bytes(canonical(m))
         directory.joinpath('manifest.sigstore.json').write_bytes(b'{}')
         db = Database()
         db.check_extensions = mock.Mock()
         db.describe = mock.Mock(return_value=description(m))
-        db.after = 'restored'
         registry = mock.Mock()
         registry.fetch.return_value = directory
         phase = c.Corpus(self.state, self.store, self.host, self.rules, registry, database=db,
                          prepare=mock.Mock(return_value=True), clock=lambda: 100000)
         phase.resources = mock.Mock()
         phase.download = mock.Mock(return_value=Path('/synthetic/dump'))
+        return phase, db
+
+    def activate(self, m):
+        fixture.ActivationFixture.setUp(self)
+        phase, db = self.build(m, 'corpus-fixture')
+        db.after = 'restored'
         with self.assertRaises(Crash):
             phase.run(self.paths.state / 'run', 'activate')
         self.assertTrue(phase.run(self.paths.state / 'run', 'activate'))
@@ -104,3 +109,18 @@ class EvidenceActivationTest(fixture.ActivationFixture, unittest.TestCase):
                     self.assertEqual(text.count(journaled), 1)
                     self.assertEqual(text.replace(journaled, json.dumps(base, separators=(',', ':'))),
                                      sql.activate(dict(db.rows[0], manifest=base), projection))
+
+    def test_malformed_evidence_refuses_before_the_sequence_is_bound(self):
+        fixture.ActivationFixture.setUp(self)
+        bad = dict(manifest(), evidence=dict(EVIDENCE, findings_sha256='A' * 64))
+        phase, db = self.build(bad, 'corpus-bad')
+        self.assertFalse(phase.run(self.paths.state / 'run', 'activate'))
+        result = json.loads(phase.result.path.read_bytes())
+        self.assertEqual((result['status'], result['step']), ('failed', 'manifest'))
+        self.assertEqual(self.state.records('corpus'), {})
+        self.assertEqual(db.rows, [])
+        phase.download.assert_not_called()
+        good, _ = self.build(dict(manifest(), evidence=EVIDENCE), 'corpus-good')
+        self.assertTrue(good.run(self.paths.state / 'run', 'activate'))
+        self.assertEqual(json.loads(good.result.path.read_bytes())['status'], 'ok')
+        good.download.assert_called_once_with()
