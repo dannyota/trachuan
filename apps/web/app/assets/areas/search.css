@@ -26,7 +26,7 @@
 .search-box textarea { box-sizing: border-box; height: 46px; padding: 10px 12px; overflow-y: auto; resize: none; line-height: 24px; }
 .search-results { display: flex; flex-direction: column; gap: 18px; }
 .search-summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
-.search-summary h1 { margin: 0; font-size: 20px; }
+.search-summary h1 { margin: 0; font-size: var(--type-count); }
 .search-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
 .ink-in-force { color: var(--color-ink-in-force); }
 .ink-partial { color: var(--color-ink-partial); }
@@ -54,9 +54,9 @@
 .result-rank { flex: none; margin-left: auto; }
 .result-card-body { display: flex; flex-direction: column; gap: 2px; padding: 0 16px; }
 .result-card-body p { margin: 0; }
-.result-card-body h2 { margin: 0; font-family: var(--font-serif); font-size: 18px; line-height: 1.2; }
+.result-card-body h2 { margin: 0; font-family: var(--font-serif); font-size: var(--type-result-heading); line-height: 1.2; }
 .result-members, .result-warning { font-size: 14px; }
-.result-text { font-size: 15.5px; line-height: 1.75; }
+.result-text { font-size: var(--type-result); line-height: 1.75; }
 .result-text--clamped { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
 .result-text mark { color: var(--color-highlight-ink); background: var(--color-highlight); }
 .result-gaps, .search-gaps { color: var(--color-muted); font-size: 13px; }
@@ -115,12 +115,10 @@
   .search-mobile-chips .chip { min-height: 36px; font-size: 13px; }
   .search-page { display: block; }
   .search-rail { display: none; }
-  .search-summary h1 { font-size: 16px; }
   .search-legend { font-size: 12px; }
   .result-card-body { padding: 0 14px; }
   .result-card-home .result-card-head { padding: 14px 14px 8px; }
   .result-card-home .result-card-body { padding: 0 14px 14px; }
-  .result-card-body h2 { font-size: 16px; }
   .result-card-footer { padding: 0 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .search-spinner { animation: none; } }

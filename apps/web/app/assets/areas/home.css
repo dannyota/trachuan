@@ -9,11 +9,11 @@
 .home-page .btn:not(.result-card *), .home-page button:not(.chip):not(.result-card *) { min-height: 52px; border-radius: 999px; font-weight: 700; }
 .home-page .btn:not(.result-card *) { text-decoration: none; }
 .home-page .chip:not(.result-card *) { min-height: 44px; align-items: center; }
-.home-page h2:not(.result-card h2) { font-size: 32px; line-height: 1.25; font-weight: 800; letter-spacing: -.02em; }
+.home-page h2:not(.result-card h2) { font-size: var(--type-section); line-height: 1.25; font-weight: 800; letter-spacing: -.02em; }
 .home-hero { max-width: 1200px; margin: 24px auto 0; border-radius: 28px; background: var(--color-primary-fill); color: var(--color-on-primary); }
 .home-hero-inner { display: flex; flex-direction: column; gap: 24px; padding: 48px 32px 144px; }
-.home-hero h1 { max-width: 900px; margin: 0; font-size: 40px; line-height: 1.18; font-weight: 800; letter-spacing: -.025em; }
-.home-intro { max-width: 720px; margin: 0; font-size: 18px; line-height: 1.6; }
+.home-hero h1 { max-width: 900px; margin: 0; font-size: var(--type-hero); line-height: 1.18; font-weight: 800; letter-spacing: -.025em; }
+.home-intro { max-width: 720px; margin: 0; font-size: var(--type-home-lead); line-height: 1.6; }
 .home-form { display: flex; flex-direction: column; gap: 12px; max-width: 880px; }
 .home-form > label { font-size: 14px; font-weight: 600; }
 .home-query-row { display: flex; gap: 12px; }

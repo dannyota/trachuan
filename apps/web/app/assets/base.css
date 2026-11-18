@@ -28,10 +28,11 @@ code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: no
 .stamp--expired { text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .stamp--unknown { color: var(--color-ink-neutral); background: var(--color-page); border-color: var(--color-stamp-neutral-border); border-style: dashed; }
 .relation-chip { display: inline-block; padding: .15rem .5rem; border: 1px solid currentColor; border-radius: var(--radius-stamp); }
-.law-text { font-family: var(--font-serif); font-size: 17px; line-height: 1.8; white-space: pre-wrap; }
+.law-text { font-family: var(--font-serif); font-size: var(--type-law); line-height: 1.8; white-space: pre-wrap; }
 .num, .document-number, .token-value { font-family: var(--font-mono); font-weight: 500; font-variant-ligatures: none; }
 .container { width: 100%; max-width: 1248px; margin-inline: auto; padding-inline: 24px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .notice { padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-note); }
 .notice--warn { background: var(--color-note-warn); }
 @media (max-width: 767px) { .container { padding-inline: 16px; } }
+@media (max-width: 767px), (pointer: coarse) { input:not([type=checkbox], [type=radio], [type=hidden]), textarea, select { font-size: 16px; } }
