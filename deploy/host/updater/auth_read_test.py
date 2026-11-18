@@ -2,18 +2,21 @@ import unittest
 
 from updater import activation_test as fixture
 from updater.deploy_corpus_sql import AUTH_ACTIVE_DATABASE, AUTH_SCHEMA_VERSION
-from updater.deploy_host import auth_arguments, AUTH_OUTPUT_LIMIT
+from updater.deploy_host import auth_arguments, AUTH_CLIENT_SECONDS, AUTH_OUTPUT_LIMIT
 from updater.deploy_io import CommandError
 
 
 SCRIPT = ('set +x; set -eu; export PGPASSWORD; PGPASSWORD=$(cat /run/secrets/auth_db_password); '
           '[ -n "$PGPASSWORD" ]; exec "$@"')
+OPTIONS = ('PGOPTIONS=-c search_path=pg_catalog,public -c statement_timeout=10s -c lock_timeout=5s '
+           '-c idle_in_transaction_session_timeout=10s -c client_connection_check_interval=2s')
 
 
 class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.limits, self.answers = [], {}
+        self.bound = (AUTH_OUTPUT_LIMIT, AUTH_CLIENT_SECONDS)
         self.host.runner = self.auth_runner
 
     def auth_runner(self, args, input=None, **kwargs):
@@ -21,7 +24,7 @@ class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
         for marker, answer in self.answers.items():
             if marker in text:
                 self.calls.append((args, input))
-                self.limits.append(kwargs.get('stdout_limit'))
+                self.limits.append((kwargs.get('stdout_limit'), kwargs.get('timeout')))
                 if isinstance(answer, Exception):
                     raise answer
                 return answer
@@ -29,7 +32,8 @@ class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
 
     def expected(self, sql):
         return ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c', SCRIPT, 'sh',
-                'env', 'PGOPTIONS=-c search_path=pg_catalog,public', 'psql', '--no-password', '-XqAt',
+                'timeout', '--signal=TERM', '--kill-after=2s', '15s',
+                'env', 'PGCONNECT_TIMEOUT=5', OPTIONS, 'psql', '--no-password', '-XqAt',
                 '-h', '127.0.0.1', '-U', 'auth_owner', '-v', 'ON_ERROR_STOP=1', '-d', 'auth', '-c', sql]
 
     def test_arguments_name_the_owner_role_and_keep_the_password_in_the_container(self):
@@ -45,7 +49,7 @@ class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
         self.answers[b'max(version_id)'] = b'41\n'
         self.assertEqual(self.host.schema(), 41)
         self.assertEqual(self.calls[-1], (self.expected(AUTH_SCHEMA_VERSION), None))
-        self.assertEqual(self.limits, [AUTH_OUTPUT_LIMIT])
+        self.assertEqual(self.limits, [self.bound])
 
     def test_schema_refuses_anything_but_an_integer(self):
         for value in (b'', b'-1\n', b'7 8\n', b'7\n8\n', b'seven\n', b'\xd9\xa1\n', b'1' * 20 + b'\n'):
@@ -69,7 +73,7 @@ class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
         self.answers[b'active_db'] = b'corpus_vn_20990101_1\n'
         self.host.postgres()
         self.assertIn((self.expected(AUTH_ACTIVE_DATABASE), None), self.calls)
-        self.assertEqual(self.limits, [AUTH_OUTPUT_LIMIT])
+        self.assertEqual(self.limits, [self.bound])
 
     def test_active_database_refuses_names_outside_the_corpus_shape(self):
         for value in (b'', b'auth\n', b'corpus_vn_20990101\ncorpus_vn_20990102\n', b'corpus_vn_20990101;drop\n'):
@@ -78,13 +82,27 @@ class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'invalid corpus database name'):
                     self.host.postgres()
 
-    def test_superuser_helper_refuses_auth_and_defaults_to_the_catalog_path(self):
-        self.calls.clear()
-        with self.assertRaisesRegex(ValueError, 'superuser session refused on auth'):
-            self.host.psql('auth', 'SELECT 1;')
-        self.assertEqual(self.calls, [])
-        self.host.psql('postgres', 'SELECT 1;')
-        self.assertIn('PGOPTIONS=-c search_path=pg_catalog', self.calls[-1][0])
+    def test_client_limit_outlasts_the_container_and_server_limits(self):
+        self.assertEqual(AUTH_CLIENT_SECONDS, 30)
+
+    def test_superuser_helper_accepts_only_postgres_and_release_databases(self):
+        for name in ('postgres', 'corpus_vn_20990101', 'corpus_vn_20990101_2', 'frameworks_20990101', 'frameworks_20990101_2'):
+            with self.subTest(name=name):
+                self.calls.clear()
+                self.host.psql(name, 'SELECT 1;')
+                args = self.calls[-1][0]
+                self.assertEqual(args[args.index('-d') + 1], name)
+                self.assertIn('PGOPTIONS=-c search_path=pg_catalog', args)
+
+    def test_superuser_helper_refuses_every_other_database_argument(self):
+        for name in ('auth', 'AUTH', 'dbname=auth', 'dbname=postgres', 'host=127.0.0.1 dbname=auth', 'postgresql://x/auth',
+                     'postgres://127.0.0.1/auth', 'postgres ', 'postgres\n', '', None, 'template1',
+                     'corpus_vn_20990101 ', 'corpus_vn_20990101\n', 'corpus_vn_20990101_0', 'frameworks_2099'):
+            with self.subTest(name=name):
+                self.calls.clear()
+                with self.assertRaisesRegex(ValueError, 'superuser session refused'):
+                    self.host.psql(name, 'SELECT 1;')
+                self.assertEqual(self.calls, [])
 
 
 if __name__ == '__main__':

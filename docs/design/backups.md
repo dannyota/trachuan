@@ -131,7 +131,10 @@ listener (`listen_addresses=''`), the repository keys as its only secrets,
 `hba_file` that allows only `local` peer authentication on that private socket,
 for the `postgres` role and, through a peer map, for `auth_owner` on `auth` (the
 container runs as user 999, the image's `postgres`), so it needs no database
-password and the restored SCRAM rules never apply to it. It restores with
+password and the restored SCRAM rules never apply to it. A tampered backup
+supplies its own configuration, so every setting that runs a command or loads a
+library is forced on the command line and the data directory is mounted
+`noexec`. It restores with
 `--set=<newest good backup label> --db-include=auth --type=immediate --target-action=promote`
 (other databases are restored as sparse zeroed files and never opened), waits up
 to 20 minutes for recovery to end and `pg_is_in_recovery()` to return false,

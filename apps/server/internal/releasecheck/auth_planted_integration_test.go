@@ -3,6 +3,7 @@
 package releasecheck
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -217,33 +219,76 @@ CREATE VIEW public.corpus_release AS
 	}
 }
 
-func provisionerSession(t *testing.T, role, database string) (string, string) {
+type provisionerRun struct {
+	script, password string
+	env              []string
+}
+
+func prepareProvisioner(t *testing.T, fixture *plantedAuth) provisionerRun {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join(repositoryRoot(t), "deploy/host/provision-activator.sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, rest, found := strings.Cut(string(raw), "PGOPTIONS='")
-	if !found {
-		t.Fatal("provisioner sets no session options")
+	work := t.TempDir()
+	password := plantedName(t, "synthetic_")
+	secrets := map[string]string{"activator": password, "auth": fixture.owner.Password}
+	for name, value := range secrets {
+		if err = os.WriteFile(filepath.Join(work, name), []byte(value+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
-	options, rest, _ := strings.Cut(rest, "'")
-	_, rest, found = strings.Cut(rest, "<<'SQL'\n")
-	if !found {
-		t.Fatal("provisioner has no SQL session")
+	wrapper := filepath.Join(work, "postgres-admin")
+	if err = os.WriteFile(wrapper, []byte("#!/bin/sh\nexport PGPASSWORD=\"$TEST_ADMIN_PASSWORD\" PGHOST=\"$TEST_HOST\"\nexec \"$@\"\n"), 0o700); err != nil {
+		t.Fatal(err)
 	}
-	body, _, found := strings.Cut(rest, "\nSQL\n")
-	if !found {
-		t.Fatal("provisioner SQL session has no end")
+	port := strconv.Itoa(int(fixture.admin.Port))
+	text := strings.NewReplacer(
+		"/run/secrets/activator_db_password", filepath.Join(work, "activator"),
+		"/run/secrets/auth_db_password", filepath.Join(work, "auth"),
+		"/usr/local/bin/postgres-admin.sh", wrapper,
+		"--username postgres", "--username "+fixture.admin.User,
+		"--username auth_owner", "--username "+fixture.ownerRole,
+		"--dbname auth", "--dbname "+fixture.admin.Database,
+		"--host 127.0.0.1", "--host "+fixture.admin.Host,
+		"ON DATABASE auth", "ON DATABASE "+pgx.Identifier{fixture.admin.Database}.Sanitize(),
+		"activator", fixture.provisioned,
+	).Replace(string(raw))
+	script := filepath.Join(work, "provision-activator.sh")
+	if err = os.WriteFile(script, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	body = strings.ReplaceAll(body, "ON DATABASE auth", "ON DATABASE "+pgx.Identifier{database}.Sanitize())
-	return options, strings.ReplaceAll(body, "activator", role) + "\n"
+	env := append(os.Environ(), "TEST_ADMIN_PASSWORD="+fixture.admin.Password, "TEST_HOST="+fixture.admin.Host, "PGPORT="+port)
+	if filepath.IsAbs(fixture.psql) {
+		env = append(env, "PATH="+filepath.Dir(fixture.psql)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	}
+	return provisionerRun{script: script, password: password, env: env}
 }
 
-func TestProvisioner_SearchesOnlyTheCatalogAndIgnoresPlantedOverloads(t *testing.T) {
+func (r provisionerRun) run(t *testing.T, overStdin bool) string {
+	t.Helper()
+	cmd := exec.CommandContext(t.Context(), "bash", r.script)
+	if overStdin {
+		raw, err := os.ReadFile(r.script)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cmd = exec.CommandContext(t.Context(), "bash", "-s")
+		cmd.Stdin = bytes.NewReader(raw)
+	}
+	cmd.Env = r.env
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("provisioner failed: %v: %.600s", err, stderr.String())
+	}
+	return stderr.String()
+}
+
+func TestProvisioner_StaysOutOfAuthAsSuperuserAndIgnoresItsDefaults(t *testing.T) {
 	fixture := newPlantedAuth(t)
 	ctx := t.Context()
-	role := fixture.provisioned
+	role, database := fixture.provisioned, pgx.Identifier{fixture.admin.Database}.Sanitize()
 	fixture.plant(t, `
 CREATE TABLE public.corpus_release (country text);
 CREATE TABLE public.release_journal (id bigserial);
@@ -255,19 +300,54 @@ BEGIN
   RETURN 'SELECT 1';
 END
 $plant$;
+ALTER DATABASE `+database+` SET debug_print_parse = on;
+ALTER DATABASE `+database+` SET client_min_messages = log;
+ALTER DATABASE `+database+` SET password_encryption = 'md5';
 `)
-	t.Setenv("ACTIVATOR_DB_PASSWORD", plantedName(t, "synthetic_"))
-	options, body := provisionerSession(t, role, fixture.admin.Database)
-	if !strings.HasSuffix(options, "-c search_path=pg_catalog") {
-		t.Fatalf("provisioner options = %q", options)
+	if _, err := fixture.auth.Exec(ctx, `
+CREATE TABLE public.session_log (who text NOT NULL);
+CREATE FUNCTION public.record_login() RETURNS event_trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $login$
+BEGIN
+  INSERT INTO public.session_log (who) VALUES (session_user);
+END
+$login$;
+CREATE EVENT TRIGGER record_login ON login EXECUTE FUNCTION public.record_login();
+`); err != nil {
+		t.Fatalf("install login observer: %v", err)
 	}
-	frameworksPsql(t, fixture.psql, fixture.admin, options, body)
-	frameworksPsql(t, fixture.psql, fixture.admin, options, "SELECT format('%L', 'synthetic');\n")
+	run := prepareProvisioner(t, fixture)
+	for _, overStdin := range []bool{true, false} {
+		stderr := run.run(t, overStdin)
+		if !strings.Contains(stderr, "parse tree") {
+			t.Fatal("control: the planted debug_print_parse default must reach the session in auth")
+		}
+		if strings.Contains(stderr, run.password) {
+			t.Fatal("provisioner exposed the activator password through planted session defaults")
+		}
+	}
+	rows, err := fixture.auth.Query(ctx, `SELECT DISTINCT who FROM public.session_log ORDER BY who`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	who, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(who, []string{fixture.ownerRole}) {
+		t.Fatalf("sessions opened in auth: %q, want only the owner role", who)
+	}
 	if entries := fixture.log(t); len(entries) != 0 || fixture.victimIsSuperuser(t) {
 		t.Fatalf("provisioner ran planted code: %v", entries)
 	}
-	var granted bool
-	if err := fixture.auth.QueryRow(ctx, `SELECT has_table_privilege($1,'public.corpus_release','SELECT')
+	var scram, granted bool
+	if err = fixture.auth.QueryRow(ctx, `SELECT rolpassword LIKE 'SCRAM-SHA-256$%' FROM pg_catalog.pg_authid WHERE rolname=$1`, role).Scan(&scram); err != nil {
+		t.Fatal(err)
+	}
+	if !scram {
+		t.Fatal("planted password_encryption changed the stored activator password")
+	}
+	if err = fixture.auth.QueryRow(ctx, `SELECT has_database_privilege($1,current_database(),'CONNECT')
+		AND has_table_privilege($1,'public.corpus_release','SELECT')
 		AND has_table_privilege($1,'public.frameworks_release','INSERT')
 		AND has_sequence_privilege($1,'public.release_journal_id_seq','USAGE')`, role).Scan(&granted); err != nil {
 		t.Fatal(err)
@@ -275,10 +355,9 @@ $plant$;
 	if !granted {
 		t.Fatal("provisioner did not apply its grants")
 	}
-	frameworksPsql(t, fixture.psql, fixture.admin, strings.Replace(options, "search_path=pg_catalog", "search_path=pg_catalog,public", 1),
-		"SELECT format('%L', 'synthetic');\n")
+	frameworksPsql(t, fixture.psql, fixture.admin, "-c search_path=pg_catalog,public", "SELECT format('%L', 'synthetic');\n")
 	entries := fixture.log(t)
 	if len(entries) != 1 || entries[0].who != fixture.admin.User || entries[0].outcome != "escalated" || !fixture.victimIsSuperuser(t) {
-		t.Fatalf("control: an unqualified call on the old path must reach the plant as a superuser, got %v", entries)
+		t.Fatalf("control: a superuser session in auth must reach the plant, got %v", entries)
 	}
 }

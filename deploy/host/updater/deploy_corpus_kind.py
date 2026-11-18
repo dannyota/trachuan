@@ -7,13 +7,6 @@ from . import deploy_frameworks_verify as frameworks_verify
 from .deploy_frameworks_steps import Steps
 
 
-def safe_cause(error):
-    found = re.match(r'[^:]*: exit -?[0-9]+', error.detail or '')
-    if not found:
-        return None
-    return found[0] + (': ' + error.safe if error.safe else '')
-
-
 class Law:
     name, key, label, sql = 'law', 'corpus', 'corpus', deploy_corpus_sql
     tag, result, dump = 'vn-production', 'release', 'corpus.dump'
@@ -54,7 +47,7 @@ class Law:
         return self.sql.activate(row, database.projection(row))
 
     def cause(self, error):
-        return safe_cause(error)
+        return error.detail
 
     def discard(self, releases):
         pass
@@ -101,7 +94,10 @@ class Frameworks:
         return self.sql.activate(row)
 
     def cause(self, error):
-        return safe_cause(error)
+        found = re.match(r'[^:]*: exit -?[0-9]+', error.detail or '')
+        if not found:
+            return None
+        return found[0] + (': ' + error.safe if error.safe else '')
 
     def discard(self, releases):
         if releases.is_symlink() or not releases.is_dir():

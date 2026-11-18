@@ -110,7 +110,7 @@ podman exec trachuan-postgres bash /usr/local/bin/grant-corpus.sh "$DB"
 `postgres` ([database roles](../design/system.md#database-roles)):
 
 ```sh
-bash /srv/trachuan/host/auth-psql.sh -v ON_ERROR_STOP=1 -v database="$DB" <<'SQL'
+bash /srv/trachuan/host/auth-psql.sh -v database="$DB" <<'SQL'
 INSERT INTO public.corpus_release (country, active_db, activated_at, activated_by)
 VALUES ('vn', :'database', now(), 'owner')
 ON CONFLICT (country) DO UPDATE SET active_db = EXCLUDED.active_db,
@@ -141,7 +141,7 @@ row there and stays until it is dropped once by hand. Confirm it is not
 
 ```sh
 DB=corpus_vn_20261112_2
-bash /srv/trachuan/host/auth-psql.sh -At -v db="$DB" <<'SQL'
+bash /srv/trachuan/host/auth-psql.sh -v db="$DB" <<'SQL'
 SELECT (SELECT count(*) FROM public.corpus_release WHERE active_db = :'db'),
        (SELECT count(*) FROM public.retired_release WHERE db_name = :'db'),
        (SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE datname = :'db');

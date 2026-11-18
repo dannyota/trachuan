@@ -51,6 +51,8 @@ if args[0]=='wait':
         self.assertEqual(secrets, ['--secret=backup_s3_key,type=mount,uid=999,gid=999,mode=0400',
                                    '--secret=backup_s3_key_secret,type=mount,uid=999,gid=999,mode=0400'])
         self.assertIn('sha256:'+'1'*64, run)
+        volumes = [run[index + 1] for index, arg in enumerate(run) if arg == '--volume']
+        self.assertIn('/srv/trachuan/data/restore-check:/var/lib/postgresql:Z,U,noexec,nosuid,nodev', volumes)
         self.assertEqual(run[-3:], ['--repository-only', '/usr/local/bin/restore-auth.sh', '20270115-020000F'])
         self.assertFalse(any('/data/postgres' in arg or '/data/pgbackrest' in arg for arg in run))
         self.assertEqual(calls[:2], [['rm', '--force', '--ignore', 'trachuan-restore-check'],
@@ -72,12 +74,13 @@ if args[0]=='wait':
         self.assertTrue((HOST / 'restore-auth.sh').exists(), 'restore worker is missing')
         with tempfile.TemporaryDirectory() as work:
             work = Path(work)
-            for binary in ['pgbackrest', 'postgres', 'psql', 'pg_controldata']:
+            for binary in ['pgbackrest', 'postgres', 'psql', 'pg_controldata', 'timeout']:
                 stub = work / binary
                 stub.write_text('''#!/usr/bin/env python3
 import json, os, pathlib, sys
 with pathlib.Path(os.environ['CALLS']).open('a') as out: out.write(json.dumps([pathlib.Path(sys.argv[0]).name, *sys.argv[1:], 'PGOPTIONS='+os.environ.get('PGOPTIONS', '')])+'\\n')
 name=pathlib.Path(sys.argv[0]).name
+if name == 'timeout': os.execvp(sys.argv[4], sys.argv[4:])
 if name == 'pg_controldata': print('max_connections setting: 75\\nmax_worker_processes setting: 12\\nmax_wal_senders setting: 15\\nmax_prepared_xacts setting: 4\\nmax_locks_per_xact setting: 80')
 if name == 'postgres': print('FATAL: synthetic recovery diagnostic', file=sys.stderr)
 if name == 'psql':
@@ -107,6 +110,16 @@ if name == 'psql':
                 self.assertIn(option, postgres)
             self.assertIn('hba_file='+str(work/'runtime/pg_hba.conf'), postgres)
             self.assertIn('ident_file='+str(work/'runtime/pg_ident.conf'), postgres)
+            data = str(work/'data')
+            for setting in ['archive_command=', 'archive_library=', 'archive_cleanup_command=', 'recovery_end_command=',
+                            'session_preload_libraries=', 'local_preload_libraries=', 'shared_preload_libraries=',
+                            'oauth_validator_libraries=', 'ssl=off', 'ssl_passphrase_command=', 'jit=off',
+                            'jit_provider=llvmjit', 'dynamic_library_path=$libdir', 'extension_control_path=$system',
+                            'output_plugin_libraries=pgoutput,test_decoding', 'event_triggers=off',
+                            'external_pid_file=', 'data_directory='+data,
+                            f'restore_command=pgbackrest --pg1-path={data} --stanza=trachuan archive-get %f "%p"']:
+                self.assertIn(setting, postgres)
+                self.assertEqual(postgres[postgres.index(setting) - 1], '-c')
             ready = next(call for call in calls if call[0] == 'psql' and 'pg_is_in_recovery' in ' '.join(call))
             self.assertIn('--username=postgres', ready)
             self.assertIn('--dbname=postgres', ready)
@@ -116,7 +129,10 @@ if name == 'psql':
             self.assertIn('--username=auth_owner', smoke)
             self.assertNotIn('--username=postgres', smoke)
             self.assertIn('--no-password', smoke)
-            self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public', smoke)
+            self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public -c statement_timeout=120s -c lock_timeout=5s '
+                          '-c idle_in_transaction_session_timeout=120s -c client_connection_check_interval=2s', smoke)
+            limit = next(call for call in calls if call[0] == 'timeout')
+            self.assertEqual(limit[1:5], ['--signal=TERM', '--kill-after=5s', '300s', 'psql'])
             query = next(arg for arg in smoke if arg.startswith('--command='))
             for relation in ('goose_db_version', 'account', 'web_session', 'oauth_grant', 'oauth_token', 'personal_token'):
                 self.assertIn('FROM public.'+relation, query)

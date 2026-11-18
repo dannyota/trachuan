@@ -130,7 +130,9 @@ Use nonempty passwords without newlines. The updater derives the database URL
 secrets. No token signing key exists. To rotate a database password, the owner
 changes the role with `ALTER ROLE`, then publishes its Vault version. The
 updater recreates consumers; initialization secrets do not change existing
-roles.
+roles. Rotate `auth_owner` only with no deployment or activation open, and
+publish at once: until the updater reconciles, the host cannot read `auth`, so
+deploys fail and recovery of an interrupted activation ends `stopped`.
 
 ## Account key rotation
 

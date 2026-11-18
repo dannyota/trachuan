@@ -5,7 +5,7 @@ from unittest import mock
 from updater import activation_test as fixture
 from updater.corpus_verify_test import manifest, description
 from updater.corpus_activation_test import Database, Crash
-from updater.deploy_io import canonical, CommandError
+from updater.deploy_io import canonical, CommandError, describe
 from updater import deploy_corpus as c
 from updater.deploy_corpus_result import ReleaseResult
 from updater.deploy_registry import Registry
@@ -60,15 +60,15 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.state.data['accepted']['corpus']['1'] = {'hash': 'a' * 64, 'status': 'active'}
         self.assertFalse(self.run_phase())
         self.assertEqual(self.result()['status'], 'failed')
-        self.assertEqual(self.result()['message'], 'corpus command failed or run interrupted: oras resolve: exit 1')
+        self.assertTrue(self.result()['message'].startswith(
+            'corpus command failed or run interrupted: oras resolve: exit 1: Error response from registry: '))
 
-    def test_command_output_never_reaches_the_law_result_or_log(self):
+    def test_database_client_output_never_reaches_the_law_result_or_log(self):
         marker = 'invented dump marker'
-        for detail, message in (('pg_restore: exit 1: pg_restore: error: ' + marker, 'pg_restore: exit 1'),
-                                ('pg_restore: exit 1: error output withheld', 'pg_restore: exit 1'),
-                                ('psql: exit 3: ' + marker, 'psql: exit 3')):
-            with self.subTest(detail=detail):
+        for program, code, message in (('pg_restore', 1, 'pg_restore: exit 1'), ('psql', 3, 'psql: exit 3')):
+            with self.subTest(program=program):
                 self.setUp()
+                detail = describe(['podman', 'exec', 'trachuan-postgres', program], marker.encode(), code)
                 self.db.restore = mock.Mock(side_effect=CommandError('command failed', detail=detail))
                 self.assertFalse(self.run_phase())
                 self.assertEqual(self.result()['message'], 'corpus command failed or run interrupted: ' + message)

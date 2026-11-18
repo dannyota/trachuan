@@ -5,7 +5,7 @@ import unittest
 from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_frameworks_steps import SAFE
-from updater.deploy_io import command, CommandError
+from updater.deploy_io import command, CommandError, describe
 from updater.frameworks_steps_test import StepsFixture
 from updater.frameworks_verify_test import rules
 
@@ -145,14 +145,17 @@ class FrameworksCauseTest(unittest.TestCase):
         self.assertIsNone(FRAMEWORKS.cause(CommandError('command failed')))
         self.assertIsNone(LAW.cause(CommandError('command failed')))
 
-    def test_law_cause_is_program_and_exit_only(self):
-        for detail, cause in (('pg_restore: exit 1: pg_restore: error: invented dump text', 'pg_restore: exit 1'),
-                              ('pg_restore: exit 1: error output withheld', 'pg_restore: exit 1'),
-                              ('oras resolve: exit 1: Error response from registry: invented', 'oras resolve: exit 1'),
-                              ('cosign verify-blob: exit 1: invented', 'cosign verify-blob: exit 1'),
-                              ('psql: exit 3', 'psql: exit 3'),
-                              ('podman run: exit -9', 'podman run: exit -9')):
-            with self.subTest(detail=detail):
+    def test_law_cause_keeps_only_the_tails_the_command_layer_allows(self):
+        wrapper = ['podman', 'exec', 'trachuan-postgres']
+        for program, stderr, cause in (
+                (['pg_restore', '--no-password'], b'pg_restore: error: invented dump text', 'pg_restore: exit 1'),
+                (['psql', '-XqAt'], b'ERROR: invented row text', 'psql: exit 1'),
+                (['createdb', 'corpus_vn_20990101'], b'invented', 'createdb: exit 1'),
+                (['oras', 'resolve', 'ghcr.io/x:1'], b'Error: not found', 'oras resolve: exit 1: Error: not found'),
+                (['cosign', 'verify-blob', '/tmp/x.json'], b'Error: no match', 'cosign verify-blob: exit 1: Error: no match'),
+                (['oras', 'resolve', 'ghcr.io/x:1'], b'password=invented', 'oras resolve: exit 1: error output withheld')):
+            with self.subTest(program=program[0], stderr=stderr):
+                detail = describe(wrapper + program, stderr, 1)
                 self.assertEqual(LAW.cause(CommandError('command failed', detail=detail)), cause)
 
 

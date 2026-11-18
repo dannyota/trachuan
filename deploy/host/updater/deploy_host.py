@@ -2,12 +2,16 @@ import re
 
 from .deploy_corpus_sql import (AUTH_ACTIVE_DATABASE, AUTH_SCHEMA_VERSION, CATALOG_PATH, PREWARM, PREWARM_SKIPPED,
                                 SCHEMA_PATH, database as corpus_database, database_owner)
+from .deploy_frameworks_sql import database as frameworks_database
 from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
 
 
 AUTH_OUTPUT_LIMIT = 4096
+AUTH_CLIENT_SECONDS = 30
+AUTH_OPTIONS = (SCHEMA_PATH + ' -c statement_timeout=10s -c lock_timeout=5s '
+                '-c idle_in_transaction_session_timeout=10s -c client_connection_check_interval=2s')
 
 
 def pins(manifest):
@@ -26,8 +30,21 @@ def activator_arguments(*args):
 
 
 def auth_arguments(sql):
-    return secret_arguments('auth_db_password', 'env', 'PGOPTIONS=' + SCHEMA_PATH, 'psql', '--no-password', '-XqAt',
+    return secret_arguments('auth_db_password', 'timeout', '--signal=TERM', '--kill-after=2s', '15s',
+                            'env', 'PGCONNECT_TIMEOUT=5', 'PGOPTIONS=' + AUTH_OPTIONS, 'psql', '--no-password', '-XqAt',
                             '-h', '127.0.0.1', '-U', 'auth_owner', '-v', 'ON_ERROR_STOP=1', '-d', 'auth', '-c', sql)
+
+
+def superuser_database(name):
+    if name == 'postgres':
+        return
+    for check in (corpus_database, frameworks_database):
+        try:
+            check(name)
+            return
+        except ValueError:
+            pass
+    raise ValueError('superuser session refused outside postgres and release databases')
 
 
 class Host:
@@ -60,8 +77,7 @@ class Host:
         self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
     def psql(self, database, sql, options=CATALOG_PATH):
-        if database == 'auth':
-            raise ValueError('superuser session refused on auth')
+        superuser_database(database)
         return self.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + options, 'trachuan-postgres',
                          '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt',
                          '-h', '127.0.0.1', '-U', 'postgres', '-d', database,
@@ -76,7 +92,8 @@ class Host:
                               input=('SET standard_conforming_strings=on;\n' + sql).encode()).decode().strip()
 
     def auth_psql(self, sql):
-        return self.user(*auth_arguments(sql), stdout_limit=AUTH_OUTPUT_LIMIT).decode().strip()
+        return self.user(*auth_arguments(sql), stdout_limit=AUTH_OUTPUT_LIMIT,
+                         timeout=AUTH_CLIENT_SECONDS).decode().strip()
 
     def schema(self):
         raw = self.auth_psql(AUTH_SCHEMA_VERSION)

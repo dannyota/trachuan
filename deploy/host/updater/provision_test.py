@@ -24,8 +24,10 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             secret.write('synthetic-password')
             secret.flush()
             script = script.replace('/run/secrets/activator_db_password', secret.name)
+            script = script.replace('/run/secrets/auth_db_password', secret.name)
             script = script.replace('/usr/local/bin/postgres-admin.sh', 'postgres_admin')
-            fake = 'postgres_admin() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n'
+            fake = ('postgres_admin() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n'
+                    'timeout() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n')
             result = subprocess.run(['bash', '-s'], input=fake + script, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
@@ -39,7 +41,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertLess(text.index('ALTER ROLE activator LOGIN'), text.index('ALTER ROLE activator RESET ALL;'))
 
     def test_provisioner_session_searches_only_the_catalog(self):
-        self.assertTrue(self.provision_input().splitlines()[0].endswith(' -c search_path=pg_catalog'))
+        self.assertIn(' -c search_path=pg_catalog ', self.provision_input().splitlines()[0] + ' ')
 
     def test_provision_feeds_the_installed_script_over_stdin(self):
         self.calls.clear()

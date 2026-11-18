@@ -23,6 +23,15 @@ max_wal_senders|max_wal_senders setting|10
 max_prepared_transactions|max_prepared_xacts setting|0
 max_locks_per_transaction|max_locks_per_xact setting|64
 SETTINGS
+# shellcheck disable=SC2016
+for setting in archive_command= archive_library= archive_cleanup_command= recovery_end_command= \
+ session_preload_libraries= local_preload_libraries= oauth_validator_libraries= \
+ ssl=off ssl_passphrase_command= jit=off jit_provider=llvmjit \
+ 'dynamic_library_path=$libdir' 'extension_control_path=$system' output_plugin_libraries=pgoutput,test_decoding \
+ event_triggers=off external_pid_file= "data_directory=$data" \
+ "restore_command=pgbackrest --pg1-path=$data --stanza=trachuan archive-get %f \"%p\""; do
+ settings+=(-c "$setting")
+done
 postgres -D "$data" "${settings[@]}" -c listen_addresses= -c archive_mode=off \
  -c "unix_socket_directories=$runtime" -c unix_socket_permissions=0700 \
  -c "hba_file=$runtime/pg_hba.conf" -c "ident_file=$runtime/pg_ident.conf" -c shared_buffers=128MB \
@@ -48,8 +57,8 @@ while ((SECONDS < deadline)); do
  sleep 1
 done
 [[ $ready == true ]]
-PGOPTIONS='-c search_path=pg_catalog,public' \
-psql -XAt --no-password --host="$runtime" --username=auth_owner --dbname=auth --set=ON_ERROR_STOP=1 \
+PGOPTIONS='-c search_path=pg_catalog,public -c statement_timeout=120s -c lock_timeout=5s -c idle_in_transaction_session_timeout=120s -c client_connection_check_interval=2s' \
+timeout --signal=TERM --kill-after=5s 300s psql -XAt --no-password --host="$runtime" --username=auth_owner --dbname=auth --set=ON_ERROR_STOP=1 \
  --command="SELECT pg_catalog.max(version_id) FROM public.goose_db_version WHERE is_applied;
  SELECT pg_catalog.count(*) FROM public.account; SELECT pg_catalog.count(*) FROM public.web_session;
  SELECT pg_catalog.count(*) FROM public.oauth_grant; SELECT pg_catalog.count(*) FROM public.oauth_token;
