@@ -225,16 +225,9 @@ func TestInputHash_CoversEveryFrozenInput(t *testing.T) {
 		t.Fatal("input hash is not stable")
 	}
 	for name, mutate := range map[string]func(*fixture){
-		"report": func(f *fixture) { f.report["dump_sha256"] = strings.Repeat("e", 64); f.sync() },
-		"gaps":   func(f *fixture) { f.gaps = []gapRow{{"fetch", "a", "not_found", "x"}}; f.sync() },
-		"knowledge": func(f *fixture) {
-			if err := os.Chmod(f.env.Artifacts.Abs(f.build.Path), 0700); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(filepath.Join(f.env.Artifacts.Abs(f.build.Path), knowledgeFile), []byte("x"), 0600); err != nil {
-				t.Fatal(err)
-			}
-		},
+		"report":    func(f *fixture) { f.report["dump_sha256"] = strings.Repeat("e", 64); f.sync() },
+		"gaps":      func(f *fixture) { f.gaps = []gapRow{{"fetch", "a", "not_found", "x"}}; f.sync() },
+		"knowledge": func(f *fixture) { f.buildWithKnowledge("[]\n") },
 		"build": func(f *fixture) {
 			f.build = f.publish("build", strings.Repeat("2", 64), map[string]string{"build.json": "{\"other\":1}"})
 			f.report["build_artifact_sha256"] = f.build.SHA256
@@ -287,18 +280,6 @@ func TestRecipe_CoversRegistryDetectorsAndSerialization(t *testing.T) {
 	if New(Config{Detectors: []Detector{fakeDetector{id: "x"}}}).Recipe(stage.Snapshot{}) == plain {
 		t.Fatal("detector configuration not in recipe")
 	}
-}
-
-func TestProcess_KnowledgeFileFailsUntilParserShips(t *testing.T) {
-	f := newFixture(t, noneDecision())
-	if err := os.WriteFile(filepath.Join(f.env.Artifacts.Abs(f.build.Path), knowledgeFile), []byte("entries: []\n"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	_, _, err := f.process()
-	if err == nil || err.Error() != "detector_incomplete: knowledge parser unavailable" {
-		t.Fatalf("err = %v", err)
-	}
-	assertPermanent(t, err)
 }
 
 func assertPermanent(t *testing.T, err error) {

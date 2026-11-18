@@ -99,7 +99,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, itemFailure(err)
 	}
-	decisions, err := reviewDecisions(inputs.knowledge)
+	decisions, err := reviewDecisions(run.Country, inputs.knowledge)
 	if err != nil {
 		return stage.Output{}, itemFailure(err)
 	}
