@@ -76,14 +76,14 @@ takes the text colour of its ground.
 
 ## Type
 
-| Role                                       | Face                                     | Size and weight                                                                                                 |
-| ------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Chrome, headings, stamps, warnings, labels | Plus Jakarta Sans                        | body 500 16/1.6; descriptions 15/1.5; notes 14/1.5; labels 600; buttons 700; page intro 17, home intro 18       |
-| Home and page hero h1                      | Plus Jakarta Sans 800, tracking -0.025em | 30/1.18 below 768 px, 48 from 48rem, 60/1.15 from 80rem                                                         |
-| Section h2                                 | Plus Jakarta Sans 800, tracking -0.02em  | 24/1.25 below 768 px, 32 from 768 px, 40/1.18 from 64rem                                                        |
-| Headings on dense screens                  | Plus Jakarta Sans 700                    | page title 36, sign-in title 28, account title 30, section heading 20, account card heading 17, search count 20 |
-| Words of the law                           | Noto Serif                               | reader text 17/1.8; result text 15.5/1.75; provision heading 20 in the reader, 18 in a result; reader title 34  |
-| Document numbers                           | Roboto Mono 500, ligatures off           | as today                                                                                                        |
+| Role                                       | Face                                     | Size and weight                                                                                                                                                                                   |
+| ------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chrome, headings, stamps, warnings, labels | Plus Jakarta Sans                        | body 400 16/1.6, 500 on home; descriptions 15 and notes 14 at line height 1.6; labels take the text weight, 600 for the home query label; pill buttons 700; page intro 17/1.65, home intro 18/1.6 |
+| Home and page hero h1                      | Plus Jakarta Sans 800, tracking -0.025em | 30/1.18 below 768 px, 48 from 48rem, 60/1.15 from 80rem                                                                                                                                           |
+| Section h2                                 | Plus Jakarta Sans 800, tracking -0.02em  | 24/1.25 below 768 px, 32 from 768 px, 40/1.18 from 64rem                                                                                                                                          |
+| Headings on dense screens                  | Plus Jakarta Sans 700                    | page title 36, sign-in title 28, account title 30, section heading 20, account card heading 17, search count 20                                                                                   |
+| Words of the law                           | Noto Serif                               | reader text 17/1.8; result text 15.5/1.75; provision heading 20 in the reader, 18 in a result; reader title 34                                                                                    |
+| Document numbers                           | Roboto Mono 500, ligatures off           | as today                                                                                                                                                                                          |
 
 These roles are `--type-*` tokens in `tokens.css`, with one override block below
 768 px: hero 30; section h2, page, sign-in and account titles 24; document title
