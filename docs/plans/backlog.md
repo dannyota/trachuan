@@ -37,3 +37,6 @@ One line per item: date, area, finding, source.
 - 2026-11-18, deploy, `Secrets.run` swallows an `InterruptedError` during the forced reconcile inside a release phase, so the run continues after a stop request; let it report the interruption to its caller.
 - 2026-11-18, deploy, `trachuan-deploy bootstrap` takes the locks but does not run the frameworks staging cleanup; the next updater run does.
 - 2026-11-18, deploy, `activator` owns the law and frameworks databases, so a hostile signed dump of either kind can act on the other kind's databases (settings, connection limits, dropping retired ones); give frameworks restores their own login role with its own Vault password, owning only frameworks databases.
+- 2026-11-18, corpus, a hand-restored or expired release has no path that settles production (tag, host and public status cannot be made to agree by signing), which blocks uploads; define the recovery.
+- 2026-11-18, corpus, a rebuilt workshop has no run row for the predecessor release, which fails `evidence`; add the recovery to the runbook.
+- 2026-11-18, corpus, diagram relation rows carry English `raw_label` values (`replaces`) while text rows and reviewed rows carry Vietnamese; decide whether to localize the diagram labels.
