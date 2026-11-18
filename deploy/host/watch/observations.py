@@ -65,8 +65,9 @@ def deploy_state():
 
 def collect(root=Path('/srv/trachuan/state'), activity=deploy_state,
             get=network.local, disk=filesystem, mem=memory):
-    data = {name: result(root / 'deploy' / file, name) for name, file in
-            (('deploy', 'result.json'), ('release', 'release.json'), ('secrets', 'secrets.json'))}
+    data = {name: result(root / 'deploy' / file, kind) for name, file, kind in
+            (('deploy', 'result.json', 'deploy'), ('release', 'release.json', 'release'),
+             ('frameworks', 'release-frameworks.json', 'release'), ('secrets', 'secrets.json', 'secrets'))}
     data['backups'] = {job: result(root / 'backup' / (job+'.json'), 'backup')
                        for job in ('full', 'diff', 'verify', 'health', 'restore-check')}
     data['ready'] = None

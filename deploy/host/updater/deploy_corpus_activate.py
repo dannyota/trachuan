@@ -1,34 +1,36 @@
 import uuid
 
+from .deploy_corpus_kind import LAW
+
 
 COMPLETE = frozenset(('activated', 'reverted', 'aborted', 'pruned'))
 
 
 class Activation:
-    def __init__(self, database):
-        self.db = database
+    def __init__(self, database, kind=LAW):
+        self.db, self.kind = database, kind
+        self.steps = kind.steps(database)
 
     def choose(self, manifest):
-        name, country = manifest['database'], manifest['country']
+        name, country = manifest['database'], self.kind.country(manifest)
         active = self.db.current(country)
-        if active is None:
+        if active is None and not self.kind.bootstrap:
             raise ValueError('active corpus pointer missing')
         retired = self.db.retirement(name)
         if retired is not None:
             if not retired['dump_sha256'] or retired['dump_sha256'] != manifest['dump']['sha256']:
                 raise ValueError('retained database dump digest differs or is unknown')
-            if not retired['live'] or not self.db.exists(name) or name == active:
+            if active is None or not retired['live'] or not self.db.exists(name) or name == active:
                 raise ValueError('retained database unavailable or retention expired')
             return 'retained', active
-        expected = 'corpus_' + country + '_' + manifest['previous']
-        if active != expected:
-            raise ValueError('new corpus previous does not equal active release')
+        if active != self.kind.previous(manifest):
+            raise ValueError('new ' + self.kind.label + ' previous does not equal active release')
         if self.db.exists(name):
-            raise ValueError('new corpus target already exists')
+            raise ValueError('new ' + self.kind.label + ' target already exists')
         return 'new', active
 
     def begin(self, hash_value, manifest, mode, expected):
-        row = dict(operation_id=uuid.uuid4().hex, country=manifest['country'], rel=manifest['rel'],
+        row = dict(operation_id=uuid.uuid4().hex, country=self.kind.country(manifest), rel=manifest['rel'],
                    mode=mode, database_name=manifest['database'], manifest_hash=hash_value,
                    dump_sha256=manifest['dump']['sha256'], expected_active_db=expected,
                    manifest=manifest)
@@ -48,7 +50,9 @@ class Activation:
         name = row['database_name']
         active = self.db.current(row['country'])
         retired = self.db.retirement(name)
-        if active is None or active != row['expected_active_db'] or active == name:
+        if active != row['expected_active_db'] or active == name:
+            return False
+        if active is None and (not self.kind.bootstrap or row['mode'] != 'new'):
             return False
         if row['mode'] == 'new':
             return retired is None
@@ -67,41 +71,41 @@ class Activation:
             return row
         if row['step'] == 'aborted':
             self.abort_cleanup(row)
-            raise ValueError('corpus activation was aborted')
+            raise ValueError(self.kind.label + ' activation was aborted')
         if not self.guarded(row):
             self.abort(row)
             return dict(row, step='aborted')
         try:
             if recheck and row['step'] == 'checked':
-                self.db.validate(row)
-                self.db.smoke(row, image)
+                self.steps.validate(row)
+                self.steps.smoke(row, image)
             if row['mode'] == 'new':
                 if row['step'] == 'started':
-                    self.db.inspect(row, dump)
+                    self.steps.inspect(row, dump)
                     row = self.db.append(row, 'creating')
                 if row['step'] == 'creating':
-                    self.db.inspect(row, dump)
-                    self.db.create(row)
+                    self.steps.inspect(row, dump)
+                    self.steps.create(row)
                     row = self.db.append(row, 'created')
                 if row['step'] == 'created':
                     row = self.db.append(row, 'restoring')
                 if row['step'] == 'restoring':
-                    self.db.restore(row, dump)
+                    self.steps.restore(row, dump)
                     row = self.db.append(row, 'restored')
             elif row['step'] == 'started':
                 row = self.db.append(row, 'restored')
             if row['step'] == 'restored':
-                self.db.validate(row)
+                self.steps.validate(row)
                 row = self.db.append(row, 'validated')
             if row['step'] == 'validated':
-                self.db.smoke(row, image)
+                self.steps.smoke(row, image)
                 row = self.db.append(row, 'checked')
             if row['step'] == 'checked':
                 if not self.guarded(row):
-                    raise ValueError('corpus activation guard changed')
+                    raise ValueError(self.kind.label + ' activation guard changed')
                 row = self.db.activate(row)
             if row['step'] != 'activated':
-                raise ValueError('unknown corpus activation step')
+                raise ValueError('unknown ' + self.kind.label + ' activation step')
             return row
         except Exception:
             self.abort(row)
@@ -132,7 +136,7 @@ class Activation:
         for name in self.db.expired():
             if name in open_prunes or self.db.protected(name) or self.db.connections(name):
                 continue
-            _, country, rel = name.split('_', 2)
+            country, rel = self.kind.parse(name)
             row = dict(operation_id=uuid.uuid4().hex, country=country, rel=rel, mode='prune',
                        database_name=name, manifest_hash=None, dump_sha256=None,
                        expected_active_db=None, manifest=None)

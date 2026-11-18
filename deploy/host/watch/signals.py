@@ -51,6 +51,18 @@ def event(state, key, identity):
         state['events'][key]['observed'] = identity
 
 
+def release_signals(state, prefix, release, now, message):
+    failure = status_value(release, ('failed',), ('ok', 'current', 'verified'))
+    if release and release['status'] == 'waiting':
+        failure = 'hold'
+    update(state, prefix + '_failed', failure,
+           now, 1800, 2, attempt=(release or {}).get('started_at'), facts=message(release))
+    waiting = status_value(release, (), ('ok', 'current', 'verified'))
+    if release and release['status'] in ('waiting', 'failed') and release.get('waiting_since') is not None:
+        waiting = 'bad' if now-release['waiting_since'] > 86400 else 'hold'
+    update(state, prefix + '_waiting', waiting, now, facts=message(release))
+
+
 def observe(state, data, now):
     ready = data['ready']
     update(state, 'site', None if ready is None else 'good' if ready == 200 else 'bad',
@@ -61,15 +73,8 @@ def observe(state, data, now):
            now, facts=message(deploy))
     update(state, 'deploy_failed', status_value(deploy, ('failed', 'rolled_back'), ('ok', 'current')),
            now, 900, 3, attempt=(deploy or {}).get('started_at'), facts=message(deploy))
-    release_failure = status_value(release, ('failed',), ('ok', 'current', 'verified'))
-    if release and release['status'] == 'waiting':
-        release_failure = 'hold'
-    update(state, 'release_failed', release_failure,
-           now, 1800, 2, attempt=(release or {}).get('started_at'), facts=message(release))
-    waiting = status_value(release, (), ('ok', 'current', 'verified'))
-    if release and release['status'] in ('waiting', 'failed') and release.get('waiting_since') is not None:
-        waiting = 'bad' if now-release['waiting_since'] > 86400 else 'hold'
-    update(state, 'release_waiting', waiting, now, facts=message(release))
+    release_signals(state, 'release', release, now, message)
+    release_signals(state, 'frameworks', data['frameworks'], now, message)
     secret_value = status_value(secrets, ('failed',), ('ok', 'current'))
     stale = (secrets or {}).get('last_success_at')
     stale = stale is not None and now-stale > 7200

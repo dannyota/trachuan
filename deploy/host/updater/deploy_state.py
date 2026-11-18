@@ -6,8 +6,32 @@ from .deploy_io import atomic, canonical
 from .deploy_floor import check_floor, release_floor
 
 
+FRAMEWORKS = 'frameworks'
+
+
 def digest(value):
     return isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value) is not None
+
+
+def check_records(records, statuses):
+    if not isinstance(records, dict):
+        raise ValueError('state records')
+    for sequence, record in records.items():
+        if not sequence.isdigit() or int(sequence) < 1 or str(int(sequence)) != sequence:
+            raise ValueError('state sequence')
+        if not isinstance(record, dict) or set(record) != {'hash', 'status'} or not digest(record['hash']):
+            raise ValueError('state binding')
+        if record['status'] not in statuses:
+            raise ValueError('state status')
+
+
+def check_frameworks(section):
+    if not isinstance(section, dict) or set(section) != {'accepted', 'retained', 'failed'}:
+        raise ValueError('state frameworks')
+    check_records(section['accepted'], ('pending', 'active', 'retained', 'failed'))
+    for key in ('retained', 'failed'):
+        if not isinstance(section[key], list) or not all(digest(h) for h in section[key]):
+            raise ValueError('state frameworks hashes')
 
 
 class State:
@@ -21,22 +45,16 @@ class State:
 
     def validate(self):
         data = self.data
-        if set(data) - {'release_floor'} != {'version', 'active', 'accepted', 'retained', 'failed', 'consumed',
+        if set(data) - {'release_floor', FRAMEWORKS} != {'version', 'active', 'accepted', 'retained', 'failed', 'consumed',
                          'schemas', 'installed_bundle', 'journal'} or data['version'] != 1:
             raise ValueError('state fields')
         release_floor(data)
         if not digest(data['active']) or set(data['accepted']) != {'image', 'rollback', 'corpus'}:
             raise ValueError('state active')
         for records in data['accepted'].values():
-            if not isinstance(records, dict):
-                raise ValueError('state records')
-            for sequence, record in records.items():
-                if not sequence.isdigit() or int(sequence) < 1 or str(int(sequence)) != sequence:
-                    raise ValueError('state sequence')
-                if set(record) != {'hash', 'status'} or not digest(record['hash']):
-                    raise ValueError('state binding')
-                if record['status'] not in ('pending', 'active', 'retained', 'failed', 'consumed'):
-                    raise ValueError('state status')
+            check_records(records, ('pending', 'active', 'retained', 'failed', 'consumed'))
+        if FRAMEWORKS in data:
+            check_frameworks(data[FRAMEWORKS])
         for key in ('retained', 'failed', 'consumed'):
             if not isinstance(data[key], list) or not all(digest(h) for h in data[key]):
                 raise ValueError('state hashes')
@@ -81,16 +99,35 @@ class State:
         self.validate()
         atomic(self.path, canonical(self.data) + b'\n')
 
+    def records(self, kind):
+        if kind == FRAMEWORKS:
+            return self.data[FRAMEWORKS]['accepted'] if FRAMEWORKS in self.data else {}
+        return self.data['accepted'][kind]
+
+    def failed(self, kind):
+        if kind == FRAMEWORKS:
+            return self.data[FRAMEWORKS]['failed'] if FRAMEWORKS in self.data else []
+        return self.data['failed']
+
+    def seen(self, kind):
+        if kind == FRAMEWORKS:
+            section = self.data.get(FRAMEWORKS, {})
+            return [*section.get('retained', []), *section.get('failed', [])]
+        return [self.data['active'], *self.data['retained'], *self.data['failed']]
+
+    def section(self):
+        return self.data.setdefault(FRAMEWORKS, dict(accepted={}, retained=[], failed=[]))
+
     def decision(self, kind, hash_value, sequence):
         if type(sequence) is not int or sequence < 1:
             raise ValueError('older or invalid sequence')
         if kind == 'image':
             self.check_floor(sequence)
-        records = self.data['accepted'][kind]
+        records = self.records(kind)
         bound = records.get(str(sequence))
         if bound and bound['hash'] != hash_value:
             raise ValueError('sequence reuse')
-        if hash_value in [self.data['active'], *self.data['retained'], *self.data['failed']]:
+        if hash_value in self.seen(kind):
             return 'noop'
         if hash_value in self.data['consumed']:
             raise ValueError('rollback consumed')
@@ -105,15 +142,25 @@ class State:
     def accept(self, kind, hash_value, sequence):
         decision = self.decision(kind, hash_value, sequence)
         if decision == 'new':
-            self.data['accepted'][kind][str(sequence)] = {'hash': hash_value, 'status': 'pending'}
+            records = self.section()['accepted'] if kind == FRAMEWORKS else self.data['accepted'][kind]
+            records[str(sequence)] = {'hash': hash_value, 'status': 'pending'}
             self.save()
         return decision
 
-    def fail(self, hash_value):
-        self.mark_failed(hash_value)
+    def fail(self, hash_value, kind=None):
+        self.mark_failed(hash_value, kind)
         self.save()
 
-    def mark_failed(self, hash_value):
+    def mark_failed(self, hash_value, kind=None):
+        if kind == FRAMEWORKS:
+            section = self.section()
+            if hash_value not in section['failed']:
+                section['failed'].append(hash_value)
+            section['retained'] = [h for h in section['retained'] if h != hash_value]
+            for record in section['accepted'].values():
+                if record['hash'] == hash_value:
+                    record['status'] = 'failed'
+            return
         if hash_value not in self.data['failed']:
             self.data['failed'].append(hash_value)
         self.data['retained'] = [h for h in self.data['retained'] if h != hash_value]
@@ -121,6 +168,20 @@ class State:
             for record in records.values():
                 if record['hash'] == hash_value:
                     record['status'] = 'failed'
+
+    def settle(self, kind, hash_value, sequence, active):
+        records = self.records(kind)
+        for number, record in records.items():
+            if record['hash'] == hash_value:
+                record['status'] = 'active' if active else 'retained'
+            elif active and record['status'] == 'active':
+                record['status'] = 'retained'
+            elif active and record['status'] == 'pending' and int(number) < sequence:
+                self.mark_failed(record['hash'], kind)
+        if kind == FRAMEWORKS:
+            self.section()['retained'] = [r['hash'] for _, r in sorted(records.items(), key=lambda item: int(item[0]))
+                                          if r['status'] == 'retained']
+        self.save()
 
     def check_floor(self, sequence):
         check_floor(sequence, self.data.get('release_floor', 0))

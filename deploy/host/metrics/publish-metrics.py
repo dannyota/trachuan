@@ -13,6 +13,7 @@ BACKUP_DIR = Path('/srv/trachuan/state/backup')
 DEPLOY_RESULT = Path('/srv/trachuan/state/deploy/result.json')
 SECRETS_RESULT = Path('/srv/trachuan/state/deploy/secrets.json')
 RELEASE_RESULT = Path('/srv/trachuan/state/deploy/release.json')
+FRAMEWORKS_RESULT = Path('/srv/trachuan/state/deploy/release-frameworks.json')
 WATCH_RESULT = Path('/srv/trachuan/state/watch/result.json')
 JOBS = ('full', 'diff', 'verify', 'health', 'restore-check')
 MOUNTS = ('/', '/srv/trachuan/data')
@@ -127,8 +128,9 @@ def collect(host, now):
             metrics.append((name, value, {'host': host, 'job': job}))
     for name, value in deploy(DEPLOY_RESULT, now):
         metrics.append((name, value, {'host': host}))
-    for name, value in release(RELEASE_RESULT, now):
-        metrics.append((name, value, {'host': host}))
+    for kind, path in (('law', RELEASE_RESULT), ('frameworks', FRAMEWORKS_RESULT)):
+        for name, value in release(path, now):
+            metrics.append((name, value, {'host': host, 'kind': kind}))
     for name, value in job_result(SECRETS_RESULT, now, 'secrets',
                                   ('ok', 'current', 'failed', 'skipped'), ('failed',)):
         metrics.append((name, value, {'host': host}))

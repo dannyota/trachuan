@@ -4,8 +4,8 @@ from .deploy_io import Result, atomic, canonical
 
 
 class ReleaseResult(Result):
-    def __init__(self, paths, clock):
-        super().__init__(paths.result.with_name('release.json'), paths.log.with_name('release.log'),
+    def __init__(self, paths, clock, name='release'):
+        super().__init__(paths.result.with_name(name + '.json'), paths.log.with_name(name + '.log'),
                          lambda: datetime.fromtimestamp(clock(), timezone.utc).isoformat().replace('+00:00', 'Z'))
 
     def write(self, status, step, message, digest=None, manifest=None, mode=None):

@@ -6,6 +6,7 @@ import tempfile
 from .deploy_activate import Activator
 from .deploy_bundle import bundle
 from .deploy_corpus import Corpus
+from .deploy_corpus_kind import FRAMEWORKS
 from .deploy_host import Host
 from .deploy_floor import check_floor
 from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
@@ -25,7 +26,7 @@ class Updater:
         self.verifier = Verifier(self.rules, runner, user_prefix)
         self.registry = Registry(self.rules, runner)
         self.store = Store(self.paths, self.rules, runner)
-        self.phases = ('secrets', 'images', 'corpus')
+        self.phases = ('secrets', 'images', 'corpus', 'frameworks')
         self.secrets_failed = False
         self.step, self.hash, self.manifest = 'starting', None, None
 
@@ -142,6 +143,14 @@ class Updater:
         return Corpus(state, self.store, self.host, self.rules, self.registry,
                       prepare=lambda: self.secrets(state, directory, mode, result, force=True)).run(directory, mode)
 
+    def frameworks(self, state, directory, mode, result):
+        if 'frameworks' not in self.rules:
+            return None
+        if (state.data['journal'] or {}).get('status') == 'stopped':
+            return False
+        return Corpus(state, self.store, self.host, self.rules, self.registry, kind=FRAMEWORKS,
+                      prepare=lambda: self.secrets(state, directory, mode, result, force=True)).run(directory, mode)
+
     def failure(self, result, state, error):
         status = None
         recovery_message = None
@@ -184,11 +193,14 @@ class Updater:
                         journal = state.data['journal']
                         result.write(recovered, 'recovery', activator.recovery_message, journal['target'])
                         return 1
+                    failed = False
                     with tempfile.TemporaryDirectory(prefix='run-', dir=self.paths.state) as directory:
                         for phase in self.phases:
                             if getattr(self, phase)(state, Path(directory), mode, result) is False:
-                                return 1
-                    return int(self.secrets_failed)
+                                if phase not in ('corpus', 'frameworks'):
+                                    return 1
+                                failed = True
+                    return int(failed or self.secrets_failed)
                 except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError) as error:
                     return self.failure(result, state, error)
         except Busy:
