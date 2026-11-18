@@ -45,7 +45,8 @@ it('restarts expired gaps with the same version selector', async () => {
   await flushPromises()
   await wrapper.get('button').trigger('click')
   await flushPromises()
-  expect(wrapper.text()).toContain('The results changed. Please search again.')
+  expect(wrapper.text()).toContain('The list was reloaded from the top.')
+  expect(wrapper.text()).not.toContain('The results changed. Please search again.')
   expect(wrapper.text()).toContain('unknown_kind')
   expect(wrapper.text()).not.toContain('first')
   expect(calls[2]).toMatchObject({ params: { query: { versions: ['fw:fw-alpha:2.1#A'] } } })
@@ -143,4 +144,40 @@ it('shows the item error if the fresh read also fails', async () => {
   await flushPromises()
   expect(calls).toHaveLength(3)
   expect(wrapper.get('[role="alert"]').text()).toBe('The release has expired.')
+})
+
+const gapPage = (kind: string, next?: string) => response({ release: '20990101', gaps: [{ kind, detail: kind }], next_cursor: next })
+const reloadedText = 'The list was reloaded from the top.'
+
+it('shows no restart notice when the gaps restart fails', async () => {
+  const { wrapper } = setup(FrameworkGaps, [gapPage('title_missing', 'cursor-a'), failure('cursor_expired'), failure('unavailable')])
+  await flushPromises()
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloadedText)
+})
+
+it('clears the gaps restart notice after a later page loads', async () => {
+  const { wrapper } = setup(FrameworkGaps, [gapPage('title_missing', 'cursor-a'), failure('cursor_expired'), gapPage('unknown_kind', 'cursor-b'), gapPage('ocr_blocked')])
+  await flushPromises()
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain(reloadedText)
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain('ocr_blocked')
+  expect(wrapper.text()).not.toContain(reloadedText)
+})
+
+it('drops the gaps restart notice when a second restart fails', async () => {
+  const { wrapper } = setup(FrameworkGaps, [gapPage('title_missing', 'cursor-a'), failure('cursor_expired'), gapPage('unknown_kind', 'cursor-b'), failure('cursor_expired'), failure('unavailable')])
+  await flushPromises()
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain(reloadedText)
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloadedText)
 })

@@ -12,7 +12,7 @@ const error = ref('')
 const notice = ref('')
 const unavailable = ref(false)
 const loading = ref(false)
-async function load(more = false) {
+async function load(more = false, restart = false) {
   if (loading.value) return
   loading.value = true
   const response = await api.client.GET('/api/v1/frameworks/gaps', { params: { query: { versions: [props.handle], ...(more ? { cursor: cursor.value, release: release.value } : {}) } } })
@@ -20,10 +20,11 @@ async function load(more = false) {
   if (response.response.status === 404) { notFound(); return }
   if (!response.data) {
     const code = response.error?.error.code || 'unavailable'
-    if (more && code === 'cursor_expired') { notice.value = errorMessage(language.value, code); gaps.value = []; cursor.value = ''; await load(); return }
+    if (more && code === 'cursor_expired') { notice.value = ''; gaps.value = []; cursor.value = ''; await load(false, true); return }
     error.value = code
     return
   }
+  notice.value = restart ? labels.value.restarted : ''
   unavailable.value = response.data.access_unavailable === true
   release.value = response.data.release
   gaps.value = more ? [...gaps.value, ...(response.data.gaps || [])] : response.data.gaps || []

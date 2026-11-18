@@ -46,11 +46,12 @@ async function search(more = false, restart = false) {
   if (response.response.status === 404) { notFound(); return }
   if (!response.data) {
     const code: string = response.error?.error.code || 'unavailable'
-    if (more && code === 'cursor_expired') { notice.value = errorMessage(language.value, code); result.value = undefined; await search(false, true); return }
+    if (more && code === 'cursor_expired') { notice.value = ''; result.value = undefined; await search(false, true); return }
     error.value = code
     if (code === 'account_changed') result.value = undefined
     return
   }
+  notice.value = restart ? labels.value.restarted : ''
   result.value = more && result.value ? { ...response.data, hits: [...(result.value.hits || []), ...(response.data.hits || [])] } : response.data
 }
 </script>
