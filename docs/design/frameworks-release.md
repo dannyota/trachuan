@@ -133,8 +133,9 @@ these differences:
 
 - **Pull and verify.** Tag `frameworks-production`, the frameworks identity, and
   a verifier with the field list above that refuses any other `corpus_kind`.
-  Until a frameworks manifest is accepted, a missing package is status `current`
-  with "no frameworks release published".
+  Until a frameworks manifest is accepted, a missing `frameworks-production` tag
+  in the shared package is status `current` with "no frameworks release
+  published".
 - **Mode.** `retained` and `new` as for law, over `retired_release` rows of kind
   `frameworks`. `new` requires `previous` to equal the active frameworks
   release; with no `frameworks_release` row it requires `previous` null, the
