@@ -40,12 +40,12 @@ One line per item: date, area, finding, source.
 - 2026-11-18, corpus, a hand-restored or expired release has no path that settles production (tag, host and public status cannot be made to agree by signing), which blocks uploads; define the recovery.
 - 2026-11-18, corpus, a rebuilt workshop has no run row for the predecessor release, which fails `evidence`; add the recovery to the runbook.
 - 2026-11-18, corpus, diagram relation rows carry English `raw_label` values (`replaces`) while text rows and reviewed rows carry Vietnamese; decide whether to localize the diagram labels.
-- 2026-11-18, backend, Vietnamese wording: `apps/server/internal/oauth/consent_page.go` ("Không thể cấp quyền truy cập", "Vui lòng thử lại.", "Hãy thử kết nối lại từ ứng dụng.", "Hãy thu hồi quyền của một ứng dụng trước.") and `apps/server/internal/authmail/templates.go:34` ("Hãy đăng nhập hoặc đặt lại mật khẩu.") still use the phrasing the web copy dropped.
 - 2026-11-18, docs, `docs/design/web-voice.md` says privacy and terms speak in the third person, but `apps/web/i18n/legal.ts` uses "Chúng tôi"; settle which is right, and bump the legal date if the text changes.
 - 2026-11-18, retrieval, no test covers a document-level `reviewed` row on the source side of a search hit (`hydrate_tree.go`, `source_provision_id IS NULL`); add a row from the hit's document.
 - 2026-11-18, corpus, the 500-entries-per-pull-request limit of `sources/<cc>-knowledge.yaml` has no CI check; it needs a diff against the merge base.
-- 2026-11-18, web, `apps/web/app/content/gaps.ts` has no category for `knowledge_stale`, so it shows under "Khác"; add one before the first release with knowledge entries.
 - 2026-11-18, corpus, `evidence` `Resolve` turns a transient workshop error into an item failure instead of retrying the batch; it fails closed and a restart repairs it.
 - 2026-11-18, corpus, `stage/evidence/knowledge.go` repeats the artifact manifest name and line format; add one `artifact` function that reads the manifest once, reports whether a file is listed and returns its verified bytes.
 - 2026-11-18, frameworks, the signing job should compare the release row's dense, lexical and retrieval recipes and schema version with the report-bound `build.json`.
 - 2026-11-18, frameworks, the host frameworks verifier should apply the closed recipe shapes the signing job uses.
+- 2026-11-18, deploy, export `PGREQUIREAUTH=scram-sha-256` in `postgres-admin.sh`, so `check-postgres-auth.sh` and the health command also require SCRAM.
+- 2026-11-18, corpus, relate counts diagram rows rather than distinct target ids when it decides `relation_text_ambiguous_target`, which accounts for 25 of the 48 review findings of `unmatched_operative_claim`; decide whether to change the rule (it changes the relate recipe).
