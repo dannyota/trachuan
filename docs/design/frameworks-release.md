@@ -221,14 +221,13 @@ is unaffected, and once B has raised the floor that rollback is refused.
    declares that environment, deployments from `main` only, in
    `deploy/github/settings.json` and it is applied, so no hand-made environment
    ever holds it.
-2. Image A ships the migration, `release-check --kind`, `frameworks-schema`,
-   `grant-corpus.sh` names, the updater's frameworks phase, and
-   `server_frameworks_key` in the policy's secret list and the fetcher's
-   allowlist, and the secret-presence check above. Its policy has no
-   `frameworks` block, so the phase does not run; its updater keeps a
-   `frameworks` state key it finds, untouched, so a rollback from B to A loses
-   nothing. The updater that installs A reconciles nothing new; A's own updater
-   fetches the secret.
+2. Image A ships the migration, `release-check --kind`, `frameworks-schema`, the
+   updater's frameworks phase, and `server_frameworks_key` in the policy's
+   secret list and the fetcher's allowlist, and the secret-presence check above.
+   Its policy has no `frameworks` block, so the phase does not run; its updater
+   keeps a `frameworks` state key it finds, untouched, so a rollback from B to A
+   loses nothing. The updater that installs A reconciles nothing new; A's own
+   updater fetches the secret.
 3. Image B raises the release floor to A's sequence, adds the `frameworks` block
    with `min_release_floor` A's sequence, and adds the key mount and the
    `server.env` lines with the flag off. A's updater installs it only once the
