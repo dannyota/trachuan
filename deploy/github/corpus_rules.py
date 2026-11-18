@@ -1,6 +1,6 @@
 import re
 
-LEGACY_CUTOFF = {'vn': '20261118_1'}
+LEGACY_CUTOFF = {'vn': '20261118_2'}
 DECISION_FIELDS = ('eval_report_sha256', 'previous_report_sha256')
 
 

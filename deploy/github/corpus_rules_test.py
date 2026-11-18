@@ -9,8 +9,8 @@ import corpus_rules
 class CorpusRulesTest(unittest.TestCase):
     def test_cutoff_literal_stays_on_one_line(self):
         text = Path(corpus_rules.__file__).read_text()
-        self.assertIsNotNone(re.search(r"^LEGACY_CUTOFF = \{'vn': '20261118_1'\}$", text, re.MULTILINE))
-        self.assertEqual(corpus_rules.LEGACY_CUTOFF, {'vn': '20261118_1'})
+        self.assertIsNotNone(re.search(r"^LEGACY_CUTOFF = \{'vn': '20261118_2'\}$", text, re.MULTILINE))
+        self.assertEqual(corpus_rules.LEGACY_CUTOFF, {'vn': '20261118_2'})
 
     def test_rel_order_is_date_then_numeric_suffix(self):
         ordered = ['20990101', '20990101_1', '20990101_2', '20990101_10', '20990102']

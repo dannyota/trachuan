@@ -95,7 +95,7 @@ active release, and signing the active release again recovers.
 ### Runs before this rule
 
 A snapshot without a decision is valid only at or below the cutoff
-`vn/20261118_1`, one value in the Go and Python code, bound by a test. Such a
+`vn/20261118_2`, one value in the Go and Python code, bound by a test. Such a
 run has no `evidence` stage and becomes `evaluated` after `eval`; a restart
 never appends `evidence` to it and a decision flag on it is refused. It uploads
 a report from `corpus eval --previous`, and release-row writes neither field, so
