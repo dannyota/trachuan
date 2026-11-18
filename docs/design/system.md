@@ -80,7 +80,11 @@ checked, at the point of use, to be `auth`, `postgres` or a valid release name:
 libpq reads a connection string or URI in that position, and it would override
 the host. Every updater client that sends a password requires SCRAM
 (`PGREQUIREAUTH=scram-sha-256`), so the password never answers a cleartext
-request.
+request. A value placed in a dollar-quoted SQL body may hold neither `$` nor a
+backslash, because psql would otherwise leave the quote and run a backslash
+command. Every `release_journal` row must match its exact shape when read, and a
+row returned by an insert must equal what the updater wrote; the updater then
+continues with its own values.
 
 ## Repository layout
 
