@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import pwd
 import re
+import subprocess
 
 from .deploy_vault import names
 from .deploy_floor import release_floor
@@ -204,7 +205,13 @@ def pull_image(image, runner, user_prefix):
                 raise
         else:
             raise
-        runner(user_prefix + ['podman', 'pull', image], timeout=600)
+        pull = user_prefix + ['podman', 'pull', image]
+        try:
+            runner(pull, timeout=600)
+        except CommandError as error:
+            if not isinstance(error.__cause__, subprocess.TimeoutExpired):
+                raise
+            runner(pull, timeout=600)
         raw = runner(inspect)
     rows = json.loads(raw)
     if len(rows) != 1 or image not in rows[0].get('RepoDigests', []):

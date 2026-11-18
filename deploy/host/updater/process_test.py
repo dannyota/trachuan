@@ -11,6 +11,13 @@ from updater import deploy_io as io
 
 
 class ProcessTest(unittest.TestCase):
+    def test_timeout_is_the_cause_of_the_command_error(self):
+        for limit in (None, 64):
+            with self.subTest(stdout_limit=limit):
+                with self.assertRaises(io.CommandError) as caught:
+                    io.command(['/bin/sleep', '5'], timeout=0.05, stdout_limit=limit)
+                self.assertIsInstance(caught.exception.__cause__, subprocess.TimeoutExpired)
+
     def test_only_cosign_certificate_identity_mismatch_is_an_identity_failure(self):
         for message, expected in [
                 ('none of the expected identities matched what was in the certificate', 'identity'),

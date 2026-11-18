@@ -140,6 +140,85 @@ class CachedImageTest(unittest.TestCase):
                     pull_image(self.image, runner, [])
 
 
+def timed_out():
+    try:
+        raise subprocess.TimeoutExpired('host command', 600)
+    except subprocess.TimeoutExpired as error:
+        try:
+            raise CommandError('command failed') from error
+        except CommandError as wrapped:
+            return wrapped
+
+
+class PullRetryTest(unittest.TestCase):
+    def setUp(self):
+        self.image = 'ghcr.io/dannyota/trachuan-postgres@sha256:' + 'a' * 64
+        self.calls = []
+        self.pulls = []
+
+    def runner_for(self, pull_results, digests):
+        pending = list(pull_results)
+        pulled = []
+        def runner(args, **kwargs):
+            self.calls.append(args)
+            if 'pull' in args:
+                self.pulls.append((args, kwargs))
+                result = pending.pop(0)
+                if result is not None:
+                    raise result
+                pulled.append(True)
+                return b''
+            if not pulled:
+                raise CommandError('absent', returncode=1)
+            return canonical([{'RepoDigests': digests}])
+        return runner
+
+    def inspects_after_pull(self):
+        index = max(i for i, args in enumerate(self.calls) if 'pull' in args)
+        return [args for args in self.calls[index + 1:] if 'inspect' in args]
+
+    def test_timeout_is_retried_once_with_same_arguments(self):
+        runner = self.runner_for([timed_out(), None], [self.image])
+        pull_image(self.image, runner, [])
+        self.assertEqual(len(self.pulls), 2)
+        self.assertEqual(self.pulls[0], self.pulls[1])
+        self.assertEqual(self.pulls[0][1], {'timeout': 600})
+        self.assertEqual(len(self.inspects_after_pull()), 1)
+
+    def test_second_timeout_raises_without_inspect(self):
+        runner = self.runner_for([timed_out(), timed_out()], [self.image])
+        with self.assertRaises(CommandError):
+            pull_image(self.image, runner, [])
+        self.assertEqual(len(self.pulls), 2)
+        self.assertEqual(self.calls[-1][1:], ['pull', self.image])
+
+    def test_other_pull_failure_is_not_retried(self):
+        runner = self.runner_for([CommandError('failed', returncode=125)], [self.image])
+        with self.assertRaises(CommandError):
+            pull_image(self.image, runner, [])
+        self.assertEqual(len(self.pulls), 1)
+
+    def test_stop_request_is_not_retried(self):
+        try:
+            raise InterruptedError('stop')
+        except InterruptedError as stop:
+            try:
+                raise CommandError('command failed') from stop
+            except CommandError as wrapped:
+                error = wrapped
+        runner = self.runner_for([error], [self.image])
+        with self.assertRaises(CommandError) as caught:
+            pull_image(self.image, runner, [])
+        self.assertIs(caught.exception, error)
+        self.assertEqual(len(self.pulls), 1)
+
+    def test_digest_mismatch_after_retried_pull_is_rejected(self):
+        runner = self.runner_for([timed_out(), None], [])
+        with self.assertRaisesRegex(ValueError, 'local digest mismatch'):
+            pull_image(self.image, runner, [])
+        self.assertEqual(len(self.pulls), 2)
+
+
 class RecoveryCacheTest(ActivationFixture, unittest.TestCase):
     def test_postgres_recovery_with_cached_image_ignores_unavailable_registry(self):
         self.paths.postgres_unit.write_bytes(b'changed\n')
