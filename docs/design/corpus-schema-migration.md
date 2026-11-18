@@ -27,7 +27,7 @@ and rolling back is activating the previous release.
 
 Host restore permits exactly `vector` and `ltree`, at the versions the
 PostgreSQL image provides
-([corpus release](corpus-release.md#activation-steps)).
+([corpus release](corpus-release-activation.md#steps)).
 
 First-party references, not fetched during this offline design:
 [constraints](https://www.postgresql.org/docs/current/ddl-constraints.html),

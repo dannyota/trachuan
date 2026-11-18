@@ -172,7 +172,7 @@ retries. A run has three phases, each skipped when nothing changed: secrets
      ([release restore](../runbooks/release-restore.md#prewarm-a-corpus-database)).
    - Run `provision-activator.sh` when the running PostgreSQL container provides
      both its readable script and password mount
-     ([corpus release](corpus-release.md#activation-steps)); skip provisioning
+     ([corpus release](corpus-release-activation.md#steps)); skip provisioning
      for older units without those mounts. Start queryembed, then migrate, a
      oneshot unit, and require success; start server and web.
    - Require loopback `http://127.0.0.1:8080/readyz`; start Caddy; require

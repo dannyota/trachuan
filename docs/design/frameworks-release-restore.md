@@ -2,7 +2,7 @@
 
 The host restore of a frameworks release, between creating `frameworks_<rel>`
 and the pointer swap of [frameworks release](frameworks-release.md#host). It
-follows the law [activation steps](corpus-release.md#activation-steps) except
+follows the law [activation steps](corpus-release-activation.md#steps) except
 where this file says otherwise.
 
 ## Trust in the dump
@@ -12,10 +12,11 @@ list keeps, so every statement in a frameworks dump runs with `activator`'s
 privileges. The signed manifest is the boundary; the rules below keep that SQL
 from reaching more privilege or changing what other sessions run:
 
-- Every `postgres` step (log settings, extensions, revoking `PUBLIC`'s rights on
-  the database) runs before the first byte of the dump. Once the restore starts,
-  no session with more privilege than `activator` connects to the database: the
-  owner grants the corpus reader, and there is no prewarm (the engine loads its
+- Every `postgres` step (refusing any superuser but `postgres` or a member of
+  one, log settings, extensions, revoking `PUBLIC`'s rights on the database)
+  runs before the first byte of the dump. Once the restore starts, no session
+  with more privilege than `activator` connects to the database: the owner
+  grants the corpus reader, and there is no prewarm (the engine loads its
   partitions when it opens the release).
 - Every updater session in the restored database starts with `search_path` set
   to `pg_catalog` first (`pg_catalog, public` where the image's SQL names its
