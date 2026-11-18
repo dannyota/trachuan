@@ -1,8 +1,24 @@
 import re
 
+from . import deploy_corpus_sql, deploy_frameworks_sql
 from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
+
+
+SCRAM_ONLY = ('--env', 'PGREQUIREAUTH=scram-sha-256')
+
+
+def client_database(name):
+    if name in ('auth', 'postgres'):
+        return name
+    for check in (deploy_corpus_sql.database, deploy_frameworks_sql.database):
+        try:
+            check(name)
+            return name
+        except ValueError:
+            pass
+    raise ValueError('invalid database name')
 
 
 def pins(manifest):
@@ -34,9 +50,9 @@ class Host:
         self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
     def psql(self, database, sql):
-        return self.user('podman', 'exec', '-i', 'trachuan-postgres',
+        return self.user('podman', 'exec', '-i', *SCRAM_ONLY, 'trachuan-postgres',
                          '/usr/local/bin/postgres-admin.sh', 'psql', '-XAt',
-                         '-h', '127.0.0.1', '-U', 'postgres', '-d', database,
+                         '-h', '127.0.0.1', '-U', 'postgres', '-d', client_database(database),
                          '-v', 'ON_ERROR_STOP=1', input=sql.encode())
 
     def schema(self):
@@ -66,7 +82,7 @@ class Host:
 
     def restart_postgres(self):
         self.systemctl('restart', 'postgres')
-        self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+        self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
                   '/usr/local/bin/wait-postgres.sh', timeout=150)
 
     def restore_postgres(self, candidate):
@@ -91,10 +107,9 @@ class Host:
 
     def postgres(self):
         self.restart_postgres()
-        self.user('podman', 'exec', 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
+        self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
         database = self.psql('auth', "SELECT active_db FROM corpus_release WHERE country = 'vn';").decode().strip()
-        if not re.fullmatch(r'corpus_vn_[0-9]{8}_[0-9]+', database):
-            raise ValueError('invalid active corpus database')
+        deploy_corpus_sql.database(database)
         self.psql(database, "BEGIN; CREATE EXTENSION pg_prewarm; "
                   "SELECT sum(pg_prewarm(c.oid)) FROM pg_class c "
                   "JOIN pg_namespace n ON n.oid = c.relnamespace "
@@ -112,7 +127,7 @@ class Host:
                 available = False
         if not available:
             return False
-        self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+        self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
                   'bash', '/usr/local/bin/provision-activator.sh')
         return True
 

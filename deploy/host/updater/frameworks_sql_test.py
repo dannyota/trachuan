@@ -122,10 +122,12 @@ class FrameworksDatabaseTest(unittest.TestCase):
         self.response = b'[]'
         db.operations()
         self.assertIn("corpus_kind='frameworks'", self.sql())
-        self.response = json.dumps(dict(frameworks_row(), step='started', corpus_kind='frameworks')).encode()
+        self.response = json.dumps(dict(frameworks_row(), step='started', state='open', message='frameworks started',
+                                        corpus_kind='frameworks')).encode()
         db.append(frameworks_row(), 'started')
         self.assertIn("'frameworks')", self.sql())
-        self.response = json.dumps(dict(frameworks_row(), step='activated')).encode()
+        self.response = json.dumps(dict(frameworks_row(), step='activated', state='complete',
+                                        message='frameworks activated', corpus_kind='frameworks')).encode()
         db.activate(frameworks_row())
         self.assertIn('frameworks_release', self.sql())
         self.assertNotIn('corpus_release', self.sql())

@@ -5,6 +5,8 @@ from . import deploy_corpus_sql as sql
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_lock import AdvisoryLock
 from .deploy_corpus_verify import toc
+from .deploy_frameworks_sql import plain
+from .deploy_host import SCRAM_ONLY
 
 
 class Database:
@@ -21,8 +23,18 @@ class Database:
 
     def arguments(self, *args):
         return ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
-                'set +x; set -eu; export PGPASSWORD; PGPASSWORD=$(cat /run/secrets/activator_db_password); '
+                'set +x; set -eu; export PGPASSWORD PGREQUIREAUTH; PGREQUIREAUTH=scram-sha-256; '
+                'PGPASSWORD=$(cat /run/secrets/activator_db_password); '
                 '[ -n "$PGPASSWORD" ]; exec "$@"', 'sh', *args]
+
+    def target(self, name, *shared):
+        if name not in shared:
+            self.sql.database(name)
+        return name
+
+    def client(self, database):
+        return ('psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
+                '-v', 'ON_ERROR_STOP=1', '-d', self.target(database, 'auth', 'postgres'))
 
     def user(self, *args, **kwargs):
         self.check_lock()
@@ -30,8 +42,7 @@ class Database:
 
     def query(self, text, database='auth', options=None):
         command = ('env', 'PGOPTIONS=' + options) if options else ()
-        return self.user(*command, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
-                         '-v', 'ON_ERROR_STOP=1', '-d', database,
+        return self.user(*command, *self.client(database),
                          input=('SET standard_conforming_strings=on;\n' + text).encode()).decode().strip()
 
     def current(self, country):
@@ -46,21 +57,30 @@ class Database:
         return json.loads(raw) if raw else None
 
     def operations(self):
-        return json.loads(self.query(self.sql.operations()))
+        rows = sql.journal_json(self.query(self.sql.operations()))
+        if not isinstance(rows, list):
+            raise sql.JournalRefused(sql.REFUSED)
+        return [self.sql.journal_row(row) for row in rows]
+
+    def recorded(self, raw, row, step):
+        inserted = dict(row, step=step)
+        expected = dict(inserted, corpus_kind=self.kind.name, **sql.written(step, self.kind.label))
+        sql.same_row(self.sql.journal_row(sql.journal_json(raw)), expected)
+        return inserted
 
     def append(self, row, step):
-        return json.loads(self.query(self.sql.journal(row, step)))
+        return self.recorded(self.query(self.sql.journal(row, step)), row, step)
 
     def projection(self, row):
         if row['manifest']['schema_version'] >= 8:
-            name = row['database_name']
+            name = self.target(row['database_name'])
             if self.query("SELECT to_regclass('public.document_summary') IS NOT NULL;", name) == 't':
                 if self.query('SELECT NOT EXISTS(SELECT FROM document_summary WHERE projection <> 1);', name) == 't':
                     return 1
         return 0
 
     def activate(self, row):
-        return json.loads(self.query(self.kind.activation(self, row)))
+        return self.recorded(self.query(self.kind.activation(self, row)), row, 'activated')
 
     def protected(self, name):
         self.sql.database(name)
@@ -83,7 +103,7 @@ class Database:
             " AND pg_get_userbyid(datdba)='postgres' \\gexec\n")
         if self.protected(name):
             raise ValueError('refusing to drop protected database')
-        self.user('dropdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--if-exists', name)
+        self.user('dropdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--if-exists', self.target(name))
 
     def expired(self):
         return json.loads(self.query(self.sql.expired()))
@@ -102,7 +122,8 @@ class Database:
 
     def make(self, name):
         if not self.exists(name):
-            self.user('createdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--template=template0', name)
+            self.user('createdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--template=template0',
+                      self.target(name))
         owner = self.query('SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=' + sql.literal(name) + ';')
         if owner != 'activator':
             raise ValueError('activation target not owned by activator')
@@ -110,10 +131,14 @@ class Database:
     def create(self, row):
         name, manifest = row['database_name'], row['manifest']
         sql.database(name)
+        extensions = manifest['extensions']
+        if not isinstance(extensions, dict):
+            raise ValueError('invalid manifest extensions')
+        statements = ';'.join('CREATE EXTENSION IF NOT EXISTS ' + plain(ext) + ' VERSION ' + sql.literal(version)
+                              for ext, version in extensions.items()) + ';'
         self.check_extensions(manifest)
         self.make(name)
-        self.host.psql(name, ';'.join('CREATE EXTENSION IF NOT EXISTS ' + ext + ' VERSION ' + sql.literal(version)
-                                      for ext, version in manifest['extensions'].items()) + ';')
+        self.host.psql(name, statements)
 
     def inspect(self, row, dump, image=None):
         self.check_extensions(row['manifest'])
@@ -143,6 +168,7 @@ class Database:
         return self.save_list(row, toc(self.listing(dump).decode(), self.rules['extensions']))
 
     def load(self, name, dump, listing, options=''):
+        self.target(name)
         try:
             self.user('env', 'PGOPTIONS=-c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=2 '
                       '-c statement_timeout=0 -c lock_timeout=0 -c idle_in_transaction_session_timeout=0 '
@@ -154,7 +180,9 @@ class Database:
             self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', listing)
 
     def grant(self, name):
-        self.host.user('podman', 'exec', 'trachuan-postgres', 'bash', '/usr/local/bin/grant-corpus.sh', name)
+        sql.database(name)
+        self.host.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', 'bash',
+                       '/usr/local/bin/grant-corpus.sh', name)
 
     def restore(self, row, dump, image=None):
         name = row['database_name']
@@ -168,7 +196,7 @@ class Database:
         raw = self.query("SELECT json_build_object('country',country,'rel',rel,'schema_version',schema_version,"
             "'recipes',json_build_object('dense',dense_recipe,'chunk',chunk_recipe,"
             "'lexical',lexical_recipe,'retrieval',retrieval_recipe)) FROM release WHERE singleton;",
-            row['database_name'])
+            self.target(row['database_name']))
         expected = {key: row['manifest'][key] for key in ('country', 'rel', 'schema_version', 'recipes')}
         if not raw or json.loads(raw) != expected:
             raise ValueError('restored release row differs from manifest')
@@ -188,6 +216,7 @@ class Database:
         return json.loads(self.server(image, *args, secret=database is not None, **options))
 
     def smoke(self, row, image):
+        self.target(row['database_name'])
         self.check_lock()
         self.host.psql(row['database_name'], sql.PREWARM)
         self.describe(image, row['database_name'])

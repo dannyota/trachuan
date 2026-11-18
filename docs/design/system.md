@@ -74,6 +74,18 @@ Activation has its own narrow identity; this amends the earlier wording that
 "the pipeline never touches auth"
 ([ADR 0003](../adr/0003-postgres-per-release-corpus.md) History).
 
+The server can write the `auth` tables, so the host updater treats what it reads
+there as untrusted. A database name reaches a PostgreSQL client only after it is
+checked, at the point of use, to be `auth`, `postgres` or a valid release name:
+libpq reads a connection string or URI in that position, and it would override
+the host. Every updater client that sends a password requires SCRAM
+(`PGREQUIREAUTH=scram-sha-256`), so the password never answers a cleartext
+request. A value placed in a dollar-quoted SQL body may hold neither `$` nor a
+backslash, because psql would otherwise leave the quote and run a backslash
+command. Every `release_journal` row must match its exact shape when read, and a
+row returned by an insert must equal what the updater wrote; the updater then
+continues with its own values.
+
 ## Repository layout
 
 ```text

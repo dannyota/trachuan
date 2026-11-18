@@ -1,11 +1,11 @@
 import hashlib
 from pathlib import Path
 
+from .deploy_frameworks_sql import RELEASE
 from .deploy_io import canonical, decode
 from .deploy_verify import flags, match, positive
 
 
-RELEASE = r'[0-9]{8}(?:_[0-9]{1,2})?'
 FIELDS = {'kind', 'version', 'corpus_kind', 'repository', 'commit', 'rel', 'database', 'sequence', 'previous',
           'dump', 'report', 'build_artifact_sha256', 'schema_version', 'extensions', 'recipes', 'counts'}
 REPORT = ('schema_versions', 'retrieval_recipe_versions', 'lexical_recipe_versions', 'query_recipe_hash')

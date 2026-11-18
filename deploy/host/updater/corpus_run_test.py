@@ -5,6 +5,7 @@ from unittest import mock
 from updater import activation_test as fixture
 from updater.corpus_verify_test import manifest, description
 from updater.corpus_activation_test import Database, Crash
+from updater.deploy_corpus_sql import JournalRefused
 from updater.deploy_io import canonical, CommandError
 from updater import deploy_corpus as c
 from updater.deploy_corpus_result import ReleaseResult
@@ -68,6 +69,12 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertFalse(self.run_phase())
         self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
                          ('failed', 'manifest', 'invalid corpus manifest JSON'))
+
+    def test_refused_journal_row_is_reported_as_recovery(self):
+        self.db.operations = mock.Mock(side_effect=JournalRefused('invalid release journal row'))
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
+                         ('failed', 'recovery', 'invalid release journal row'))
 
     def test_missing_mount_waits_without_any_activator_connection(self):
         for mode in ('activate', 'verify'):

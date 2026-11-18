@@ -75,7 +75,8 @@ class HeadingTest(unittest.TestCase):
             def query(text, database='auth'):
                 calls.append((text, database))
                 if database == 'auth':
-                    return json.dumps(dict(row, step='activated'))
+                    return json.dumps(dict(row, step='activated', state='complete', message='corpus activated',
+                                           corpus_kind='law'))
                 self.assertEqual(database, obj['database'])
                 if text == "SELECT to_regclass('public.document_summary') IS NOT NULL;":
                     return 't' if present else 'f'

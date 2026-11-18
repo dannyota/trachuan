@@ -3,7 +3,9 @@ import re
 from . import deploy_frameworks_check as check
 from . import deploy_frameworks_sql as sql
 from .deploy_frameworks_schema import objects, toc
+from .deploy_host import SCRAM_ONLY
 from .deploy_io import decode
+from .deploy_verify import positive
 
 
 STEPS = ('configuration', 'create reader pool', 'connect reader', 'log settings', 'release row',
@@ -25,6 +27,7 @@ class Steps:
         self.db, self.schemas = database, {}
 
     def schema(self, image, version):
+        positive(version, 'frameworks schema version')
         key = (image, version)
         if key not in self.schemas:
             output = text(self.db.server(image, 'frameworks-schema', '--version', str(version)),
@@ -38,14 +41,16 @@ class Steps:
         return toc(text(self.db.listing(dump), 'dump TOC'), self.db.rules['extensions'], schema)
 
     def admin(self, database, statements):
+        sql.database(database)
         self.db.check_lock()
-        return self.db.host.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + sql.ADMIN_OPTIONS, 'trachuan-postgres',
+        return self.db.host.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + sql.ADMIN_OPTIONS, *SCRAM_ONLY,
+                                 'trachuan-postgres',
                                  '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
                                  'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1',
                                  input=statements.encode()).decode().strip()
 
     def session(self, statements, name, path=sql.CATALOG_PATH):
-        return self.db.query(statements, name, path)
+        return self.db.query(statements, self.db.target(name), path)
 
     def settings(self, name):
         if self.session(sql.effective(), name) != sql.EFFECTIVE:
