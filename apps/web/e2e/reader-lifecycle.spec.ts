@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { clientAddress } from './client-address'
+import { scrollTo } from './reader-scroll'
 
 test.beforeEach(async ({ page }, info) => {
   await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) })
@@ -74,12 +75,8 @@ test('tracks the article in view at desktop width', async ({ page }) => {
   await start(page)
   await navigate(page, '/vn/documents/vn:vbpl:1')
   await expect(page.locator('[data-anchor="dieu-2"]')).toBeVisible()
-  await expect.poll(() => page.locator('[data-anchor="dieu-2"]').evaluate(async element => {
-    element.scrollIntoView()
-    window.scrollBy(0, -50)
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-    return window.scrollY
-  })).toBeGreaterThan(1000)
+  const edge = await page.evaluate(() => document.querySelector('.site-header')!.getBoundingClientRect().bottom)
+  await scrollTo(page.locator('[data-anchor="dieu-2"]'), edge + 90)
   await page.evaluate(async () => {
     for (let i = 0; i < 20; i++) {
       window.scrollBy(0, 5)
