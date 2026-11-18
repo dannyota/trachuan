@@ -60,10 +60,14 @@ never reports zero findings.
 | `external_report`                   | intake record      | an intake record is present ([Intake](#intake))                                                                                                                                                | review                                                                      |
 
 `unmatched_operative_claim` applies the grammar of
-[relations from text](relations-text.md) read-only; it writes no relation. No
-cross-signal detector is `blocking` at first. A detector on counts is not
-defined: the evidence carries counts per detector and the uploader prints the
-change from the previous release.
+[relations from text](relations-text.md) read-only; it writes no relation. A
+target resolves as it does [in build](relations-text.md#resolution-in-build),
+and a claim is matched by a relation row from its article or a provision inside
+it, to the target document, with the requested anchor as `target_node_id` and
+the same kind. A claim whose source or target cannot be read in this run is not
+observed, so its finding is carried. No cross-signal detector is `blocking` at
+first. A detector on counts is not defined: the evidence carries counts per
+detector and the uploader prints the change from the previous release.
 
 ## Findings
 

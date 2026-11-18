@@ -28,6 +28,7 @@ func (s Subject) validate() error {
 type Fired struct {
 	Subject           Subject
 	Discriminator     string
+	Severity          detector.Severity
 	FingerprintInputs []string
 }
 
@@ -43,6 +44,8 @@ type Inputs struct {
 	BuildDir   string
 	ReportPath string
 	Release    *pgxpool.Pool
+
+	ArtifactDir func(stage, itemKey string) (string, bool, error)
 }
 
 type Detector interface {

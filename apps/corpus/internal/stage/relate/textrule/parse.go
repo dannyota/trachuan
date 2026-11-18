@@ -76,6 +76,7 @@ func ParseUnits(units []Unit, issuers map[string]string, identity func(string) s
 			continue
 		}
 		if match.Kind != "" {
+			match.Ordinal = i
 			if item {
 				match.Sentence = lead + "\n" + c.text
 			}

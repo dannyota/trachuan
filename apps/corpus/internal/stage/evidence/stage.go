@@ -143,7 +143,7 @@ func (s *Stage) runDetectors(ctx context.Context, env stage.Env, run stage.Run, 
 		return nil, &IncompleteError{Detector: strings.Join(ids, ","), Reason: "release database unavailable: " + err.Error()}
 	}
 	defer closePool()
-	in := Inputs{Run: run, BuildDir: inputs.buildDir, ReportPath: inputs.reportPath, Release: pool}
+	in := Inputs{Run: run, BuildDir: inputs.buildDir, ReportPath: inputs.reportPath, Release: pool, ArtifactDir: lazyArtifactDirs(ctx, func() store.Querier { return s.querier(env) }, env, run)}
 	runs := make([]detectorRun, 0, len(detectors))
 	for _, d := range detectors {
 		observation, detectErr := d.Detect(ctx, in)

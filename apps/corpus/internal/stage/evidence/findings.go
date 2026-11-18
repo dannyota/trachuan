@@ -38,15 +38,16 @@ type DetectorCounts struct {
 }
 
 type Finding struct {
-	Key           string  `json:"key"`
-	Detector      string  `json:"detector"`
-	Subject       Subject `json:"subject"`
-	Discriminator string  `json:"discriminator"`
-	Fingerprint   string  `json:"fingerprint"`
-	Semantics     int     `json:"semantics"`
-	FirstRel      string  `json:"first_rel"`
-	Status        string  `json:"status"`
-	Carried       bool    `json:"carried"`
+	Key           string            `json:"key"`
+	Detector      string            `json:"detector"`
+	Subject       Subject           `json:"subject"`
+	Discriminator string            `json:"discriminator"`
+	Fingerprint   string            `json:"fingerprint"`
+	Semantics     int               `json:"semantics"`
+	Severity      detector.Severity `json:"severity"`
+	FirstRel      string            `json:"first_rel"`
+	Status        string            `json:"status"`
+	Carried       bool              `json:"carried"`
 }
 
 type ReviewDecision struct {
@@ -119,7 +120,7 @@ func compute(in computeInput) (File, error) {
 		file.Detectors[id] = DetectorCounts{Complete: true, Observed: run.observation.Observed, NotObservable: run.observation.NotObservable}
 		observed[id] = run.observation.ObservedCompletely
 		for _, f := range run.observation.Findings {
-			finding, err := firedFinding(id, run.spec.Semantics, f, in.Rel)
+			finding, err := firedFinding(run.spec, f, in.Rel)
 			if err != nil {
 				return File{}, &IncompleteError{Detector: id, Reason: err.Error()}
 			}
@@ -156,8 +157,13 @@ func compute(in computeInput) (File, error) {
 	return file, nil
 }
 
-func firedFinding(id string, semantics int, f Fired, rel string) (Finding, error) {
-	if err := f.Subject.validate(); err != nil {
+func firedFinding(spec detector.Detector, f Fired, rel string) (Finding, error) {
+	id, semantics := spec.ID, spec.Semantics
+	severity, err := findingSeverity(spec.Severity, f.Severity)
+	if err != nil {
+		return Finding{}, err
+	}
+	if err = f.Subject.validate(); err != nil {
 		return Finding{}, err
 	}
 	key, err := findingKey(id, f)
@@ -168,7 +174,7 @@ func firedFinding(id string, semantics int, f Fired, rel string) (Finding, error
 	if err != nil {
 		return Finding{}, err
 	}
-	return Finding{Key: key, Detector: id, Subject: f.Subject, Discriminator: f.Discriminator, Fingerprint: fingerprint, Semantics: semantics, FirstRel: rel, Status: StatusOpen}, nil
+	return Finding{Key: key, Detector: id, Subject: f.Subject, Discriminator: f.Discriminator, Fingerprint: fingerprint, Semantics: semantics, Severity: severity, FirstRel: rel, Status: StatusOpen}, nil
 }
 
 func applyDecisions(file *File, decisions []ReviewDecision) {
@@ -193,4 +199,26 @@ func applyDecisions(file *File, decisions []ReviewDecision) {
 		}
 		return strings.Compare(a.Key, b.Key)
 	})
+}
+
+func severityRank(s detector.Severity) int {
+	switch s {
+	case detector.Info:
+		return 1
+	case detector.Review:
+		return 2
+	case detector.Blocking:
+		return 3
+	}
+	return 0
+}
+
+func findingSeverity(registered, fired detector.Severity) (detector.Severity, error) {
+	if fired == "" {
+		return registered, nil
+	}
+	if (fired != detector.Review && fired != detector.Info) || severityRank(fired) > severityRank(registered) {
+		return "", fmt.Errorf("severity %q is not allowed for a %s detector", fired, registered)
+	}
+	return fired, nil
 }

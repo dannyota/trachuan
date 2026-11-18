@@ -17,6 +17,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
+	"danny.vn/trachuan/apps/corpus/internal/stage/relate/textrule"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
@@ -29,7 +30,7 @@ func (*Stage) Name() string { return "relate" }
 
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/5", list.CentralIssuersHash())
+	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:"+textrule.RulesVersion, list.CentralIssuersHash())
 }
 
 func PairInputHash(fetch, extract string) string {

@@ -16,7 +16,8 @@
 - [x] `findings.json` as a pure function: predecessor from the selected report's `previous_diff` (empty when it predates evidence, failure when its artifact is missing), `first_rel` inherited only from an unchanged fired or carried finding, `gone` or `carried` for every previous key, status and `unmatched` decisions computed in this stage; `corpus findings list|show <cc> <rel>` reads the artifact only.
 
 ## 16.2 Cross-signal detectors
-- [ ] `unmatched_operative_claim` (relation grammar read-only over every document with text, one finding per sentence whose target resolves to a provision; review for sources relate reads, info for incomplete sources), `partial_without_provision_effect` (info), `raw_field_not_normalized`, `ocr_label_item_outside_labels`, `waived_document_without_relations`, with fixtures from this week's defects; counts on the current release reported; none blocking.
+- [x] `unmatched_operative_claim` (relation grammar read-only over every document with text, one finding per sentence whose target resolves to a provision; review for sources relate reads, info for incomplete sources), `partial_without_provision_effect` (info), `raw_field_not_normalized`, `waived_document_without_relations`, with fixtures from this week's defects; `corpus detectors count` reports them on a release; none blocking.
+- [ ] `ocr_label_item_outside_labels`: needs the OCR check items, with a paragraph position, in the frozen inputs (extract artifact or evidence inputs).
 - [ ] `relation_kind_disagreement`. `tree_transcription_divergence` waits for a numeric definition from extract's `text.json` records.
 
 ## 16.3 Knowledge contract
