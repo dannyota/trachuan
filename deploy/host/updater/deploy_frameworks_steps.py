@@ -1,5 +1,6 @@
 import re
 
+from . import deploy_corpus_sql as law
 from . import deploy_frameworks_check as check
 from . import deploy_frameworks_sql as sql
 from .deploy_frameworks_schema import objects, toc
@@ -37,13 +38,6 @@ class Steps:
         schema = self.schema(image, row['manifest']['schema_version'])
         return toc(text(self.db.listing(dump), 'dump TOC'), self.db.rules['extensions'], schema)
 
-    def admin(self, database, statements):
-        self.db.check_lock()
-        return self.db.host.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + sql.ADMIN_OPTIONS, 'trachuan-postgres',
-                                 '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
-                                 'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1',
-                                 input=statements.encode()).decode().strip()
-
     def session(self, statements, name, path=sql.CATALOG_PATH):
         return self.db.query(statements, name, path)
 
@@ -59,8 +53,10 @@ class Steps:
         name, manifest = row['database_name'], row['manifest']
         sql.database(name)
         self.db.check_extensions(manifest)
-        self.db.make(name)
-        outcome = self.admin(name, sql.configure(name, manifest['extensions']))
+        self.db.make(row)
+        outcome = self.db.admin(name, sql.configure(name, manifest['extensions']), sql.ADMIN_OPTIONS)
+        if outcome == 'superuser':
+            raise ValueError(law.SUPERUSER_REFUSED)
         if outcome == 'granted':
             raise ValueError('frameworks log parameter SET granted to a role other than a superuser')
         if outcome != 'configured':
@@ -72,14 +68,17 @@ class Steps:
         sql.database(name)
         self.settings(name)
         if self.session(sql.restored(), name) != 't':
-            self.db.load(name, dump, self.db.save_list(row, self.select(row, dump, image)), ' ' + sql.CATALOG_PATH)
+            self.db.load(name, dump, self.db.save_list(row, self.select(row, dump, image)))
+        self.session(sql.apply(self.schema(image, row['manifest']['schema_version'])), name, sql.SCHEMA_PATH)
+        self.check_catalog(row, image)
+        self.session(sql.grants(name), name, sql.SCHEMA_PATH)
+
+    def check_catalog(self, row, image):
         schema = self.schema(image, row['manifest']['schema_version'])
-        self.session(sql.apply(schema), name, sql.SCHEMA_PATH)
-        outcome = self.session(check.executable(schema, row['manifest']['extensions']), name)
+        outcome = self.session(check.executable(schema, row['manifest']['extensions']), row['database_name'])
         if outcome != 'ok':
             kind = outcome if outcome in check.KINDS else 'object'
             raise ValueError('frameworks database ' + kind + ' differs from image schema version')
-        self.session(sql.grants(name), name, sql.SCHEMA_PATH)
 
     def validate(self, row):
         name = row['database_name']
@@ -95,6 +94,8 @@ class Steps:
         name = row['database_name']
         sql.database(name)
         self.db.check_lock()
+        if row['mode'] == 'retained':
+            self.check_catalog(row, image)
         report = self.db.describe(image, name, safe=SAFE)
         if not isinstance(report, dict) or report.get('status') != 'ok':
             raise ValueError('frameworks release-check did not report ok')

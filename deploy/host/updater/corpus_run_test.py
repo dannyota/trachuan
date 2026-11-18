@@ -132,6 +132,16 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.phase.download.assert_not_called()
         self.assertFalse(self.db.rows)
 
+    def test_aborted_target_activator_does_not_own_does_not_repeat_the_daily_prune(self):
+        name = self.m['database']
+        self.db.databases.add(name)
+        self.db.foreign.add(name)
+        self.db.append(self.phase.engine.begin('e' * 64, self.m, 'new', self.db.active), 'aborted')
+        (self.paths.state / self.phase.kind.marker).write_bytes(canonical('1970-01-02'))
+        self.phase.engine.prune = mock.Mock()
+        self.phase.prune('activate')
+        self.phase.engine.prune.assert_not_called()
+
     def test_new_activation_current_noop_and_daily_prune(self):
         self.assertTrue(self.run_phase())
         self.assertEqual(self.db.lists_discarded, 1)

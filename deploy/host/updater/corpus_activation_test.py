@@ -23,6 +23,7 @@ class Database:
         self.created = 0
         self.lists_removed = []
         self.lists_discarded = 0
+        self.foreign = set()
 
     def lock(self):
         return nullcontext()
@@ -61,8 +62,14 @@ class Database:
     def exists(self, name):
         return name in self.databases
 
+    def owned(self, name):
+        return name in self.databases and name not in self.foreign
+
     def connections(self, name):
         return False
+
+    def drop_owned(self, name):
+        self.drop(name)
 
     def drop(self, name):
         if self.protected(name):
@@ -166,6 +173,61 @@ class CorpusActivationTest(unittest.TestCase):
         self.activate()
         self.assertEqual(self.db.created, 1)
         self.assertEqual(self.db.dropped, [])
+
+    def test_unprotected_existing_target_reaches_the_create_step(self):
+        self.db.databases.add(self.m['database'])
+        self.assertEqual(self.engine.choose(self.m), ('new', self.db.active))
+        self.activate()
+        self.assertEqual(self.db.created, 1)
+        self.assertEqual(self.db.active, self.m['database'])
+
+    def test_existing_target_of_another_open_operation_is_refused(self):
+        self.db.databases.add(self.m['database'])
+        other = self.engine.begin('f' * 64, self.m, 'new', self.db.active)
+        self.assertEqual(self.db.operations()[0]['operation_id'], other['operation_id'])
+        with self.assertRaisesRegex(ValueError, 'target already exists'):
+            self.engine.choose(self.m)
+
+    def test_target_activator_does_not_own_is_refused_before_any_journal(self):
+        self.db.databases.add(self.m['database'])
+        self.db.foreign.add(self.m['database'])
+        with self.assertRaisesRegex(ValueError, 'target already exists'):
+            self.activate()
+        self.assertFalse(self.db.rows)
+        self.assertFalse(self.db.dropped)
+
+    def test_failed_create_keeps_a_target_activator_does_not_own(self):
+        def create(row):
+            self.db.databases.add(row['database_name'])
+            self.db.foreign.add(row['database_name'])
+            raise ValueError('activation target not owned by activator')
+        self.db.create = create
+        with self.assertRaisesRegex(ValueError, 'not owned by activator'):
+            self.activate()
+        self.assertEqual(self.db.operations()[0]['step'], 'aborted')
+        self.assertEqual(self.db.dropped, [])
+        self.assertTrue(self.db.exists(self.m['database']))
+
+    def test_cleanup_and_prune_keep_an_aborted_target_activator_does_not_own(self):
+        row = self.engine.begin(self.hash, self.m, 'new', self.db.active)
+        self.db.databases.add(self.m['database'])
+        self.db.foreign.add(self.m['database'])
+        self.engine.abort(row)
+        self.engine.abort_cleanup(self.db.operations()[0])
+        self.engine.prune()
+        self.assertEqual(self.db.dropped, [])
+        self.assertTrue(self.db.exists(self.m['database']))
+
+    def test_resume_past_the_create_step_keeps_the_database(self):
+        for step in ('created', 'restoring', 'restored', 'validated', 'checked'):
+            with self.subTest(step=step):
+                self.setUp()
+                self.db.after = step
+                with self.assertRaises(Crash):
+                    self.activate()
+                self.activate()
+                self.assertEqual(self.db.created, 1)
+                self.assertEqual(self.db.dropped, [])
 
     def test_changed_guards_abort_after_every_open_step_without_dropping_protected(self):
         for step in ('started', 'creating', 'created', 'restoring', 'restored', 'validated', 'checked'):

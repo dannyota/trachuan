@@ -56,6 +56,11 @@ class FrameworksCheckTest(StepsFixture, unittest.TestCase):
         self.assertIn('pg_temp.frameworks_before', sql)
         self.assertIn('pg_temp.frameworks_after', sql)
 
+    def test_activator_setting_rows_for_the_database_are_compared_by_value(self):
+        sql = check.executable(executable_sql(), self.m['extensions'])
+        self.assertIn("('setting','role activator','" + LOGS + "')", sql)
+        self.assertIn('e.definition IS NOT NULL AND a.definition IS DISTINCT FROM e.definition', sql)
+
     def test_roles_and_extensions_must_be_plain_names(self):
         for extensions, roles in (({'vector; DROP': '1'}, ('activator', 'corpus_reader')),
                                   ({'vector': '1'}, ('activator', 'Reader"'))):

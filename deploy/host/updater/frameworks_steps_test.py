@@ -33,8 +33,9 @@ def classify(args, text):
         return 'grant-corpus'
     if 'rm -f /run/pgbackrest/corpus-*.list' in args:
         return 'discard-lists'
-    if 'createdb' in args:
-        return 'createdb'
+    for program in ('createdb', 'dropdb'):
+        if program in args:
+            return program
     if 'pg_restore' in args:
         return 'list' if '--list' in args else 'pg_restore'
     if 'umask 077; cat > "$1"' in args:
@@ -44,7 +45,8 @@ def classify(args, text):
     if '/usr/local/bin/postgres-admin.sh' in args:
         return 'prewarm' if 'pg_prewarm' in text else 'configure' if 'ALTER DATABASE' in text else 'postgres'
     for word, name in (('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
-                       ('EXISTS(SELECT FROM pg_database', 'exists'), ("to_regclass('public.release')", 'restored'),
+                       ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'), ('frameworks_release WHERE active_db', 'protected'),
+                       ("to_regclass('public.release')", 'restored'),
                        ('frameworks_before', 'check'), ('CREATE OR REPLACE', 'apply'),
                        ('FROM public.release WHERE singleton', 'validate'), ('GRANT SELECT ON ALL TABLES', 'grants'),
                        ('current_setting', 'effective')):
@@ -134,9 +136,11 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
                      "pg_catalog.has_parameter_privilege(r.oid,p,'SET')",
                      'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n',
                      "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public VERSION '0.8.1';",
-                     "CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public VERSION '1.3';"):
+                     "CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public VERSION '1.3';",
+                     "pg_catalog.pg_has_role(r.oid,s.oid,'MEMBER')"):
             self.assertIn(text, sql)
         self.assertNotIn('GRANT', sql)
+        self.assertLess(sql.index('pg_has_role'), sql.index('\\if'))
         self.assertLess(sql.index('pg_parameter_acl'), sql.index('\\if'))
         self.assertLess(sql.index('\\if'), sql.index('ALTER DATABASE'))
         args, _ = self.call('effective')
@@ -145,10 +149,31 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
             self.assertIn("pg_catalog.current_setting('" + setting + "')", self.sql('effective'))
         self.assertIn('pg_catalog.concat_ws(', self.sql('effective'))
 
-    def test_existing_target_is_reconfigured_without_createdb(self):
+    def test_existing_target_is_dropped_and_created_again(self):
         self.responses['exists'] = b't\n'
         self.steps.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'configure', 'effective'])
+        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'protected', 'dropdb', 'createdb', 'owner',
+                                        'configure', 'effective'])
+        self.assertIn("operation_id <> '" + 'e' * 32 + "'", self.sql('protected'))
+
+    def test_existing_target_activator_does_not_own_is_refused_without_a_postgres_session(self):
+        self.responses.update(exists=b't\n', owner=b'postgres\n')
+        with self.assertRaisesRegex(ValueError, '^activation target not owned by activator$'):
+            self.steps.create(self.row)
+        self.assertEqual(self.names(), ['extensions', 'exists', 'owner'])
+
+    def test_protected_existing_target_is_refused_and_kept(self):
+        self.responses.update(exists=b't\n', protected=b't\n')
+        with self.assertRaisesRegex(ValueError, 'refusing to drop protected database'):
+            self.steps.create(self.row)
+        for name in ('dropdb', 'createdb', 'configure'):
+            self.assertNotIn(name, self.names())
+
+    def test_another_superuser_refuses_before_the_effective_check(self):
+        self.responses['configure'] = b'superuser\n'
+        with self.assertRaisesRegex(ValueError, '^a role other than postgres is a superuser or a member of one$'):
+            self.steps.create(self.row)
+        self.assertNotIn('effective', self.names())
 
     def test_parameter_grant_refuses_before_effective_check(self):
         self.responses['configure'] = b'granted\n'

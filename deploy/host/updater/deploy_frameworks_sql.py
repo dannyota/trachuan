@@ -1,7 +1,7 @@
 import re
 
 from . import deploy_corpus_sql as law
-from .deploy_corpus_sql import literal
+from .deploy_corpus_sql import CATALOG_PATH, SCHEMA_PATH, literal, plain
 
 
 KIND = 'frameworks'
@@ -9,21 +9,13 @@ LOG_SETTINGS = (('log_min_messages', 'panic'), ('log_min_error_statement', 'pani
                 ('log_min_duration_statement', '-1'), ('log_statement', 'none'))
 LOG_OPTIONS = ' '.join('-c ' + name + '=' + value for name, value in LOG_SETTINGS)
 EFFECTIVE = ','.join(value for _, value in LOG_SETTINGS)
-ADMIN_OPTIONS = LOG_OPTIONS + ' -c search_path=pg_catalog'
-CATALOG_PATH = '-c search_path=pg_catalog'
-SCHEMA_PATH = '-c search_path=pg_catalog,public'
+ADMIN_OPTIONS = LOG_OPTIONS + ' ' + CATALOG_PATH
 
 
 def database(name):
     if not isinstance(name, str) or not re.fullmatch(r'frameworks_[0-9]{8}(?:_[0-9]{1,2})?', name):
         raise ValueError('invalid frameworks database name')
     return '"' + name + '"'
-
-
-def plain(name):
-    if not isinstance(name, str) or not re.fullmatch('[a-z_][a-z0-9_]{0,62}', name):
-        raise ValueError('invalid frameworks role or extension name')
-    return name
 
 
 def effective():
@@ -44,19 +36,19 @@ def configure(name, extensions, activator='activator', reader='corpus_reader'):
     parameters = 'ARRAY[' + ','.join(literal(setting) for setting, _ in LOG_SETTINGS) + ']'
     settings = ''.join('ALTER ' + scope + ' SET ' + setting + ' = ' + literal(value) + ';\n'
                        for scope in scopes for setting, value in LOG_SETTINGS)
-    created = ''.join('CREATE EXTENSION IF NOT EXISTS ' + plain(extension) + ' WITH SCHEMA public VERSION ' +
-                      literal(version) + ';\n' for extension, version in extensions.items())
     return ('SELECT EXISTS(SELECT FROM pg_catalog.pg_parameter_acl a CROSS JOIN pg_catalog.aclexplode(a.paracl) x '
             'LEFT JOIN pg_catalog.pg_roles r ON r.oid=x.grantee WHERE a.parname=ANY(' + parameters + ") "
             "AND x.privilege_type='SET' AND r.rolsuper IS NOT TRUE) "
             'OR EXISTS(SELECT FROM pg_catalog.pg_roles r CROSS JOIN pg_catalog.unnest(' + parameters + ') p '
             "WHERE NOT r.rolsuper AND pg_catalog.has_parameter_privilege(r.oid,p,'SET')) "
-            'AS frameworks_log_granted \\gset\n'
-            '\\if :frameworks_log_granted\n'
+            'AS frameworks_log_granted \\gset\n' + law.SUPERUSER_CHECK +
+            '\\if :release_superuser\n'
+            "SELECT 'superuser';\n"
+            '\\elif :frameworks_log_granted\n'
             "SELECT 'granted';\n"
             '\\else\n'
             'BEGIN;\n'
-            'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n' + settings + created +
+            'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n' + settings + law.create_extensions(extensions) +
             'COMMIT;\n'
             "SELECT 'configured';\n"
             '\\endif\n')
@@ -67,13 +59,7 @@ def apply(schema):
 
 
 def grants(name, reader='corpus_reader'):
-    role = '"' + plain(reader) + '"'
-    return ('BEGIN;\n' + guard() + 'GRANT CONNECT ON DATABASE ' + database(name) + ' TO ' + role + ';\n'
-            'REVOKE CREATE ON SCHEMA public FROM PUBLIC;\n'
-            'GRANT USAGE ON SCHEMA public TO ' + role + ';\n'
-            'GRANT SELECT ON ALL TABLES IN SCHEMA public TO ' + role + ';\n'
-            'GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ' + role + ';\n'
-            'COMMIT;\n')
+    return law.owner_grants(database(name), reader, guard())
 
 
 def release_row():
@@ -152,13 +138,13 @@ COMMIT;
 """
 
 
-def protected(name):
+def protected(name, operation=None):
     target = literal(name)
     return f"""SELECT EXISTS(SELECT FROM frameworks_release WHERE active_db={target})
 OR EXISTS(SELECT FROM retired_release WHERE corpus_kind='frameworks' AND db_name={target} AND retain_until > now())
 OR EXISTS(SELECT FROM (
   SELECT DISTINCT ON (operation_id) * FROM release_journal
   WHERE corpus_kind='frameworks' AND operation_id IS NOT NULL ORDER BY operation_id,id DESC
-) j WHERE database_name={target} AND mode <> 'prune'
+) j WHERE database_name={target} AND mode <> 'prune'{law.other_operation(operation)}
   AND step NOT IN ('activated','reverted','aborted','pruned'));
 """

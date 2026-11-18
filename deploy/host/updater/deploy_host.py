@@ -1,5 +1,6 @@
 import re
 
+from .deploy_corpus_sql import CATALOG_PATH, PREWARM, PREWARM_SKIPPED, SCHEMA_PATH, database_owner
 from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
@@ -8,6 +9,12 @@ from .deploy_verify import as_user, pull_image
 def pins(manifest):
     images = dict(manifest['images'], **manifest['upstream'])
     return ''.join(name.upper() + '_IMAGE=' + image + '\n' for name, image in sorted(images.items())).encode()
+
+
+def activator_arguments(*args):
+    return ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
+            'set +x; set -eu; export PGPASSWORD; PGPASSWORD=$(cat /run/secrets/activator_db_password); '
+            '[ -n "$PGPASSWORD" ]; exec "$@"', 'sh', *args]
 
 
 class Host:
@@ -33,11 +40,19 @@ class Host:
     def publish_user(self, path, data, mode=0o644):
         self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
-    def psql(self, database, sql):
-        return self.user('podman', 'exec', '-i', 'trachuan-postgres',
-                         '/usr/local/bin/postgres-admin.sh', 'psql', '-XAt',
+    def psql(self, database, sql, options=SCHEMA_PATH):
+        return self.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + options, 'trachuan-postgres',
+                         '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt',
                          '-h', '127.0.0.1', '-U', 'postgres', '-d', database,
                          '-v', 'ON_ERROR_STOP=1', input=sql.encode())
+
+    def activator(self, *args, **kwargs):
+        return self.user(*activator_arguments(*args), **kwargs)
+
+    def activator_psql(self, database, sql, options=SCHEMA_PATH):
+        return self.activator('env', 'PGOPTIONS=' + options, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1',
+                              '-U', 'activator', '-v', 'ON_ERROR_STOP=1', '-d', database,
+                              input=('SET standard_conforming_strings=on;\n' + sql).encode()).decode().strip()
 
     def schema(self):
         raw = self.psql('auth', 'SELECT coalesce(max(version_id),0) FROM goose_db_version;').decode().strip()
@@ -92,14 +107,24 @@ class Host:
     def postgres(self):
         self.restart_postgres()
         self.user('podman', 'exec', 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
-        database = self.psql('auth', "SELECT active_db FROM corpus_release WHERE country = 'vn';").decode().strip()
+        database = self.psql('auth', "SELECT active_db FROM public.corpus_release WHERE country = 'vn';").decode().strip()
         if not re.fullmatch(r'corpus_vn_[0-9]{8}_[0-9]+', database):
             raise ValueError('invalid active corpus database')
-        self.psql(database, "BEGIN; CREATE EXTENSION pg_prewarm; "
-                  "SELECT sum(pg_prewarm(c.oid)) FROM pg_class c "
-                  "JOIN pg_namespace n ON n.oid = c.relnamespace "
-                  "WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't'); "
-                  "DROP EXTENSION pg_prewarm; COMMIT;")
+        self.prewarm_active(database)
+
+    def prewarm_active(self, database):
+        if not self.provision_activator():
+            return self.prewarm_skipped('activator not provisioned')
+        if self.psql('auth', database_owner(database)).decode().strip() != 'activator':
+            return self.prewarm_skipped('database not owned by activator')
+        if self.activator_psql(database, PREWARM, CATALOG_PATH) == PREWARM_SKIPPED:
+            self.prewarm_skipped('database has no pg_prewarm')
+
+    def prewarm_skipped(self, reason):
+        try:
+            self.warning('prewarm', 'active corpus prewarm skipped: ' + reason)
+        except OSError:
+            pass
 
     def provision_activator(self):
         available = True

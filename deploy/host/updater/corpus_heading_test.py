@@ -72,14 +72,15 @@ class HeadingTest(unittest.TestCase):
                    dump_sha256=obj['dump']['sha256'])
         for present, supported in ((False, False), (True, False), (True, True)):
             calls = []
-            def query(text, database='auth'):
+            def query(text, database='auth', options=None):
                 calls.append((text, database))
                 if database == 'auth':
                     return json.dumps(dict(row, step='activated'))
                 self.assertEqual(database, obj['database'])
-                if text == "SELECT to_regclass('public.document_summary') IS NOT NULL;":
+                self.assertEqual(options, '-c search_path=pg_catalog')
+                if text == "SELECT pg_catalog.to_regclass('public.document_summary') IS NOT NULL;":
                     return 't' if present else 'f'
-                if text == 'SELECT NOT EXISTS(SELECT FROM document_summary WHERE projection <> 1);':
+                if text == 'SELECT NOT EXISTS(SELECT FROM public.document_summary WHERE projection <> 1);':
                     return 't' if supported else 'f'
                 self.fail('unexpected capability query')
             db = Database(None, None)

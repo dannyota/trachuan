@@ -97,7 +97,8 @@ class CorpusDatabaseTest(unittest.TestCase):
 
     def test_restore_uses_transaction_toc_and_manifest_extension_versions(self):
         self.response = b'f\n'
-        with mock.patch.object(self.db, 'toc', return_value='/run/pgbackrest/test.list'):
+        with mock.patch.object(self.db, 'toc', return_value='/run/pgbackrest/test.list'), \
+             mock.patch.object(self.db, 'check_catalog'):
             self.db.restore(self.row, '/synthetic/dump')
         args, kwargs = next((args, kwargs) for args, kwargs in self.calls if 'pg_restore' in args)
         for value in ('--single-transaction', '--no-owner', '--no-privileges', '--exit-on-error', '--use-list'):

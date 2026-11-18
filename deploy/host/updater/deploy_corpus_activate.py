@@ -25,7 +25,7 @@ class Activation:
             return 'retained', active
         if active != self.kind.previous(manifest):
             raise ValueError('new ' + self.kind.label + ' previous does not equal active release')
-        if self.db.exists(name):
+        if self.db.exists(name) and (self.db.protected(name) or not self.db.owned(name)):
             raise ValueError('new ' + self.kind.label + ' target already exists')
         return 'new', active
 
@@ -41,10 +41,7 @@ class Activation:
         if latest['step'] in ('activated', 'reverted'):
             return
         self.db.append(row, 'aborted')
-        name = row['database_name']
-        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.exists(name)
-                and not self.db.connections(name)):
-            self.db.drop(name)
+        self.abort_cleanup(row)
         self.db.remove_list(row['operation_id'])
 
     def guarded(self, row):
@@ -114,9 +111,9 @@ class Activation:
 
     def abort_cleanup(self, row):
         name = row['database_name']
-        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.exists(name)
+        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.owned(name)
                 and not self.db.connections(name)):
-            self.db.drop(name)
+            self.db.drop_owned(name)
 
     def prune_one(self, row):
         name = row['database_name']

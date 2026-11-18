@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 from updater import activation_test as fixture
@@ -11,6 +13,29 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertIn("SELECT 'GRANT SELECT, INSERT, UPDATE ON frameworks_release TO activator'\n"
                       "WHERE to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
         self.assertNotIn("'retired_release','frameworks_release'", script)
+
+    def provision_input(self):
+        script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
+        with tempfile.NamedTemporaryFile('w', suffix='.secret') as secret:
+            secret.write('synthetic-password')
+            secret.flush()
+            script = script.replace('/run/secrets/activator_db_password', secret.name)
+            script = script.replace('/usr/local/bin/postgres-admin.sh', 'postgres_admin')
+            fake = 'postgres_admin() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n'
+            result = subprocess.run(['bash', '-c', fake + script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
+    def test_activator_settings_are_reset_except_in_frameworks_databases(self):
+        text = self.provision_input()
+        self.assertIn('ALTER ROLE activator RESET ALL;\n', text)
+        self.assertIn("pg_catalog.format('ALTER ROLE activator IN DATABASE %I RESET ALL', d.datname)", text)
+        self.assertIn('FROM pg_catalog.pg_db_role_setting s', text)
+        self.assertIn("d.datname !~ '^frameworks_[0-9]{8}(_[0-9]{1,2})?$' \\gexec", text)
+        self.assertLess(text.index('ALTER ROLE activator LOGIN'), text.index('ALTER ROLE activator RESET ALL;'))
+
+    def test_provisioner_session_pins_search_path(self):
+        self.assertIn('-c search_path=pg_catalog,public', self.provision_input().splitlines()[0])
 
     def test_provision_checks_both_running_container_mounts(self):
         self.calls.clear()

@@ -59,6 +59,17 @@ class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
         self.assertIs(kwargs['safe'], SAFE)
         self.assertEqual(kwargs['timeout'], 150)
 
+    def test_retained_database_passes_the_catalog_check_before_the_release_check(self):
+        row = dict(self.row, mode='retained')
+        self.steps.smoke(row, 'server-image')
+        self.assertEqual(self.names(), ['schema', 'check', 'release-check'])
+        self.assert_activator(self.call('check')[0], self.name)
+        self.calls.clear()
+        self.responses['check'] = b'setting\n'
+        with self.assertRaisesRegex(ValueError, '^frameworks database setting differs from image schema version$'):
+            self.steps.smoke(row, 'server-image')
+        self.assertNotIn('release-check', self.names())
+
     def test_smoke_requires_ok_status(self):
         for value in (b'{"status":"failed"}\n', b'[]\n'):
             self.responses['release-check'] = value

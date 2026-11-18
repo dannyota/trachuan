@@ -73,6 +73,8 @@ class ActivationFixture:
                 return (str(self.schema) + '\n').encode()
             if input and b'active_db' in input:
                 return b'corpus_vn_20990101_1\n'
+            if input and b'datdba' in input:
+                return b'activator\n'
         if args[:1] == ['curl']:
             return b'200'
         if 'show' in args:

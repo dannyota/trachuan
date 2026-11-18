@@ -168,7 +168,7 @@ class Corpus:
         previous = json.loads(marker.read_bytes()) if marker.exists() else None
         with self.db.lock():
             interrupted = any(r['step'] == 'pruning' or (r['step'] == 'aborted'
-                and self.db.exists(r['database_name']) and not self.db.protected(r['database_name']))
+                and self.db.owned(r['database_name']) and not self.db.protected(r['database_name']))
                 for r in self.db.operations())
             if previous != day or interrupted:
                 self.step = 'prune'
