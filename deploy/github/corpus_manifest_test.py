@@ -32,7 +32,10 @@ class CorpusManifestTest(unittest.TestCase):
                         build_artifact_sha256=self.report['build_artifact_sha256'], schema_version=6,
                         extensions=self.row['extensions'],
                         recipes=dict(dense=self.row['dense_recipe'], chunk=self.row['chunk_recipe'],
-                                     lexical=self.row['lexical_recipe'], retrieval=self.row['retrieval_recipe']))
+                                     lexical=self.row['lexical_recipe'], retrieval=self.row['retrieval_recipe']),
+                        evidence={name: digest((self.path / file).read_bytes()) for name, file in
+                                  (('findings_sha256', 'findings.json'), ('identity_sha256', 'identity.jsonl'),
+                                   ('changes_sha256', 'changes.jsonl'))})
         self.assertEqual(obj, canonical(expected))
         self.assertEqual(self.module.read_manifest(obj), expected)
         with self.assertRaises(ValueError):

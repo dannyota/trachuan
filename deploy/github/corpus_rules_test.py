@@ -49,11 +49,12 @@ class CorpusRulesTest(unittest.TestCase):
         for field in corpus_rules.DECISION_FIELDS:
             self.assertTrue(corpus_rules.first_signing_allowed('vn', '20990103_1', {field: 'a' * 64}))
 
-    def test_decision_fields_are_refused_until_the_sidecar_gate(self):
-        corpus_rules.refuse_until_sidecar_gate(dict(run={}))
+    def test_decision_fields_are_the_two_report_hashes_and_the_three_evidence_hashes(self):
+        self.assertEqual(corpus_rules.DECISION_FIELDS, ('eval_report_sha256', 'previous_report_sha256', 'findings_sha256',
+                                                        'identity_sha256', 'changes_sha256'))
         for field in corpus_rules.DECISION_FIELDS:
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'sidecar gate'):
-                corpus_rules.refuse_until_sidecar_gate(dict(run={field: 'a' * 64}))
+            self.assertTrue(corpus_rules.has_decision({field: 'none'}))
+        self.assertFalse(corpus_rules.has_decision({'complete': True}))
 
     def test_status_endpoint_serves_only_vietnam(self):
         corpus_rules.require_status_country('vn')

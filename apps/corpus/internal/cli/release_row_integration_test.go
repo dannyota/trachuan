@@ -65,6 +65,17 @@ func TestReleaseRow_ReadOnlyMetadataAndAcceptedGaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	evidenceArtifact, err := artifacts.Publish(ctx, "evidence", hash, hash, func(dir string) error {
+		for name, body := range evidenceFiles {
+			if writeErr := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); writeErr != nil {
+				return writeErr
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	var runID, artifactID, evalID, evidenceID int64
 	if err = workshop.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES ('vn',$1,'evaluated','{"PreviousReport":{"sha256":"none"}}') RETURNING id`, rel).Scan(&runID); err != nil {
 		t.Fatal(err)
@@ -75,7 +86,7 @@ func TestReleaseRow_ReadOnlyMetadataAndAcceptedGaps(t *testing.T) {
 	if err = workshop.QueryRow(ctx, `INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('eval',$1,$2,$2,$3,$4) RETURNING id`, key, hash, evalArtifact.Path, evalArtifact.SHA256).Scan(&evalID); err != nil {
 		t.Fatal(err)
 	}
-	if err = workshop.QueryRow(ctx, `INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('evidence',$1,$2,$2,'synthetic-evidence',$2) RETURNING id`, key, hash).Scan(&evidenceID); err != nil {
+	if err = workshop.QueryRow(ctx, `INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('evidence',$1,$2,$2,$3,$4) RETURNING id`, key, hash, evidenceArtifact.Path, evidenceArtifact.SHA256).Scan(&evidenceID); err != nil {
 		t.Fatal(err)
 	}
 	_, err = workshop.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,input_hash,recipe_hash,state,batch,artifact_id)
@@ -96,6 +107,9 @@ func TestReleaseRow_ReadOnlyMetadataAndAcceptedGaps(t *testing.T) {
 				Complete             bool   `json:"complete"`
 				EvalReportSHA256     string `json:"eval_report_sha256"`
 				PreviousReportSHA256 string `json:"previous_report_sha256"`
+				FindingsSHA256       string `json:"findings_sha256"`
+				IdentitySHA256       string `json:"identity_sha256"`
+				ChangesSHA256        string `json:"changes_sha256"`
 			} `json:"run"`
 		}
 		if readErr = json.Unmarshal(data, &row); readErr != nil || row.Rel != rel || row.Run.Complete != want || len(row.Extensions) != 2 || row.Extensions["vector"] == "" || row.Extensions["ltree"] == "" {
@@ -103,6 +117,9 @@ func TestReleaseRow_ReadOnlyMetadataAndAcceptedGaps(t *testing.T) {
 		}
 		if row.Run.EvalReportSHA256 != sha256Hex(reportBody) || row.Run.PreviousReportSHA256 != "none" {
 			t.Fatalf("report hashes in %s", data)
+		}
+		if row.Run.FindingsSHA256 != sha256Hex([]byte(evidenceFiles["findings.json"])) || row.Run.IdentitySHA256 != sha256Hex([]byte(evidenceFiles["identity.jsonl"])) || row.Run.ChangesSHA256 != sha256Hex([]byte(evidenceFiles["changes.jsonl"])) {
+			t.Fatalf("evidence hashes in %s", data)
 		}
 	}
 	read(false)
@@ -127,7 +144,9 @@ func TestReleaseRow_ReadOnlyMetadataAndAcceptedGaps(t *testing.T) {
 	if _, err = workshop.Exec(ctx, `DELETE FROM run_item WHERE run_id=$1 AND stage='evidence'`, runID); err != nil {
 		t.Fatal(err)
 	}
-	read(false)
+	if _, err = readReleaseRow(ctx, "vn", rel, builderURL, workshopURL, artifacts); err == nil || !strings.Contains(err.Error(), "no done evidence") {
+		t.Fatalf("decided run without evidence: %v", err)
+	}
 	if _, err = workshop.Exec(ctx, `UPDATE run SET snapshot='{}' WHERE id=$1`, runID); err != nil {
 		t.Fatal(err)
 	}

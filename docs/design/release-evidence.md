@@ -19,8 +19,9 @@ binds, and never changes, the build artifact and the evaluation report.
 - `identity.jsonl` and `changes.jsonl` hold one JSON object per line, at most 1
   MiB each. The first line holds the schema version and the bindings. Later
   lines are sorted by record type and then by document key, anchor, or a
-  relation's identity, so equal inputs give equal bytes. A relation's identity
-  is its kind, method and two ends; equal rows compare as a count.
+  relation's identity (the byte order of its JSON), so equal inputs give equal
+  bytes. A relation's identity is its kind, method and two ends; equal rows
+  compare as a count. Taxonomy codes are sorted by code.
 - An anchor with no `~k` component is derived from the kinds and tokens on the
   provision's path ([text structure](text-structure.md)). A `~k` suffix numbers
   repeated anchors in tree order and is not stable across releases. A provision
@@ -176,15 +177,17 @@ predecessor's:
   recorded as `source_replaced` naming both keys (a release requires that gap
   accepted) ([sources](sources.md#secondary-discovery-and-hand-over)), and only
   when the old key has a document line in the predecessor's summary and the new
-  key has one in this summary. The document is then a surviving document,
-  compared as one: metadata and classification as on a surviving key; provisions
-  paired by equal anchor, each record carrying `provenance: true`; relation ends
-  compared with the old key read as the new key, so a relation that differs only
-  by the key is unchanged. When the new key has no document line, as after a
-  failed fetch of the replacement, the old document is a removal with cause
-  `source` that names the replacement key in `replaced_by`, and the replacement
-  is an addition in the release that first holds it. Any other change of key is
-  one removal and one addition;
+  key has one in this summary, neither key has a line on the other side, and no
+  other old key names the same replacement. The document is then a surviving
+  document, compared as one: metadata and classification as on a surviving key;
+  provisions paired by equal anchor, each record carrying `provenance: true`;
+  relation ends compared with the old key read as the new key, so a relation
+  that differs only by the key is unchanged. When the new key has no document
+  line, as after a failed fetch of the replacement, or when the pair fails
+  another condition, the old document is a removal with cause `source` that
+  names the replacement key in `replaced_by`, and the replacement is an addition
+  in the release that first holds it. Any other change of key is one removal and
+  one addition;
 - document metadata: `number_norm` before and after on a surviving key;
 - provisions added, removed and changed (text hash before and after) in
   surviving documents. Each carries `provenance: true` when its document's text
@@ -196,6 +199,11 @@ predecessor's:
   `provision_validity` rows added and removed;
 - provenance changes: text source, completeness, served from a baseline;
 - classification changes: node codes added to and removed from a provision.
+
+Classification and validity records carry the same `provenance` and `ambiguous`
+flags as provision records. The record types are `document`, `document_key`,
+`document_metadata`, `document_legal`, `document_provenance`, `provision`,
+`provision_classification`, `provision_validity` and `relation`.
 
 Added, removed and hand-over rules count only document lines that are not
 `absent`. When the predecessor has no summary (it predates evidence, or there is
@@ -247,11 +255,10 @@ none.
 
 The sidecar rows apply exactly to a release whose `release.json` carries the
 decision fields. Above the [cutoff](#runs-before-this-rule) a release without
-them is refused, so they cannot be dropped to avoid these rows. Until these rows
-ship, signing refuses a release with a decision. Their change to the `evidence`
-recipe means a run with a decision started earlier takes a new `rel`. A
-predecessor without a decision counts as having no summary for `changes.jsonl`;
-one with a decision but no `identity.jsonl` fails the stage.
+them is refused, so they cannot be dropped to avoid these rows. Their change to
+the `evidence` recipe means a run with a decision started earlier takes a new
+`rel`. A predecessor without a decision counts as having no summary for
+`changes.jsonl`; one with a decision but no `identity.jsonl` fails the stage.
 
 ## Downstream use
 

@@ -9,7 +9,8 @@ from manifest import canonical, positive, require_match
 from corpus_cohorts import cohort_counts
 from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
-from corpus_rules import DECISION_FIELDS, has_decision, older_shape_allowed, refuse_until_sidecar_gate, require_status_country
+from corpus_evidence import SIDECARS, validate_evidence_field, validate_sidecars
+from corpus_rules import DECISION_FIELDS, has_decision, older_shape_allowed, require_status_country
 
 
 def unique_object(pairs):
@@ -37,9 +38,11 @@ def identity(country, rel):
     require_match(r'[0-9]{8}_[0-9]+', rel, 'rel')
 
 
-def release_files(schema_version):
+def release_files(row):
     names = ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json')
-    return names + ('build.json',) if schema_version >= 8 else names
+    if row['schema_version'] >= 8:
+        names += ('build.json',)
+    return names + SIDECARS if has_decision(row['run']) else names
 
 
 def no_research_override(value):
@@ -176,7 +179,7 @@ def validate_selected_report(row, report, report_bytes, signing):
             raise ValueError('release run has no selected report decision')
         return
     if not all(field in run for field in DECISION_FIELDS):
-        raise ValueError('release run has only one selected report hash')
+        raise ValueError('release run has only some decision fields')
     if hashlib.sha256(report_bytes).hexdigest() != run['eval_report_sha256']:
         raise ValueError('report differs from the selected report')
     if report['previous_diff']['previous']['report_sha256'] != run['previous_report_sha256']:
@@ -184,7 +187,7 @@ def validate_selected_report(row, report, report_bytes, signing):
 
 
 def validate_inputs(country, rel, directory, report_path, signing=False):
-    row, report, _ = validated_inputs(country, rel, directory, report_path, signing)
+    row, report, _, _ = validated_inputs(country, rel, directory, report_path, signing)
     return row, report
 
 
@@ -231,7 +234,10 @@ def validated_inputs(country, rel, directory, report_path, signing=False):
                         scan_sha256=record.get('heading_scan_sha256'),
                         exclusions_sha256=record.get('heading_exclusions_sha256'))
         validate_heading_evidence(evidence)
-    return row, report, evidence
+    sidecars = None
+    if has_decision(run):
+        sidecars = validate_sidecars(row, report, report_bytes, directory, dump_hash, build_hash)
+    return row, report, evidence, sidecars
 
 
 def validate_heading_evidence(value):
@@ -247,10 +253,12 @@ def validate_manifest(obj):
     keys = {'kind', 'version', 'repository', 'commit', 'country', 'rel', 'database',
             'sequence', 'previous', 'dump', 'report', 'build_artifact_sha256',
             'schema_version', 'extensions', 'recipes'}
-    if not isinstance(obj, dict) or set(obj) - {'heading_review', 'heading_evidence'} != keys:
+    if not isinstance(obj, dict) or set(obj) - {'heading_review', 'heading_evidence', 'evidence'} != keys:
         raise ValueError('invalid corpus manifest fields')
     if 'heading_review' in obj:
         validate_heading_review(obj['heading_review'])
+    if 'evidence' in obj:
+        validate_evidence_field(obj['evidence'])
     for key, value in dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError(f'invalid {key}')
@@ -291,7 +299,7 @@ def read_manifest(data):
 
 
 def manifest_fields(commit, sequence, country, rel, directory, report_path, previous_report=None):
-    row, report, evidence = validated_inputs(country, rel, directory, report_path, signing=True)
+    row, report, evidence, sidecars = validated_inputs(country, rel, directory, report_path, signing=True)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
     obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
@@ -305,6 +313,8 @@ def manifest_fields(commit, sequence, country, rel, directory, report_path, prev
                recipes={name: row[name + '_recipe'] for name in ('dense', 'chunk', 'lexical', 'retrieval')})
     if evidence is not None:
         obj['heading_evidence'] = evidence
+    if sidecars is not None:
+        obj['evidence'] = sidecars['evidence']
     return obj
 
 
@@ -328,18 +338,18 @@ def main():
     if args.command == 'validate':
         require_status_country(args.country)
         row, _ = validate_inputs(args.country, args.rel, args.directory, args.report)
-        refuse_until_sidecar_gate(row)
         if args.list_files:
-            print('\n'.join(release_files(row['schema_version'])))
+            print('\n'.join(release_files(row)))
     else:
         if args.list_files:
             parser.error('--list-files requires validate')
         if os.environ['GITHUB_REF'] != 'refs/heads/main':
             raise ValueError('dispatch corpus release from main')
         from corpus_previous import check_remote
-        row, report = validate_inputs(args.country, args.rel, args.directory, args.report, signing=True)
-        refuse_until_sidecar_gate(row)
-        previous_report = check_remote(report, release_row=row)
+        row, report, _, sidecars = validated_inputs(args.country, args.rel, args.directory, args.report, signing=True)
+        if sidecars is not None:
+            print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
+        previous_report = check_remote(report, release_row=row, sidecars=sidecars)
         (args.directory / 'manifest.json').write_bytes(create(
             os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),
             args.country, args.rel, args.directory, args.report, previous_report=previous_report))

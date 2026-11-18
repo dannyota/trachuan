@@ -88,6 +88,9 @@ func newBatchFixture(t *testing.T, decision stage.PreviousReport) *batchFixture 
 	f := &batchFixture{t: t, ctx: ctx, db: db, env: stage.Env{DB: db, Artifacts: artifact.Store{Root: t.TempDir()}}}
 	f.stage = New(Config{Detectors: []Detector{batchDetector{fixture: f}}})
 	f.stage.release = func(context.Context, stage.Env, stage.Run) (*pgxpool.Pool, func(), error) { return nil, func() {}, nil }
+	summary, current := currentSummary()
+	f.stage.summary = func(*pgxpool.Pool) summarySource { return summary }
+	f.stage.members = func(context.Context, stage.Env, stage.Run) (members, error) { return current, nil }
 	f.stage.lookup = func(context.Context, stage.Env, store.Querier, stage.Run) (artifact.Result, error) {
 		return f.build, nil
 	}
@@ -157,7 +160,8 @@ func (f *batchFixture) addPredecessor(frozen string) {
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	f.commit(id, 1, stage.EvidenceStage, "vn/"+previousRel, bareSHA256(data), f.recipes[stage.EvidenceStage], map[string]string{findingsFile: string(data)})
+	identity := predecessorIdentityBytes(f.t, previousRel, frozen)
+	f.commit(id, 1, stage.EvidenceStage, "vn/"+previousRel, bareSHA256(data), f.recipes[stage.EvidenceStage], map[string]string{findingsFile: string(data), identityFile: string(identity)})
 }
 
 func (f *batchFixture) plan() {

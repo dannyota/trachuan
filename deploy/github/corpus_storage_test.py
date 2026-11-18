@@ -10,8 +10,9 @@ from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from corpus_evidence import LIMITS, SIDECARS
 from corpus_upload_test import FAKE
-from corpus_test_support import add_heading_build, digest, save_fixture, write_fixture
+from corpus_test_support import add_heading_build, digest, save_fixture, save_older_shape, write_fixture
 
 
 class CorpusStorageTest(unittest.TestCase):
@@ -34,14 +35,14 @@ class CorpusStorageTest(unittest.TestCase):
                         OCI_S3_ENDPOINT='https://synthetic.example', PYTHONDONTWRITEBYTECODE='1',
                         FAKE_AWS_VERSION='2.40.0')
 
-    def test_downloads_all_four_objects_with_path_style_and_size_checks(self):
+    def test_downloads_all_seven_objects_of_a_decision_release_with_path_style_and_size_checks(self):
         output = self.path / 'download'
         with patch.dict(os.environ, self.env, clear=True):
             self.storage.download('vn', '20990102_1', output)
-        for name in ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json'):
+        for name in ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json') + SIDECARS:
             self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
-        self.assertEqual(sum('get-object' in call['args'] for call in calls), 4)
+        self.assertEqual(sum('get-object' in call['args'] for call in calls), 7)
         self.assertGreater(min(i for i, call in enumerate(calls) if 'get-object' in call['args']),
                            max(i for i, call in enumerate(calls) if 'head-object' in call['args']))
         for call in calls:
@@ -66,9 +67,35 @@ class CorpusStorageTest(unittest.TestCase):
             self.storage.download('../', '20990102_1', self.path / 'unused')
         self.assertFalse(self.log.exists())
 
+    def test_older_shape_downloads_four_objects_and_never_its_stray_evidence(self):
+        save_older_shape(self.remote, self.row)
+        output = self.path / 'older'
+        with patch.dict(os.environ, self.env, clear=True):
+            self.storage.download('vn', '20990102_1', output)
+        self.assertEqual(sorted(path.name for path in output.iterdir()), sorted(['corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json']))
+        for name in SIDECARS:
+            (self.remote / name).unlink()
+        with patch.dict(os.environ, self.env, clear=True):
+            self.storage.download('vn', '20990102_1', self.path / 'older-without-evidence')
+
+    def test_decision_release_missing_evidence_refuses_before_dump_download(self):
+        for name in SIDECARS:
+            with self.subTest(name=name):
+                data = (self.remote / name).read_bytes()
+                (self.remote / name).unlink()
+                self.log.unlink(missing_ok=True)
+                with patch.dict(os.environ, self.env, clear=True), self.assertRaisesRegex(ValueError, 'evidence files'):
+                    self.storage.download('vn', '20990102_1', self.path / ('missing-' + name))
+                calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+                self.assertFalse(any('get-object' in call['args'] and 'vn/20990102_1/corpus.dump' in call['args'] for call in calls))
+                (self.remote / name).write_bytes(data)
+
+    def test_evidence_limits_are_sixteen_mib_and_one_gib(self):
+        self.assertEqual(LIMITS, {'findings.json': 16 * 1024**2, 'identity.jsonl': 1024**3, 'changes.jsonl': 1024**3})
+
     def test_rejects_every_object_limit_before_downloading(self):
         limits = {'corpus.dump': 16 * 1024**3, 'report.json': 16 * 1024**2,
-                  'release.json': 16 * 1024**2, 'MANIFEST.sha256': 1024**2}
+                  'release.json': 16 * 1024**2, 'MANIFEST.sha256': 1024**2} | LIMITS
         for name, limit in limits.items():
             with self.subTest(name=name), patch.dict(os.environ, self.env | {
                     'FAKE_HEAD_SIZES': json.dumps({name: limit + 1})}, clear=True):
@@ -79,7 +106,7 @@ class CorpusStorageTest(unittest.TestCase):
                 self.log.unlink()
 
     def test_checks_aggregate_against_free_space_with_two_gib_reserved(self):
-        total = sum((self.remote / name).stat().st_size for name in ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json'))
+        total = sum((self.remote / name).stat().st_size for name in ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json') + SIDECARS)
         reserve = 2 * 1024**3
         for free in (reserve - 1, reserve + total - 1, reserve + total):
             with self.subTest(free=free), patch.dict(os.environ, self.env, clear=True), \
@@ -145,16 +172,16 @@ class CorpusStorageTest(unittest.TestCase):
                     self.storage.download('vn', '20990102_1', self.path / version)
                 self.assertFalse((self.path / version).exists())
 
-    def test_schema_eight_downloads_all_five_objects_after_all_heads(self):
+    def test_schema_eight_downloads_all_eight_objects_after_all_heads(self):
         add_heading_build(self.remote, self.row, self.report)
         output = self.path / 'schema-eight'
         with patch.dict(os.environ, self.env, clear=True):
             self.storage.download('vn', '20990102_1', output)
-        names = ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json', 'build.json')
+        names = ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json', 'build.json') + SIDECARS
         for name in names:
             self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
-        self.assertEqual(sum('get-object' in call['args'] for call in calls), 5)
+        self.assertEqual(sum('get-object' in call['args'] for call in calls), 8)
         self.assertLess(max(i for i, call in enumerate(calls) if 'head-object' in call['args']),
                         min(i for i, call in enumerate(calls) if 'get-object' in call['args']))
         for call in calls:
@@ -191,7 +218,7 @@ class CorpusStorageTest(unittest.TestCase):
     def test_schema_eight_counts_build_record_in_free_space_check(self):
         add_heading_build(self.remote, self.row, self.report)
         total = sum((self.remote / name).stat().st_size for name in
-                    ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json', 'build.json'))
+                    ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json', 'build.json') + SIDECARS)
         with patch.dict(os.environ, self.env, clear=True), \
                 patch('shutil.disk_usage', return_value=SimpleNamespace(free=2 * 1024**3 + total)):
             with self.assertRaises(ValueError):

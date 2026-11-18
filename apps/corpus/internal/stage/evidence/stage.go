@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const serialization = "findings.json/1"
+const serialization = "findings.json/2,identity.jsonl/1,changes.jsonl/1"
 
 type Config struct {
 	Build     build.Config
@@ -31,6 +31,8 @@ type Stage struct {
 	queries func(stage.Env) store.Querier
 	lookup  func(context.Context, stage.Env, store.Querier, stage.Run) (artifact.Result, error)
 	release func(context.Context, stage.Env, stage.Run) (*pgxpool.Pool, func(), error)
+	summary func(*pgxpool.Pool) summarySource
+	members func(context.Context, stage.Env, stage.Run) (members, error)
 }
 
 func New(cfg Config) *Stage { return &Stage{cfg: cfg} }
@@ -103,7 +105,12 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, itemFailure(err)
 	}
-	runs, err := s.runDetectors(ctx, env, run, inputs)
+	pool, closePool, err := s.openRelease(ctx, env, run)
+	if err != nil {
+		return stage.Output{}, itemFailure(&IncompleteError{Detector: strings.Join(s.detectorIDs(), ","), Reason: "release database unavailable: " + err.Error()})
+	}
+	defer closePool()
+	runs, err := s.runDetectors(ctx, env, run, inputs, pool)
 	if err != nil {
 		return stage.Output{}, itemFailure(err)
 	}
@@ -115,8 +122,15 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, itemFailure(err)
 	}
+	m, err := s.loadMembers(ctx, env, run, inputs.buildDir)
+	if err != nil {
+		return stage.Output{}, itemFailure(err)
+	}
 	result, err := env.Artifacts.Publish(ctx, stage.EvidenceStage, inputs.inputHash(), s.Recipe(run.Snapshot), func(dir string) error {
-		return os.WriteFile(filepath.Join(dir, findingsFile), data, 0600)
+		if writeErr := os.WriteFile(filepath.Join(dir, findingsFile), data, 0600); writeErr != nil {
+			return writeErr
+		}
+		return writeSidecars(ctx, dir, run.Rel, inputs, m, s.summaryFor(pool))
 	})
 	if err != nil {
 		return stage.Output{}, itemFailure(fmt.Errorf("publish evidence: %w", err))
@@ -124,7 +138,15 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	return stage.Output{Artifact: &result, State: "done"}, nil
 }
 
-func (s *Stage) runDetectors(ctx context.Context, env stage.Env, run stage.Run, inputs frozenInputs) ([]detectorRun, error) {
+func (s *Stage) detectorIDs() []string {
+	ids := make([]string, 0, len(s.cfg.Detectors))
+	for _, spec := range s.specs() {
+		ids = append(ids, spec.ID)
+	}
+	return ids
+}
+
+func (s *Stage) runDetectors(ctx context.Context, env stage.Env, run stage.Run, inputs frozenInputs, pool *pgxpool.Pool) ([]detectorRun, error) {
 	if len(s.cfg.Detectors) == 0 {
 		return nil, nil
 	}
@@ -138,11 +160,6 @@ func (s *Stage) runDetectors(ctx context.Context, env stage.Env, run stage.Run, 
 		}
 		ids = append(ids, id)
 	}
-	pool, closePool, err := s.openRelease(ctx, env, run)
-	if err != nil {
-		return nil, &IncompleteError{Detector: strings.Join(ids, ","), Reason: "release database unavailable: " + err.Error()}
-	}
-	defer closePool()
 	in := Inputs{Run: run, BuildDir: inputs.buildDir, BuildSHA256: inputs.build.SHA256, ReportPath: inputs.reportPath, Release: pool, ArtifactDir: lazyArtifactDirs(ctx, func() store.Querier { return s.querier(env) }, env, run)}
 	runs := make([]detectorRun, 0, len(detectors))
 	for _, d := range detectors {
@@ -196,6 +213,9 @@ func (s *Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, item 
 	}
 	if file.Bindings != inputs.bindings(run.Rel) {
 		return stage.Resolution{}, errors.New("evidence bindings do not match the run")
+	}
+	if err = checkSidecars(env.Artifacts.Abs(art.Path), run.Rel, inputs); err != nil {
+		return stage.Resolution{}, errors.New(err.Error())
 	}
 	return stage.Resolution{}, nil
 }
