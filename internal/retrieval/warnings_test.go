@@ -47,6 +47,7 @@ func TestWarnings_MethodsAndExactness(t *testing.T) {
 		{"vbpl_references,vbpl_diagram", &missing, "vbpl_reference", true, "", true},
 		{"vbpl_diagram", &anchor, "", false, "", false},
 		{"text_rule/1", nil, "", false, "", false},
+		{"reviewed", nil, "", false, "", false},
 	} {
 		w, ok := warning(Relation{Kind: "suspends", Method: tc.method, TargetResolved: true, TargetAnchor: &anchor, TargetNodeID: tc.node})
 		if ok != tc.eligible || (ok && (w.Basis != tc.basis || w.Exact != tc.exact || w.Named != tc.named)) {
