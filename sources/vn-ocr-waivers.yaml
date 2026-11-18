@@ -12,3 +12,46 @@
     - { page: 84, kind: document_number, ocr: "Mẫu A108b", pdf: "Mẫu AI08b", reading: "Annex form code, not the decree number." }
   reason: "Every label and number item is a misread annex form code (AI01b, AI02, AI06a, AI06b, AI07a, AI07b, AI08a, AI08b), not the decree number or an article label; the OCR text keeps those misreadings, and the sonnet check also noted a section heading VIII read as VII on the form pages."
   reviewed: "2026-11-15"
+- key: vn:vbpl:132398
+  pdf_sha256: 559eee0f073f492d7fb5d66b810a3bcc766c6af292e0cbf75ddbff29a6997079
+  check_sha256: c7b643e5da0c82df4edf21e24ad68a63f3d656fd198a1fad86f02bdaa0d44918
+  items:
+    - { page: 25, kind: article_label, ocr: "Phụ lục Ola, 01b", pdf: "Phụ lục 01a, 01b", reading: "Article 18a clause 1 refers to the license template appendices 'Phụ lục 01a, 01b' attached to the circular; an appendix reference, not the VBHN number or an article label." }
+    - { page: 26, kind: article_label, ocr: "(Phụ lục Ola)", pdf: "(Phụ lục 01a)", reading: "Article 18a clause 3 cites the license template '(Phụ lục 01a)'; an appendix reference, not the VBHN number or an article label." }
+    - { page: 49, kind: article_label, ocr: "PHỤ LỤC 016", pdf: "PHỤ LỤC 01b", reading: "Heading 'PHỤ LỤC 01b' above the branch license template; an appendix label, not the VBHN number or an article label." }
+    - { page: 52, kind: article_label, ocr: "PHỤ LỤC 01", pdf: "PHỤ LỤC 01c", reading: "Heading 'PHỤ LỤC 01c' above the representative office license template; an appendix label, not the VBHN number or an article label." }
+  reason: "Every label item is a misread appendix label or appendix reference (Phụ lục 01a, 01b, 01c), not the VBHN number or an article label."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:140493
+  pdf_sha256: 5cec0e494c0df896de72388775bc126c0579f378596ae19de6d1f49568859d32
+  check_sha256: e26b0da38eec07b99c82ad5a98355423fbeb54af6ca0b71dde253c44f6ae2a87
+  items:
+    - { page: 37, kind: document_number, ocr: "Mẫu số C1-106/NS - TĐT", pdf: "Mẫu số C1-10b/NS - TĐT", reading: "Form code 'Mẫu số C1-10b/NS - TĐT' in the top-right box of the tax payment confirmation form (printed page 35); a form code, not the circular's number or an article label." }
+  reason: "The only number item is a misread form code (Mẫu số C1-10b/NS - TĐT), not the circular's number or an article label."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:140647
+  pdf_sha256: baac237fe8fd362c8e966096934cfeaa3c043c1fad091b3da57fc60195718082
+  check_sha256: c1586fbe58084bfcd45ce9901054067cb404a4ea6513501f970b207728bdff04
+  items:
+    - { page: 5, kind: article_label, ocr: "Phụ lục la/LK", pdf: "Phụ lục 1a/LK", reading: "Article 6 clause 1 point a cites the application form 'Phụ lục 1a/LK' attached to the circular; an appendix reference, not the VBHN number or an article label." }
+  reason: "The only label item is a misread appendix reference (Phụ lục 1a/LK), not the VBHN number or an article label."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:167675
+  pdf_sha256: 12eba1d88f30069b578cde38044b106d5cdbc308f52a05723c15c413f09287d6
+  check_sha256: 755a32e1b809993e324b8a5faf1707cdd1027ad019f018b7fd071e09b955cd1a
+  items:
+    - { page: 8, kind: document_number, ocr: "Bola/NHNN", pdf: "B01a/NHNN", reading: "Report form code 'B01a/NHNN' in the 'Mẫu biểu số' column of the Article 11 form table; a form code, not the VBHN number or an article label." }
+    - { page: 8, kind: document_number, ocr: "B016/NHNN", pdf: "B01b/NHNN", reading: "Report form code 'B01b/NHNN' in the 'Mẫu biểu số' column of the Article 11 form table; a form code, not the VBHN number or an article label." }
+    - { page: 10, kind: document_number, ocr: "Bola/NHNN", pdf: "B01a/NHNN", reading: "Report form code 'B01a/NHNN' in the 'Mẫu biểu số' column of the NHNN report form table above Article 15; a form code, not the VBHN number or an article label." }
+    - { page: 10, kind: document_number, ocr: "B015/NHNN", pdf: "B01b/NHNN", reading: "Report form code 'B01b/NHNN' in the 'Mẫu biểu số' column of the NHNN report form table above Article 15; a form code, not the VBHN number or an article label." }
+    - { page: 17, kind: document_number, ocr: "B015/NHNN", pdf: "B01b/NHNN", reading: "Report form code 'B01b/NHNN' in the 'Mẫu số' column of the attached report form list; a form code, not the VBHN number or an article label." }
+    - { page: 17, kind: article_label, ocr: "50", pdf: "5", reading: "Row number 5 in the STT column of the attached report form list (row 'Báo cáo thu nhập, chi phí và kết quả hoạt động'); a table row number, not an article label." }
+  reason: "Every label and number item is a misread report form code (B01a/NHNN, B01b/NHNN) or a table row number (5), not the VBHN number or an article label."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:102001
+  pdf_sha256: ea13d63cb44ab9efc7ac09fb1b8f575e470fffc3e49f088a77b7f042467486d0
+  check_sha256: 7441edec474e77516a17e7fe743a8b812a681ad800d606b03dc847b8781a8673
+  items:
+    - { page: 24, kind: article_label, ocr: ") Số rút vốn trong kỳ báo cáo", pdf: "(8) Số rút vốn trong kỳ báo cáo", reading: "Column note '(8) Số rút vốn trong kỳ báo cáo' in the filling guide ('Hướng dẫn lập báo cáo') of the Phụ lục 04 bond report form, naming column 8 'Số rút vốn trong kỳ' of the form table on page 23 (also used in 'Cột (12) = Cột (6) + Cột (8) - Cột (9)'); a form column number, not the VBHN number or an article label." }
+  reason: "The only label item is a misread column number (8) in the filling guide of the Phụ lục 04 report form, not the VBHN number or an article label."
+  reviewed: "2026-11-18"
