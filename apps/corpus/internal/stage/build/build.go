@@ -26,6 +26,7 @@ type Config struct {
 	HeadingExclusions                       HeadingExclusionsInput
 	Taxonomy                                TaxonomyInput
 	Knowledge                               KnowledgeInput
+	Reports                                 ReportsInput
 	Now                                     func() time.Time
 	Versions                                Versions
 	Calibrate                               func(context.Context, *pgxpool.Pool, retrieval.Release) (evaluation.Calibration, error)
@@ -140,7 +141,7 @@ func (s *Stage) inputHash(country, rel string, inv Inventory, correction correct
 	if err != nil {
 		return ""
 	}
-	return withKnowledge(withHeadingExclusions(withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, provenanceInputHash(inv), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development), exclusions), s.cfg.Knowledge.hash)
+	return withReports(withKnowledge(withHeadingExclusions(withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, provenanceInputHash(inv), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development), exclusions), s.cfg.Knowledge.hash), s.cfg.Reports.hash)
 }
 
 func withHeadingExclusions(input, exclusions string) string {

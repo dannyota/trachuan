@@ -38,7 +38,7 @@ var ErrNoDecision = errors.New("run has no previous report decision")
 
 func LegacyCutoff(country string) string {
 	if country == "vn" {
-		return "20261118_1"
+		return "20261118_2"
 	}
 	return ""
 }

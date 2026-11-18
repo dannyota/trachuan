@@ -57,6 +57,10 @@ func loadSourceInputs(deps *workflow.Deps, cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("load knowledge: %w", err)
 	}
+	reports, err := build.ReadReports("vn", "sources/vn-reports.yaml")
+	if err != nil {
+		return fmt.Errorf("load reports: %w", err)
+	}
 	reviewData, err := os.ReadFile("sources/vn-heading-reviews.yaml")
 	if err != nil {
 		return fmt.Errorf("load heading reviews: %w", err)
@@ -81,6 +85,8 @@ func loadSourceInputs(deps *workflow.Deps, cfg config.Config) error {
 	deps.Eval.Build.HeadingExclusions = exclusions
 	deps.Build.Knowledge = knowledge
 	deps.Eval.Build.Knowledge = knowledge
+	deps.Build.Reports = reports
+	deps.Eval.Build.Reports = reports
 	return nil
 }
 

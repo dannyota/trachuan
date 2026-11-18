@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -25,6 +26,7 @@ func TestDetectorsCount_PrintsCountsAndClasses(t *testing.T) {
 		}
 		return []evidence.Count{
 			{Detector: "raw_field_not_normalized", Severity: detector.Info, Findings: 9, Observed: 100},
+			{Detector: "relation_kind_disagreement", Severity: detector.Review, Findings: 4, Excluded: 6, Observed: 50},
 			{Detector: "unmatched_operative_claim", Severity: detector.Review, Findings: 3, Observed: 100, NotObservable: 4, Classes: map[string]int{"review": 2, "info": 1}},
 		}, nil
 	}
@@ -32,7 +34,10 @@ func TestDetectorsCount_PrintsCountsAndClasses(t *testing.T) {
 	if code != 0 || errout != "" {
 		t.Fatalf("code=%d err=%q", code, errout)
 	}
-	for _, want := range []string{"raw_field_not_normalized", "unmatched_operative_claim", "  review 2", "  info 1"} {
+	if !regexp.MustCompile(`relation_kind_disagreement\s+review\s+4\s+50\s+0\s+6`).MatchString(out) || !regexp.MustCompile(`raw_field_not_normalized\s+info\s+9\s+100\s+0\s+0`).MatchString(out) {
+		t.Errorf("excluded column is wrong:\n%s", out)
+	}
+	for _, want := range []string{"raw_field_not_normalized", "unmatched_operative_claim", "  review 2", "  info 1", "relation_kind_disagreement", "EXCLUDED"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}

@@ -1,12 +1,19 @@
+import argparse
 import os
+from pathlib import Path
 import subprocess
+import sys
+import tempfile
 
-from corpus_manifest import decode
+from corpus_manifest import decode, manifest_fields, validate_manifest
 from corpus_registry import existing_release, production
-from corpus_rules import require_status_country
+from corpus_rules import first_signing_allowed, refuse_until_sidecar_gate, require_status_country
+from manifest import canonical
 
 STATUS_URL = 'https://trachuan.vn/api/v1/public/status'
 STATUS_LIMIT = 1024**2
+RESIGN_MAY_CHANGE = {'commit', 'sequence', 'heading_review'}
+RESIGN_DRIFT_EXIT = 3
 
 
 def require_compared_with(report, current):
@@ -59,11 +66,56 @@ def require_settled(report, directory):
     return current
 
 
-def require_signable(country, rel, report, directory):
+def changed_fields(signed, rebuilt):
+    return sorted(field for field, value in signed.items() if field not in RESIGN_MAY_CHANGE
+                  and (field not in rebuilt or canonical(rebuilt[field]) != canonical(value)))
+
+
+def require_signable(manifest, report, run, directory):
+    country, rel = manifest['country'], manifest['rel']
     current = production(country, directory)
     if current is None:
         raise ValueError('no verified production manifest')
     existing = existing_release(country, rel, directory)
+    if existing is None:
+        if not first_signing_allowed(country, rel, run):
+            raise ValueError('a release without a decision below the cutoff needs a signed manifest')
+    else:
+        changed = changed_fields(existing, manifest)
+        if changed:
+            raise ValueError('signing again would change signed fields: ' + ', '.join(changed))
     if existing is None or existing['sequence'] > current['sequence']:
         require_compared_with(report, current)
     return current
+
+
+def resign_differences(country, rel, directory, temporary):
+    signed = existing_release(country, rel, temporary)
+    if signed is None:
+        raise ValueError(f'no signed manifest for {country}-{rel}')
+    rebuilt = validate_manifest(manifest_fields(signed['commit'], signed['sequence'], country, rel,
+                                                directory, directory / 'report.json'))
+    refuse_until_sidecar_gate(decode((directory / 'release.json').read_bytes()))
+    return [(field, canonical(signed[field]).decode(),
+             canonical(rebuilt[field]).decode() if field in rebuilt else 'absent')
+            for field in changed_fields(signed, rebuilt)]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command', choices=['resign-check'])
+    parser.add_argument('country')
+    parser.add_argument('rel')
+    parser.add_argument('directory', type=Path)
+    args = parser.parse_args()
+    with tempfile.TemporaryDirectory() as temporary:
+        differences = resign_differences(args.country, args.rel, args.directory, Path(temporary))
+    for field, signed, rebuilt in differences:
+        print(f'{field}: signed {signed} rebuilt {rebuilt}')
+    if differences:
+        sys.exit(RESIGN_DRIFT_EXIT)
+    print('no signed field would change')
+
+
+if __name__ == '__main__':
+    main()

@@ -3,7 +3,7 @@ import type { Language } from './index'
 export const en = {
   title: 'Ask in Vietnamese. Read the law in its own words.',
   intro: "Hi, I'm Tra Chuẩn. I don't write answers. I find passages in the source documents and show them word for word, with the document number and the status recorded in the dataset.",
-  query: 'Question or document number', placeholder: 'For example: minimum password length for online banking', submit: 'Search', inForce: 'Only documents in force', signIn: 'Sign in to search. I never write your questions to disk or logs.', suggestions: 'Suggestions:',
+  query: 'Question or document number', placeholder: 'E.g. xử lý dữ liệu cá nhân', submit: 'Search', inForce: 'Only documents in force', signIn: 'Sign in to search. I never write your questions to disk or logs.', suggestions: 'Suggestions:',
   sampleTitle: 'A real result from the {date} release.', sampleText: "Each result is a passage from the source document, not the whole document. The stamp is the document's status as recorded in Tra Chuẩn's dataset, with its stated basis; on this sample, the line beside the stamp gives the date the status applies to. A warning appears right on the clause when another document has amended or repealed it.",
   check1: 'The original text, never paraphrased.', check2: 'Copy the citation in one click: {citation}', check3: 'A link to the original, when the source publishes one.',
   scope: 'I focus on banking, finance, IT and personal data, so not every document is here yet.', scopeLink: "See what's missing",
@@ -13,7 +13,7 @@ export const en = {
 export const vi: Record<keyof typeof en, string> = {
   title: 'Hỏi bằng tiếng Việt, đọc nguyên văn từ văn bản gốc.',
   intro: 'Chào bạn, mình là Tra Chuẩn. Mình không viết câu trả lời. Mình tìm các đoạn trong văn bản gốc và đưa nguyên văn, kèm số hiệu và trạng thái hiệu lực ghi trong dữ liệu.',
-  query: 'Câu hỏi hoặc số hiệu văn bản', placeholder: 'Ví dụ: độ dài tối thiểu của mật khẩu ngân hàng trực tuyến', submit: 'Tra cứu', inForce: 'Chỉ văn bản còn hiệu lực', signIn: 'Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi vào ổ đĩa hay nhật ký.', suggestions: 'Gợi ý:',
+  query: 'Câu hỏi hoặc số hiệu văn bản', placeholder: 'Ví dụ: xử lý dữ liệu cá nhân', submit: 'Tra cứu', inForce: 'Chỉ văn bản còn hiệu lực', signIn: 'Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi vào ổ đĩa hay nhật ký.', suggestions: 'Gợi ý:',
   sampleTitle: 'Một kết quả thật, từ bản phát hành ngày {date}.', sampleText: 'Mỗi kết quả là một đoạn trích từ văn bản gốc, không phải cả văn bản. Con dấu là trạng thái hiệu lực ghi trong dữ liệu của Tra Chuẩn, kèm căn cứ. Ở mẫu này, dòng cạnh con dấu ghi trạng thái tính đến ngày nào. Khi một văn bản khác đã sửa đổi hoặc bãi bỏ một khoản, cảnh báo hiện ngay trên khoản đó.',
   check1: 'Nguyên văn, không diễn giải.', check2: 'Bấm một lần để sao chép trích dẫn: {citation}', check3: 'Liên kết về bản gốc, khi nguồn có công bố.',
   scope: 'Mình tập trung vào ngân hàng, tài chính, công nghệ thông tin và dữ liệu cá nhân, nên chưa có mọi văn bản.', scopeLink: 'Xem những gì còn thiếu',

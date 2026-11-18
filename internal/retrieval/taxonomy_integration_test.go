@@ -7,6 +7,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func taxonomyFixture(t *testing.T) *Engine {
@@ -167,6 +168,46 @@ func TestTaxonomyNode_OtherFamilyDoesNotOverride(t *testing.T) {
 		if err != nil || len(got.Documents) != 1 || got.Documents[0].Key != "vn:1" || got.Documents[0].Provisions != 1 {
 			t.Fatalf("node %s: %+v, error %v", code, got.Documents, err)
 		}
+	}
+}
+
+func TestTaxonomyNode_DocumentStatusAtVietnamDate(t *testing.T) {
+	e := taxonomyFixture(t)
+	boundary := statusDay(2026, time.July, 1)
+	start := statusDay(2020, time.January, 1)
+	lastSecond := time.Date(2026, time.June, 30, 16, 59, 59, 0, time.UTC)
+	firstSecond := lastSecond.Add(time.Second)
+	for _, tc := range []struct {
+		name     string
+		stored   string
+		conflict bool
+		from, to *time.Time
+		now      time.Time
+		class    string
+		current  bool
+	}{
+		{"before the end", "in_force", false, start, boundary, lastSecond, "in_force", true},
+		{"at the end", "in_force", false, start, boundary, firstSecond, "expired", false},
+		{"partial at the end", "partial", false, start, boundary, firstSecond, "expired", false},
+		{"before the start", "in_force", false, boundary, nil, lastSecond, "not_yet", false},
+		{"at the start", "partial", false, boundary, nil, firstSecond, "partial", true},
+		{"conflict", "in_force", true, start, nil, firstSecond, "in_force", false},
+		{"stored suspended", "suspended", false, start, boundary, firstSecond, "suspended", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stored := tc.stored == "in_force" || tc.stored == "partial"
+			readExec(t, e.db, `UPDATE document SET status_class=$1,is_current=$2,validity_conflict=$3,eff_from=$4,eff_to=$5 WHERE id=1`, tc.stored, stored, tc.conflict, tc.from, tc.to)
+			e.options.Now = func() time.Time { return tc.now }
+			page, err := e.TaxonomyNode(context.Background(), "1.1")
+			if err != nil || len(page.Documents) != 1 {
+				t.Fatalf("page %+v: %v", page, err)
+			}
+			got := page.Documents[0]
+			want, _ := stamp(Document{StatusClass: tc.stored, IsCurrent: stored, ValidityConflict: tc.conflict, EffectiveFrom: tc.from, EffectiveTo: tc.to}, Arms{Date: e.statusDate()})
+			if got.StatusClass != tc.class || got.IsCurrent != tc.current || got.StatusClass != want.StatusClass || got.IsCurrent != want.Current {
+				t.Fatalf("document %+v, stamp %+v", got, want)
+			}
+		})
 	}
 }
 

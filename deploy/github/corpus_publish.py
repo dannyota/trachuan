@@ -20,7 +20,8 @@ def publish(directory, ref, commit):
     report = (directory / 'report.json').read_bytes()
     if hashlib.sha256(report).hexdigest() != obj['report']['sha256']:
         raise ValueError('report differs from corpus manifest')
-    current = require_signable(obj['country'], obj['rel'], decode(report), directory / 'production')
+    run = decode((directory / 'release.json').read_bytes())['run']
+    current = require_signable(obj, decode(report), run, directory / 'production')
     sign(path, directory / 'manifest.sigstore.json', 'corpus-release.yml', ref, commit)
     repository = 'ghcr.io/dannyota/trachuan-corpus-release'
     tag = obj['country'] + '-' + obj['rel']

@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from corpus_manifest import create, main, validate_inputs
+from corpus_upload import upload
 from corpus_test_support import digest, save_fixture, save_older_shape, write_fixture
 
 REL = '20990102_1'
@@ -110,6 +111,21 @@ class SelectedReportTest(unittest.TestCase):
         self.assertTrue((self.path / 'manifest.json').exists())
         with self.assertRaises(ValueError):
             self.run_cli('validate')
+
+    def test_cli_refuses_decision_fields_until_the_sidecar_gate(self):
+        for command in ('validate', 'create'):
+            with self.subTest(command=command), self.assertRaisesRegex(ValueError, 'sidecar gate'):
+                self.run_cli(command)
+        self.assertFalse((self.path / 'manifest.json').exists())
+
+    def test_upload_refuses_decision_fields_before_any_remote_call(self):
+        with patch.dict(os.environ, OCI_S3_ENDPOINT='https://synthetic.invalid'), \
+                patch('corpus_upload.require_settled') as settled, \
+                patch('corpus_upload.subprocess.run') as run, \
+                self.assertRaisesRegex(ValueError, 'sidecar gate'):
+            upload('vn', REL, self.path, self.path / 'report.json')
+        settled.assert_not_called()
+        run.assert_not_called()
 
     def test_validate_refuses_a_country_the_status_endpoint_does_not_serve(self):
         self.row['country'] = self.report['country'] = 'us'

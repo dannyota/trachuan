@@ -25,7 +25,7 @@ development cohort precedes recipe changes under ADR 0010 item 4.
 
 `in_force_only` defaults to true. Document dates, missing-date gaps, historical
 filtering and the separate non-current group follow the
-[retrieval recipe](retrieval-recipe.md#validity-and-evidence). Provision-level
+[retrieval recipe](retrieval-validity.md#validity-and-evidence). Provision-level
 repeal relations appear as warnings, never as a changed stamp.
 
 ## Filter contract

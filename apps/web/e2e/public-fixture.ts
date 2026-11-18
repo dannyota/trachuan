@@ -3,8 +3,8 @@ import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { createInterface } from 'node:readline'
 
-export async function withPublicSite(available: boolean, run: (origin: string) => Promise<void>) {
-  const node = { code: '1', name: 'Chủ đề mẫu', documents: 2, provisions: 4 }
+export async function withPublicSite(available: boolean, run: (origin: string) => Promise<void>, children: object[] = []) {
+  const node = { code: '1', name: 'Chủ đề mẫu', documents: 2, provisions: 4, children }
   const api = createServer((request, response) => {
     if (!available) {
       response.writeHead(503).end()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"time"
 
 	"danny.vn/trachuan/apps/server/internal/cache"
 	"danny.vn/trachuan/internal/retrieval"
@@ -57,7 +58,8 @@ func (o *Operations) TaxonomyNode(ctx context.Context, code string) (json.RawMes
 	if o.cfg.Caches != nil {
 		scoped = o.cfg.Caches.Scope(lease.Release, lease.Generation).TopicNodes
 	}
-	keyBytes, _ := json.Marshal([2]string{lease.Release, code})
+	now := o.cfg.requestInstant(ctx).In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60))
+	keyBytes, _ := json.Marshal([3]string{lease.Release, now.Format(time.DateOnly), code})
 	key := sha256.Sum256(keyBytes)
 	if raw, ok := scoped.Get(lease.Release, key); ok {
 		return json.RawMessage(raw), nil

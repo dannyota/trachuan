@@ -109,9 +109,10 @@ class ProductionTest(unittest.TestCase):
         self.assertEqual(self.calls(), [])
 
     def signable(self, candidate, current, existing=None, existing_error=None):
+        run = dict(eval_report_sha256='e' * 64, previous_report_sha256='b' * 64)
         with patch('corpus_production.production', return_value=current), \
                 patch('corpus_production.existing_release', return_value=existing, side_effect=existing_error):
-            return corpus_production.require_signable('vn', REL, candidate, self.path)
+            return corpus_production.require_signable(manifest(rel=REL, sequence=11), candidate, run, self.path)
 
     def test_first_signing_requires_the_comparison(self):
         self.assertEqual(self.signable(report(), manifest())['rel'], PREVIOUS)

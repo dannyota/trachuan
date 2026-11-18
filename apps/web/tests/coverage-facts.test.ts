@@ -37,3 +37,11 @@ it('omits the newest date card when the date is absent', () => {
   expect(wrapper.findAll('.coverage-stats > div')).toHaveLength(3)
   expect(wrapper.findAll('.coverage-stats dd').map(item => item.text())).toEqual(['0', '0', '0'])
 })
+
+it.each([[true, true], [false, false]])('shows the summary gap heading only when public summaries are %s', (available, shown) => {
+  vi.stubGlobal('useState', () => ref('vi'))
+  vi.stubGlobal('computed', computed)
+  const status = { release: '20990101_1', documents: 1, provisions: 2, nodes: 3, gaps: { summary_row_capped: 2 }, features: { public_summaries: available } }
+  const wrapper = mount(CoverageFacts, { props: { status, showGaps: true } })
+  expect(wrapper.text().includes('Trang thông tin văn bản chưa đầy đủ')).toBe(shown)
+})

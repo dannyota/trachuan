@@ -44,7 +44,8 @@ func TestPredatesDecision_FollowsCutoff(t *testing.T) {
 		{"vn", "20261118_1", Snapshot{}, true},
 		{"vn", "20261118", Snapshot{}, true},
 		{"vn", "20261117_9", Snapshot{}, true},
-		{"vn", "20261118_2", Snapshot{}, false},
+		{"vn", "20261118_2", Snapshot{}, true},
+		{"vn", "20261118_3", Snapshot{}, false},
 		{"vn", "20261119", Snapshot{}, false},
 		{"vn", "20990101", Snapshot{}, false},
 		{"us", "20200101", Snapshot{}, false},
@@ -88,8 +89,8 @@ func TestEvaluatedAfter_FollowsOlderRunRule(t *testing.T) {
 		{"decided run at eval", "20990101", decided, "eval", false},
 		{"decided run at evidence", "20990101", decided, EvidenceStage, true},
 		{"decided older rel at eval", "20261118_1", decided, "eval", false},
-		{"missing decision above cutoff at eval", "20261118_2", Snapshot{}, "eval", false},
-		{"missing decision above cutoff at evidence", "20261118_2", Snapshot{}, EvidenceStage, true},
+		{"missing decision above cutoff at eval", "20261118_3", Snapshot{}, "eval", false},
+		{"missing decision above cutoff at evidence", "20261118_3", Snapshot{}, EvidenceStage, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := EvaluatedAfter("vn", tc.rel, tc.snapshot, tc.stage); got != tc.want {

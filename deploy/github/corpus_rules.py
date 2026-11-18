@@ -1,6 +1,7 @@
 import re
 
-LEGACY_CUTOFF = {'vn': '20261118_1'}
+LEGACY_CUTOFF = {'vn': '20261118_2'}
+DECISION_FIELDS = ('eval_report_sha256', 'previous_report_sha256')
 
 
 def rel_order(rel):
@@ -15,6 +16,19 @@ def older_shape_allowed(country, rel, signing):
     if cutoff is None:
         return False
     return rel_order(rel) <= rel_order(cutoff) if signing else rel == cutoff
+
+
+def has_decision(run):
+    return any(field in run for field in DECISION_FIELDS)
+
+
+def first_signing_allowed(country, rel, run):
+    return has_decision(run) or rel == LEGACY_CUTOFF.get(country)
+
+
+def refuse_until_sidecar_gate(row):
+    if has_decision(row['run']):
+        raise ValueError('a release with a decision cannot publish until the sidecar gate ships')
 
 
 def require_status_country(country):

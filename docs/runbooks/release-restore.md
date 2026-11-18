@@ -68,12 +68,16 @@ bash scripts/corpus-upload.sh --dry-run "$CC" "$REL" "$UPLOAD" "$REPORT"
 bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
 ```
 
-The older path is for `vn/20261118_1` only, whose run predates this rule: it has
+The older path is for `vn/20261118_2` only, whose run predates this rule: it has
 no decision, so evaluate with
 `corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
 production release's uploaded report, and upload that report. Its `release.json`
 has no selected report hashes; upload refuses that shape for every other
 release.
+
+Until the sidecar gate ships, upload and signing refuse a release whose
+`release.json` carries the selected report hashes, so no prefix is spent on a
+release that cannot be signed.
 
 The upload refuses unless production is settled: the report's previous `rel` and
 SHA-256 must equal `rel` and `report.sha256` of the verified `<cc>-production`
@@ -101,7 +105,11 @@ Signing repeats the production comparison before it signs or pushes anything, so
 a refusal leaves no tag and no signature. A release whose `<cc>-<rel>` manifest
 already exists with a sequence at or below production's is exempt, which keeps
 retry and rollback working. Dispatching the same release again retries a failed
-activation.
+activation. Signing an existing `<cc>-<rel>` again keeps every field of its
+signed manifest except `commit`, `sequence` and `heading_review`, and refuses
+before signing when the bucket's objects would change one. A release without
+selected report hashes below `vn/20261118_2` signs only when its manifest
+already exists.
 
 When an earlier run pushed the release but failed to move `<cc>-production`, the
 comparison applies to the retry only while production's sequence is below the
@@ -135,6 +143,19 @@ The new signature gives that release a new sequence, `<cc>-production` follows
 it, and the host reactivates the retained database. A manual swap of
 `corpus_release.active_db` leaves the tag behind, and the next upload refuses
 until the two agree.
+
+Check a rollback target ahead of need, from its upload directory. The command
+needs `oras` and `cosign`, signs and pushes nothing, prints each signed field
+that would change and exits 3 when any would:
+
+```sh
+python3 deploy/github/corpus_production.py resign-check vn <rel> <upload-dir>
+```
+
+`no signed field would change` does not prove the rollback will sign. Signing
+also runs `check_remote`, which fetches the previous release's report and
+recomputes the comparison with today's rules. It needs the S3 key, so
+`resign-check` does not run it.
 
 ### Refresh the home sample
 

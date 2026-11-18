@@ -35,22 +35,22 @@ func runDetectorsCount(ctx context.Context, args []string, stdout, stderr io.Wri
 		return 1
 	}
 	table := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(table, "DETECTOR\tSEVERITY\tFINDINGS\tOBSERVED\tNOT_OBSERVABLE")
+	_, _ = fmt.Fprintln(table, "DETECTOR\tSEVERITY\tFINDINGS\tOBSERVED\tNOT_OBSERVABLE\tEXCLUDED")
 	code := 0
 	for _, c := range counts {
 		if c.NotRun != "" {
 			code = 1
-			_, _ = fmt.Fprintf(table, "%s\t%s\tnot run: %s\t\t\n", c.Detector, c.Severity, c.NotRun)
+			_, _ = fmt.Fprintf(table, "%s\t%s\tnot run: %s\t\t\t\n", c.Detector, c.Severity, c.NotRun)
 			continue
 		}
-		_, _ = fmt.Fprintf(table, "%s\t%s\t%d\t%d\t%d\n", c.Detector, c.Severity, c.Findings, c.Observed, c.NotObservable)
+		_, _ = fmt.Fprintf(table, "%s\t%s\t%d\t%d\t%d\t%d\n", c.Detector, c.Severity, c.Findings, c.Observed, c.NotObservable, c.Excluded)
 		classes := make([]string, 0, len(c.Classes))
 		for class := range c.Classes {
 			classes = append(classes, class)
 		}
 		slices.Sort(classes)
 		for _, class := range classes {
-			_, _ = fmt.Fprintf(table, "  %s %d\t\t\t\t\n", class, c.Classes[class])
+			_, _ = fmt.Fprintf(table, "  %s %d\t\t\t\t\t\n", class, c.Classes[class])
 		}
 	}
 	if err = table.Flush(); err != nil {

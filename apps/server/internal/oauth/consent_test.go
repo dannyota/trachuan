@@ -409,7 +409,7 @@ func TestConsent_BrowserOriginTracksReferrerPolicy(t *testing.T) {
 
 func TestConsent_ProductDisplayName(t *testing.T) {
 	for _, tc := range []struct{ lang, title, prompt, failure string }{
-		{"vi", "Cho phép truy cập · Tra Chuẩn", "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn của bạn?", "Không thể cấp quyền truy cập · Tra Chuẩn"},
+		{"vi", "Cho phép truy cập · Tra Chuẩn", "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn?", "Chưa cấp được quyền truy cập · Tra Chuẩn"},
 		{"en", "Authorize access · Tra Chuẩn", "Allow this app to access your Tra Chuẩn account?", "Cannot authorize access · Tra Chuẩn"},
 	} {
 		t.Run(tc.lang, func(t *testing.T) {

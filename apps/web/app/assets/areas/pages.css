@@ -70,6 +70,8 @@
   .coverage-stats div:last-child, .coverage-stats div:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
   .coverage-stats-three div:last-child { grid-column: span 2; }
   .topic-documents li { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .topic-tree li { padding: 6px 0; }
+  .topic-tree li > a { display: flex; align-items: center; width: fit-content; max-width: 100%; min-height: 44px; }
 }
 
 .google-button { font-family: GoogleSansButton, var(--font-sans); display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px; height: 40px; padding: 0 12px; border: 1px solid #747775; background: #fff; color: #1f1f1f; font-size: 14px; font-weight: 500; line-height: 20px; }
