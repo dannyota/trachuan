@@ -11,20 +11,11 @@ class GrantCorpusTest(unittest.TestCase):
         return subprocess.run(['bash', '-c', fake + script, 'grant-corpus.sh', database],
                               capture_output=True, text=True)
 
-    def test_frameworks_receives_same_reader_grants_as_law(self):
-        law = self.grant('corpus_vn_20990101_1')
-        self.assertEqual(law.returncode, 0, law.stderr)
-        for database in ('frameworks_20990101', 'frameworks_20990101_1', 'frameworks_20990101_99'):
-            with self.subTest(database=database):
-                result = self.grant(database)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(result.stdout.replace(database, 'corpus_vn_20990101_1'), law.stdout)
-                self.assertIn('GRANT SELECT ON ALL TABLES IN SCHEMA public TO corpus_reader;', result.stdout)
-
-    def test_invalid_frameworks_names_never_call_postgres(self):
-        for database in ('frameworks_2099010', 'frameworks_209901011', 'frameworks_20990101_',
+    def test_frameworks_and_invalid_names_never_call_postgres(self):
+        for database in ('frameworks_20990101', 'frameworks_20990101_1', 'frameworks_20990101_99',
+                         'frameworks_2099010', 'frameworks_209901011', 'frameworks_20990101_',
                          'frameworks_20990101_123', 'frameworks_vn_20990101',
-                         'frameworks_20990101;SELECT 1', 'frameworks_20990101\n'):
+                         'frameworks_20990101;SELECT 1', 'frameworks_20990101\n', 'corpus_vn_20990101\n'):
             with self.subTest(database=database):
                 result = self.grant(database)
                 self.assertNotEqual(result.returncode, 0)
@@ -36,12 +27,12 @@ class GrantCorpusTest(unittest.TestCase):
             with self.subTest(database=database):
                 self.assertEqual(self.grant(database).returncode, 0)
 
-    def test_session_in_database_sets_log_values_for_both_kinds(self):
+    def test_law_reader_grants_and_session_log_values(self):
         options = ('-c log_min_messages=panic -c log_min_error_statement=panic '
                    '-c log_min_duration_statement=-1 -c log_statement=none')
-        for database in ('corpus_vn_20990101_1', 'frameworks_20990101_1'):
-            with self.subTest(database=database):
-                result = self.grant(database)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn('PGOPTIONS=' + options + '\npsql\n-X\n-q\n--set\nON_ERROR_STOP=1\n'
-                              '--username\npostgres\n--dbname\n' + database + '\n', result.stdout)
+        database = 'corpus_vn_20990101_1'
+        result = self.grant(database)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('GRANT SELECT ON ALL TABLES IN SCHEMA public TO corpus_reader;', result.stdout)
+        self.assertIn('PGOPTIONS=' + options + '\npsql\n-X\n-q\n--set\nON_ERROR_STOP=1\n'
+                      '--username\npostgres\n--dbname\n' + database + '\n', result.stdout)

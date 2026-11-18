@@ -105,6 +105,15 @@ class CorpusDatabaseTest(unittest.TestCase):
         self.assertEqual(kwargs['input_file'], '/synthetic/dump')
         self.assertIn('maintenance_work_mem=2GB', ' '.join(args))
 
+    def test_toc_lists_are_removed_per_operation_and_by_prefix(self):
+        self.db.remove_list('e' * 32)
+        self.db.discard_lists()
+        self.assertEqual([args for args, _ in self.calls[-2:]], [
+            ['podman', 'exec', 'trachuan-postgres', 'rm', '-f', '/run/pgbackrest/corpus-' + 'e' * 32 + '.list'],
+            ['podman', 'exec', 'trachuan-postgres', 'sh', '-c', 'rm -f /run/pgbackrest/corpus-*.list']])
+        with self.assertRaises(ValueError):
+            self.db.remove_list('../../secrets')
+
     def test_available_extensions_must_equal_manifest_versions(self):
         self.response = b'{"vector":"wrong","ltree":"1.3"}'
         with self.assertRaises(ValueError):

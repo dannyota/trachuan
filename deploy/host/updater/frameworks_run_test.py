@@ -58,6 +58,7 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.phase = Corpus(self.state, self.store, self.host, self.rules, self.registry, database=self.db,
                             prepare=self.prepare, clock=lambda: 100000, kind=FRAMEWORKS)
         self.phase.resources = mock.Mock()
+        self.phase.engine.steps = self.db
         self.staging = self.paths.root / 'srv/trachuan/data/releases' / ('frameworks-' + self.m['rel'])
         self.downloads = []
         def download():
@@ -110,33 +111,63 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.result()['status'], 'failed')
         self.assertFalse(self.paths.result.with_name('release.json').exists())
 
-    def test_new_activation_refuses_before_download_or_journal(self):
+    def test_new_bootstrap_downloads_restores_and_activates(self):
         law_before = json.dumps(self.state.data['accepted']['corpus'])
-        for attempt in range(2):
-            with self.subTest(attempt=attempt):
-                self.assertFalse(self.run_phase())
-                result = self.result()
-                self.assertEqual((result['status'], result['step'], result['message'], result['mode']),
-                                 ('failed', 'download', 'frameworks restore not implemented', 'new'))
-                self.assertEqual(result['rel'], self.m['rel'])
-                self.assertEqual(self.downloads, [])
-                self.assertEqual(self.db.rows, [])
-                self.assertEqual(self.state.decision('frameworks', result['manifest_hash'], self.m['sequence']), 'pending')
-        self.assertEqual(self.state.data['failed'], [])
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.db.lists_discarded, 1)
+        result = self.result()
+        self.assertEqual((result['status'], result['step'], result['message'], result['mode']),
+                         ('ok', 'complete', 'frameworks release activated', 'new'))
+        self.assertEqual(self.downloads, [self.staging])
+        self.assertFalse((self.staging / 'frameworks.dump').exists())
+        self.assertEqual(self.db.steps, ['inspect', 'inspect', 'create', 'restore', 'validate', 'smoke'])
+        self.assertEqual([r['step'] for r in self.db.rows][-1], 'activated')
+        self.assertEqual(self.db.active, self.m['database'])
+        self.assertEqual(self.state.decision('frameworks', result['manifest_hash'], self.m['sequence']), 'noop')
         self.assertEqual(json.dumps(self.state.data['accepted']['corpus']), law_before)
-        self.assertEqual(self.db.created, 0)
 
-    def test_recovery_of_an_open_new_journal_refuses_before_download(self):
+    def test_recovery_of_an_open_new_journal_downloads_and_resumes(self):
         digest = self.result_hash()
         self.phase.hash = digest
         self.phase.remember(self.directory)
         self.state.accept('frameworks', digest, self.m['sequence'])
-        self.phase.engine.begin(digest, self.m, 'new', None)
+        row = self.phase.engine.begin(digest, self.m, 'new', None)
+        self.db.append(row, 'restoring')
         self.registry.fetch.side_effect = AssertionError('recovery must not fetch')
+        self.assertTrue(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['message']), ('ok', 'frameworks release activated'))
+        self.assertEqual(self.downloads, [self.staging])
+        self.assertEqual(self.db.steps, ['restore', 'validate', 'smoke'])
+        self.assertEqual(self.db.active, self.m['database'])
+
+    def test_smoke_failure_reports_program_exit_and_safe_cause_only(self):
+        self.db.smoke = mock.Mock(side_effect=CommandError(
+            'command failed', detail='podman run: exit 1', safe='frameworks release-check search: SQLSTATE 42P01'))
         self.assertFalse(self.run_phase())
-        self.assertEqual((self.result()['step'], self.result()['message']), ('recovery', 'frameworks restore not implemented'))
-        self.assertEqual(self.downloads, [])
-        self.assertEqual([r['step'] for r in self.db.rows], ['started'])
+        self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
+                         ('failed', 'activation', 'frameworks command failed or run interrupted: podman run: exit 1: '
+                          'frameworks release-check search: SQLSTATE 42P01'))
+        self.assertEqual([r['step'] for r in self.db.rows][-1], 'aborted')
+        self.assertEqual(self.db.dropped, [self.m['database']])
+        self.assertIsNone(self.db.active)
+        self.assertIn(self.result()['manifest_hash'], self.state.failed('frameworks'))
+
+    def test_restore_and_step_failures_never_log_command_output(self):
+        marker = 'invented licensed marker'
+        for error, message in (
+                (CommandError('command failed', detail='pg_restore: exit 1: pg_restore: error: ' + marker),
+                 'frameworks command failed or run interrupted: pg_restore: exit 1'),
+                (CommandError('command failed', detail='psql: exit 3: ' + marker),
+                 'frameworks command failed or run interrupted: psql: exit 3'),
+                (ValueError('frameworks log settings refused'), 'frameworks log settings refused')):
+            with self.subTest(message=message):
+                self.setUp()
+                self.db.restore = mock.Mock(side_effect=error)
+                self.assertFalse(self.run_phase())
+                self.assertEqual(self.result()['message'], message)
+                log = self.paths.log.with_name('release-frameworks.log').read_text()
+                self.assertNotIn(marker, log)
+                self.assertNotIn(marker, json.dumps(self.db.rows))
 
     def test_compatibility_difference_waits_without_download(self):
         for change in (dict(query_recipe_hash='f' * 64), dict(schema_versions=[2]),

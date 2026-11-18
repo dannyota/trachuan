@@ -149,36 +149,9 @@ these differences:
 - **Staging.** `/srv/trachuan/data/releases/frameworks-<rel>/`, mode `0700`,
   deleted when activation ends in any state, and by every updater run that holds
   the locks, with or without a `frameworks` block.
-- **Logs.** No session in a frameworks database may write an error, statement or
-  parameter to the PostgreSQL log. Right after creating the database, as
-  `postgres`, set `log_min_messages` and `log_min_error_statement` to `panic`,
-  `log_min_duration_statement` to `-1` and `log_statement` to `none` on the
-  database and, with `ALTER ROLE ... IN DATABASE`, for `activator` and
-  `corpus_reader` in it, which takes precedence over any role-wide setting. The
-  same step refuses when `pg_parameter_acl` grants `SET` on any of them to a
-  role other than a superuser; without that grant no other role can change them
-  in a session. Every session that reads a frameworks database (restore,
-  prewarm, smoke, and each connection the server's frameworks pool opens) reads
-  the four effective values first and stops, or is discarded, unless they are
-  those. Superusers are the trusted boundary: the host's `postgres` role is the
-  only one, and its own sessions set the values before touching the database.
-  The updater and the server log only safe causes (SQLSTATE, step, object
-  names).
-- **Restore.** The TOC list keeps the law allowlist and also omits every view,
-  function and trigger entry, refusing the dump when such an entry is not one
-  the image's schema version defines, and refusing any other executable object
-  (rule, policy, aggregate, operator, cast, event trigger). The dump supplies
-  tables, data, sequences, constraints and indexes only. After the data,
-  `server frameworks-schema --version <n>` prints the image's own views,
-  functions and triggers for that schema version, applied as `activator`; a
-  check constraint or default that needs a function the dump omitted fails the
-  restore. Then `grant-corpus.sh`, which accepts `frameworks_<rel>` names,
-  grants the corpus reader as for law.
-- **Smoke.**
-  `server release-check --kind frameworks --database frameworks_<rel>` opens the
-  frameworks engine with a key made in memory for that run and runs one search
-  and one read as a caller who may read every version, printing status and
-  counts only.
+- **Logs, restore and smoke.** The steps between creating the database and the
+  pointer swap, and what a dump may do, are in
+  [frameworks restore](frameworks-release-restore.md).
 - **Pointer.** Step 4 swaps `frameworks_release.active_db` from the journaled
   value, or inserts the row when there is none (bootstrap), and writes the old
   database to `retired_release` with kind `frameworks`. The law phase never
@@ -248,14 +221,13 @@ is unaffected, and once B has raised the floor that rollback is refused.
    declares that environment, deployments from `main` only, in
    `deploy/github/settings.json` and it is applied, so no hand-made environment
    ever holds it.
-2. Image A ships the migration, `release-check --kind`, `frameworks-schema`,
-   `grant-corpus.sh` names, the updater's frameworks phase, and
-   `server_frameworks_key` in the policy's secret list and the fetcher's
-   allowlist, and the secret-presence check above. Its policy has no
-   `frameworks` block, so the phase does not run; its updater keeps a
-   `frameworks` state key it finds, untouched, so a rollback from B to A loses
-   nothing. The updater that installs A reconciles nothing new; A's own updater
-   fetches the secret.
+2. Image A ships the migration, `release-check --kind`, `frameworks-schema`, the
+   updater's frameworks phase, and `server_frameworks_key` in the policy's
+   secret list and the fetcher's allowlist, and the secret-presence check above.
+   Its policy has no `frameworks` block, so the phase does not run; its updater
+   keeps a `frameworks` state key it finds, untouched, so a rollback from B to A
+   loses nothing. The updater that installs A reconciles nothing new; A's own
+   updater fetches the secret.
 3. Image B raises the release floor to A's sequence, adds the `frameworks` block
    with `min_release_floor` A's sequence, and adds the key mount and the
    `server.env` lines with the flag off. A's updater installs it only once the
@@ -279,11 +251,14 @@ failure that leaves law activation, state and pointer untouched, and the
 reverse; the phase waiting below `min_release_floor`; an updater from before the
 migration completing a law activation against it; a dump carrying a function,
 trigger or view outside the schema version refused before restore; the restored
-executable objects equal to the image's; the effective log settings seen by each
-role in a new session despite a conflicting role-wide setting, a session
-override and a parameter grant refused, a server connection with other values
-discarded, and an induced error with a marker absent from the PostgreSQL log; an
-image whose Quadlet names a missing secret left waiting with the serving image
-unchanged; the uploader's and the job's temporary directories empty after
-success and failure; and no log line of the uploader, the job or the updater
-holding anything but ids, sizes, hashes, counts and statuses.
+executable objects equal to the image's; SQL a hostile dump could plant (an
+extension-member function, a database `search_path`, an extra function, schema,
+type or role setting) refused by the check, and no `postgres` session after the
+restore starts; the effective log settings seen by each role in a new session
+despite a conflicting role-wide setting, a session override and a parameter
+grant refused, a server connection with other values discarded, and an induced
+error with a marker absent from the PostgreSQL log; an image whose Quadlet names
+a missing secret left waiting with the serving image unchanged; the uploader's
+and the job's temporary directories empty after success and failure; and no log
+line of the uploader, the job or the updater holding anything but ids, sizes,
+hashes, counts and statuses.

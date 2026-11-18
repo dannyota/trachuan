@@ -1,4 +1,5 @@
 import json
+import re
 
 from . import deploy_corpus_sql as sql
 from .deploy_corpus_kind import LAW
@@ -27,8 +28,9 @@ class Database:
         self.check_lock()
         return self.host.user(*self.arguments(*args), **kwargs)
 
-    def query(self, text, database='auth'):
-        return self.user('psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
+    def query(self, text, database='auth', options=None):
+        command = ('env', 'PGOPTIONS=' + options) if options else ()
+        return self.user(*command, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
                          '-v', 'ON_ERROR_STOP=1', '-d', database,
                          input=('SET standard_conforming_strings=on;\n' + text).encode()).decode().strip()
 
@@ -98,46 +100,69 @@ class Database:
         if installed != manifest['extensions']:
             raise ValueError('PostgreSQL extension versions differ from corpus manifest')
 
-    def create(self, row):
-        name, manifest = row['database_name'], row['manifest']
-        sql.database(name)
-        self.check_extensions(manifest)
+    def make(self, name):
         if not self.exists(name):
             self.user('createdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--template=template0', name)
         owner = self.query('SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=' + sql.literal(name) + ';')
         if owner != 'activator':
             raise ValueError('activation target not owned by activator')
+
+    def create(self, row):
+        name, manifest = row['database_name'], row['manifest']
+        sql.database(name)
+        self.check_extensions(manifest)
+        self.make(name)
         self.host.psql(name, ';'.join('CREATE EXTENSION IF NOT EXISTS ' + ext + ' VERSION ' + sql.literal(version)
                                       for ext, version in manifest['extensions'].items()) + ';')
 
-    def inspect(self, row, dump):
+    def inspect(self, row, dump, image=None):
         self.check_extensions(row['manifest'])
         self.toc(row, dump)
 
-    def toc(self, row, dump):
-        raw = self.user('pg_restore', '--list', input_file=dump, timeout=300)
-        selected = toc(raw.decode(), self.rules['extensions'])
-        path = '/run/pgbackrest/corpus-' + row['operation_id'] + '.list'
+    def listing(self, dump):
+        return self.user('pg_restore', '--list', input_file=dump, timeout=300)
+
+    def list_path(self, operation):
+        if not isinstance(operation, str) or not re.fullmatch('[0-9a-f]{32}', operation):
+            raise ValueError('invalid activation operation id')
+        return '/run/pgbackrest/corpus-' + operation + '.list'
+
+    def save_list(self, row, selected):
+        path = self.list_path(row['operation_id'])
         self.host.user('podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
                        'umask 077; cat > "$1"', 'sh', path, input=selected.encode())
         return path
 
-    def restore(self, row, dump):
+    def remove_list(self, operation):
+        self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', self.list_path(operation))
+
+    def discard_lists(self):
+        self.host.user('podman', 'exec', 'trachuan-postgres', 'sh', '-c', 'rm -f /run/pgbackrest/corpus-*.list')
+
+    def toc(self, row, dump):
+        return self.save_list(row, toc(self.listing(dump).decode(), self.rules['extensions']))
+
+    def load(self, name, dump, listing, options=''):
+        try:
+            self.user('env', 'PGOPTIONS=-c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=2 '
+                      '-c statement_timeout=0 -c lock_timeout=0 -c idle_in_transaction_session_timeout=0 '
+                      '-c transaction_timeout=0' + options,
+                      'pg_restore', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--dbname', name,
+                      '--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction',
+                      '--use-list', listing, input_file=dump, timeout=3600)
+        finally:
+            self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', listing)
+
+    def grant(self, name):
+        self.host.user('podman', 'exec', 'trachuan-postgres', 'bash', '/usr/local/bin/grant-corpus.sh', name)
+
+    def restore(self, row, dump, image=None):
         name = row['database_name']
         sql.database(name)
         restored = self.query("SELECT to_regclass('public.release') IS NOT NULL;", name) == 't'
         if not restored:
-            listing = self.toc(row, dump)
-            try:
-                self.user('env', 'PGOPTIONS=-c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=2 '
-                          '-c statement_timeout=0 -c lock_timeout=0 -c idle_in_transaction_session_timeout=0 '
-                          '-c transaction_timeout=0',
-                          'pg_restore', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--dbname', name,
-                          '--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction',
-                          '--use-list', listing, input_file=dump, timeout=3600)
-            finally:
-                self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', listing)
-        self.host.user('podman', 'exec', 'trachuan-postgres', 'bash', '/usr/local/bin/grant-corpus.sh', name)
+            self.load(name, dump, self.toc(row, dump))
+        self.grant(name)
 
     def validate(self, row):
         raw = self.query("SELECT json_build_object('country',country,'rel',rel,'schema_version',schema_version,"
@@ -148,22 +173,21 @@ class Database:
         if not raw or json.loads(raw) != expected:
             raise ValueError('restored release row differs from manifest')
 
-    def describe(self, image, database=None):
-        args = ['podman', 'run', '--rm', '--network=host', '--read-only', '--cap-drop=ALL',
-                '--security-opt=no-new-privileges', '--env-file', str(self.host.paths.host / 'server.env')]
+    def server(self, image, *args, secret=False, **options):
+        command = ['podman', 'run', '--rm', '--network=host', '--read-only', '--cap-drop=ALL',
+                   '--security-opt=no-new-privileges', '--env-file', str(self.host.paths.host / 'server.env')]
+        if secret:
+            command += ['--secret', 'server_corpus_database_url,type=env,target=SERVER_CORPUS_DATABASE_URL']
+        return self.host.user(*command, image, *args, timeout=150, **options)
+
+    def describe(self, image, database=None, **options):
+        args = ['release-check', *self.kind.check]
         if database is not None:
-            sql.database(database)
-            args += ['--secret', 'server_corpus_database_url,type=env,target=SERVER_CORPUS_DATABASE_URL']
-        args += [image, 'release-check', *self.kind.check]
-        if database is not None:
+            self.sql.database(database)
             args += ['--database', database]
-        return json.loads(self.host.user(*args, timeout=150))
+        return json.loads(self.server(image, *args, secret=database is not None, **options))
 
     def smoke(self, row, image):
         self.check_lock()
-        self.host.psql(row['database_name'], 'SET statement_timeout=0; SET lock_timeout=0; SET idle_in_transaction_session_timeout=0; '
-            'SET transaction_timeout=0; BEGIN; CREATE EXTENSION IF NOT EXISTS pg_prewarm; '
-            "SELECT sum(pg_prewarm(c.oid)) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
-            "WHERE n.nspname IN ('public','pg_toast') AND c.relkind IN ('r','i','t'); "
-            'DROP EXTENSION pg_prewarm; COMMIT;')
+        self.host.psql(row['database_name'], sql.PREWARM)
         self.describe(image, row['database_name'])

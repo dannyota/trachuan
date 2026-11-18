@@ -82,12 +82,13 @@ class Lock:
 
 
 class CommandError(Exception):
-    def __init__(self, message, reason='failed', returncode=None, detail=None, code=None):
+    def __init__(self, message, reason='failed', returncode=None, detail=None, code=None, safe=None):
         super().__init__(message)
         self.reason = reason
         self.returncode = returncode
         self.detail = detail
         self.code = code
+        self.safe = safe
 
 
 PROGRAMS = ('pg_restore', 'pg_dump', 'psql', 'createdb', 'dropdb', 'oras', 'cosign', 'podman', 'systemctl', 'curl')
@@ -111,6 +112,14 @@ def describe(args, stderr, returncode):
     if re.search('auth|basic|bearer|password|secret|token|credential', text, re.IGNORECASE):
         return detail + ': error output withheld'
     return detail + ': ' + text[-300:]
+
+
+def safe_line(pattern, stderr):
+    if pattern is None:
+        return None
+    found = [match[1] for line in stderr.decode('utf-8', errors='replace').split('\n')
+             if (match := pattern.fullmatch(line))]
+    return found[-1] if found else None
 
 
 def failure_reason(args, stderr):
@@ -161,7 +170,7 @@ def bounded_output(process, limit, timeout):
     return bytes(output), bytes(errors)
 
 
-def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None, input_file=None):
+def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None, input_file=None, safe=None):
     if input is not None and input_file is not None:
         raise ValueError('conflicting command input')
     try:
@@ -184,7 +193,8 @@ def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None,
                         code = found[1].decode() if found else 'SDKError'
                     raise CommandError('command failed', reason=failure_reason(args, errors),
                                        returncode=process.returncode, code=code,
-                                       detail=describe(args, errors, process.returncode))
+                                       detail=describe(args, errors, process.returncode),
+                                       safe=safe_line(safe, errors))
             except BaseException:
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
