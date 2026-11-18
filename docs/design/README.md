@@ -63,6 +63,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [backups](backups.md)                                                            | pgBackRest image, configuration, schedules, restore proof and results                                            |
 | [pull deployment](pull-deployment.md)                                            | Signed release from a tag, host updater, rollback, remote execution                                              |
 | [corpus release](corpus-release.md)                                              | Upload, signed corpus manifest, host restore and activation                                                      |
+| [corpus signing](corpus-signing.md)                                              | The signing workflow and the signed corpus manifest                                                              |
 | [corpus release changes](corpus-release-changes.md)                              | The order in which schema versions and recipe changes ship                                                       |
 | [budgets](budgets.md)                                                            | Request, pipeline, indexing, retrieval and Temporal limits                                                       |
 | [host budgets](budgets-host.md)                                                  | Hosting cost, host memory, alarms and disk                                                                       |
