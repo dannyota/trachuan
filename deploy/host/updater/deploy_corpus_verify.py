@@ -15,14 +15,25 @@ def release_name(value):
     datetime.strptime(value[:8], '%Y%m%d')
 
 
+def release_evidence(value):
+    fields = ('findings_sha256', 'identity_sha256', 'changes_sha256')
+    if not isinstance(value, dict) or set(value) != set(fields):
+        raise ValueError('invalid corpus evidence fields')
+    for field in fields:
+        match('[0-9a-f]{64}', value[field], 'evidence ' + field)
+
+
 def manifest(data, rules):
     obj = decode(data, 'corpus manifest')
     keys = {'kind', 'version', 'repository', 'commit', 'country', 'rel', 'database',
             'sequence', 'previous', 'dump', 'report', 'build_artifact_sha256',
             'schema_version', 'extensions', 'recipes'}
-    if not isinstance(obj, dict) or not keys <= set(obj) or set(obj) - keys - {'heading_review', 'heading_evidence'}:
+    optional = {'heading_review', 'heading_evidence', 'evidence'}
+    if not isinstance(obj, dict) or not keys <= set(obj) or set(obj) - keys - optional:
         raise ValueError('invalid corpus manifest fields')
     validate_headings(obj)
+    if 'evidence' in obj:
+        release_evidence(obj['evidence'])
     for key, value in dict(kind='trachuan.corpus-release', version=1,
                            repository=rules['repository'], country='vn').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
