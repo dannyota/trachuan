@@ -19,10 +19,15 @@ class FrameworksValidateTest(StepsFixture, unittest.TestCase):
         sql = self.sql('validate')
         self.assert_guard_first(sql, 'FROM release WHERE singleton')
         self.assertNotIn('country', sql)
+        for column in ("'kind',kind", "'versions',version_count", "'controls',control_count"):
+            self.assertIn(column, sql)
 
     def test_validate_refuses_any_difference_from_manifest(self):
-        expected = {key: self.m[key] for key in ('rel', 'schema_version', 'recipes')}
-        changes = [dict(expected, rel='20990101'), dict(expected, schema_version=2),
+        expected = dict({key: self.m[key] for key in ('rel', 'schema_version', 'recipes', 'counts')}, kind='frameworks')
+        changes = [dict(expected, rel='20990101'), dict(expected, schema_version=2), dict(expected, kind='law'),
+                   {key: value for key, value in expected.items() if key != 'kind'},
+                   dict(expected, counts=dict(expected['counts'], versions=expected['counts']['versions'] + 1)),
+                   dict(expected, counts=dict(expected['counts'], controls=expected['counts']['controls'] - 1)),
                    dict(expected, recipes=dict(expected['recipes'], chunk={'version': 2}))]
         for value in [json.dumps(change).encode() for change in changes] + [b'\n', b'{"rel":', b'[]']:
             self.responses['validate'] = value

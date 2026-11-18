@@ -42,7 +42,8 @@ def classify(args, text):
         return 'prewarm' if 'pg_prewarm' in text else 'configure' if 'ALTER DATABASE' in text else 'postgres'
     for word, name in (('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
                        ('EXISTS(SELECT FROM pg_database', 'exists'), ("to_regclass('public.release')", 'restored'),
-                       ('CREATE OR REPLACE', 'apply'), ('FROM release WHERE singleton', 'validate'),
+                       ('frameworks_before', 'check'), ('CREATE OR REPLACE', 'apply'),
+                       ('FROM release WHERE singleton', 'validate'),
                        ('current_setting', 'effective')):
         if word in text:
             return name
@@ -60,7 +61,9 @@ class StepsFixture:
             schema=executable_sql().encode(), extensions=json.dumps(self.m['extensions']).encode(),
             exists=b'f\n', owner=b'activator\n', configure=b'configured\n', effective=b'panic,panic,-1,none\n',
             restored=b'f\n', list=(HEADER + DATA + EXECUTABLE).encode(),
-            validate=json.dumps({key: self.m[key] for key in ('rel', 'schema_version', 'recipes')}).encode(),
+            validate=json.dumps(dict({key: self.m[key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
+                                     kind='frameworks')).encode(),
+            check=b'ok\n',
             **{'release-check': b'{"status":"ok","search_hits":1,"read_items":1}\n'})
         def runner(args, **kwargs):
             name = classify(args, (kwargs.get('input') or b'').decode())
@@ -185,7 +188,7 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
     def test_restore_checks_settings_filters_toc_restores_applies_image_schema_then_grants(self):
         self.restore()
         self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'list', 'write-list', 'pg_restore',
-                                        'remove-list', 'apply', 'grant'])
+                                        'remove-list', 'apply', 'check', 'grant'])
         self.assert_activator(self.call('effective')[0], self.name)
         self.assert_guard_first(self.sql('restored'), 'to_regclass')
         args, kwargs = self.call('schema')
@@ -261,7 +264,44 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
     def test_resumed_restore_reapplies_schema_and_grants_without_pg_restore(self):
         self.responses['restored'] = b't\n'
         self.restore()
-        self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'apply', 'grant'])
+        self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'apply', 'check', 'grant'])
+
+    def test_executable_check_reapplies_image_schema_between_snapshots_and_rolls_back(self):
+        self.restore()
+        args, _ = self.call('check')
+        self.assert_activator(args, self.name)
+        self.assertIn('ON_ERROR_STOP=1', args)
+        sql = self.sql('check')
+        self.assertTrue(sql.startswith('SET standard_conforming_strings=on;\nBEGIN;\nDO $guard$'))
+        self.assertTrue(sql.endswith('ROLLBACK;\n'))
+        self.assertLess(sql.index('CREATE TEMP TABLE frameworks_before'), sql.index(executable_sql()))
+        self.assertLess(sql.index(executable_sql()), sql.index('CREATE TEMP TABLE frameworks_after'))
+        for identity in ("('view','public.body_lexical_stats')", "('function','public.check_evidence_dependencies()')",
+                         "('trigger','public.release release_versions_sealed')"):
+            self.assertIn(identity, sql)
+        self.assertEqual(sql.count("('view','public."), 4)
+        self.assertEqual(sql.count("('function','public."), 6)
+        self.assertEqual(sql.count("('trigger','public."), 8)
+        for source in ('pg_class', 'pg_trigger', 'pg_proc', 'pg_rewrite', 'pg_policy', 'pg_event_trigger',
+                       'pg_operator', 'pg_cast', 'pg_get_viewdef', 'pg_get_functiondef', 'pg_get_triggerdef',
+                       "deptype='e'"):
+            self.assertIn(source, sql)
+        self.assertIn("SELECT 'schema', n.nspname::text, '' FROM pg_namespace n", sql)
+        self.assertIn("left(n.nspname,3) <> 'pg_'", sql)
+        self.assertIn("n.nspname NOT IN ('information_schema','public')", sql)
+        for unsafe in ('prokind||', 'relkind||', 'prokind ||', 'relkind ||'):
+            self.assertNotIn(unsafe, sql)
+
+    def test_executable_difference_fails_with_the_object_type_only(self):
+        for outcome, kind in ((b'function\n', 'function'), (b'view\n', 'view'), (b'trigger\n', 'trigger'),
+                              (b'event trigger\n', 'event trigger'), (b'cast\n', 'cast'), (b'schema\n', 'schema'),
+                              (b'invented secret body\n', 'object'), (b'\n', 'object')):
+            self.calls.clear()
+            self.responses['check'] = outcome
+            with self.subTest(outcome=outcome), self.assertRaises(ValueError) as caught:
+                self.restore()
+            self.assertEqual(str(caught.exception), 'frameworks database ' + kind + ' differs from image schema version')
+            self.assertNotIn('grant', self.names())
 
     def test_schema_apply_failure_fails_the_restore_before_grants(self):
         self.failures['apply'] = CommandError('command failed', detail='psql: exit 3')

@@ -59,7 +59,6 @@ class FrameworksTocTest(unittest.TestCase):
         for extra in ('5; 1259 17000 VIEW public invented_secret_view builder',
                       '5; 1255 17001 FUNCTION public invented_secret_function() builder',
                       '5; 1255 17002 FUNCTION public check_evidence_dependencies(integer) builder',
-                      '5; 1255 17003 FUNCTION invented_secret_schema check_evidence_dependencies() builder',
                       '5; 2620 17004 TRIGGER public release invented_secret_trigger builder',
                       '5; 2620 17005 TRIGGER public framework mapping_evidence_dependencies builder',
                       '5; 1259 17006 VIEW public body_lexical_stats invented secret owner'):
@@ -67,6 +66,36 @@ class FrameworksTocTest(unittest.TestCase):
                 s.toc(HEADER + DATA + extra + '\n', EXTENSIONS, executable_sql())
             self.assertNotIn('invented', str(caught.exception))
             self.assertNotIn('secret', str(caught.exception))
+
+    def test_toc_keeps_only_the_public_schema_entry(self):
+        public = '6; 2615 2200 SCHEMA - public pg_database_owner\n'
+        self.assertEqual(s.toc(HEADER + public + DATA, EXTENSIONS, executable_sql()), SPECIAL + public + DATA)
+        for extra in ('6; 2615 17100 SCHEMA - invented_secret_schema builder',
+                      '6; 2615 17101 SCHEMA - public invented secret owner',
+                      '6; 2615 17102 SCHEMA - Public builder'):
+            with self.subTest(extra=extra), self.assertRaises(ValueError) as caught:
+                s.toc(HEADER + extra + '\n' + DATA, EXTENSIONS, executable_sql())
+            self.assertEqual(str(caught.exception), 'frameworks dump schema other than public')
+        law_toc(HEADER + '6; 2615 17100 SCHEMA - invented_schema builder\n' + DATA, EXTENSIONS)
+
+    def test_toc_refuses_any_object_outside_the_public_schema_with_type_only(self):
+        for extra, kind in (('TABLE invented_secret t builder', 'table'),
+                            ('TABLE DATA invented_secret t builder', 'table data'),
+                            ('SEQUENCE invented_secret s builder', 'sequence'),
+                            ('SEQUENCE SET invented_secret s builder', 'sequence set'),
+                            ('SEQUENCE OWNED BY invented_secret s builder', 'sequence owned by'),
+                            ('DEFAULT invented_secret t c builder', 'default'),
+                            ('CONSTRAINT invented_secret t c builder', 'constraint'),
+                            ('FK CONSTRAINT invented_secret t c builder', 'fk constraint'),
+                            ('INDEX invented_secret i builder', 'index'),
+                            ('INDEX ATTACH invented_secret i builder', 'index attach'),
+                            ('STATISTICS invented_secret x builder', 'statistics'),
+                            ('VIEW invented_secret body_lexical_stats builder', 'view'),
+                            ('FUNCTION invented_secret check_evidence_dependencies() builder', 'function'),
+                            ('TRIGGER invented_secret release release_delete builder', 'trigger')):
+            with self.subTest(extra=extra), self.assertRaises(ValueError) as caught:
+                s.toc(HEADER + DATA + '7; 1259 17200 ' + extra + '\n', EXTENSIONS, executable_sql())
+            self.assertEqual(str(caught.exception), 'frameworks dump ' + kind + ' outside public schema')
 
     def test_toc_refuses_every_other_executable_object_type(self):
         for extra in ('5; 2618 17000 RULE public framework invented_rule builder',

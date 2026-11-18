@@ -67,7 +67,12 @@ class Steps:
         self.settings(name)
         if self.db.query(sql.restored(), name) != 't':
             self.db.load(name, dump, self.db.save_list(row, self.select(row, dump, image)))
-        self.db.query(sql.apply(self.schema(image, row['manifest']['schema_version'])), name)
+        schema = self.schema(image, row['manifest']['schema_version'])
+        self.db.query(sql.apply(schema), name)
+        outcome = self.db.query(sql.executable(schema), name)
+        if outcome != 'ok':
+            kind = outcome if outcome in sql.KINDS else 'object'
+            raise ValueError('frameworks database ' + kind + ' differs from image schema version')
         self.db.grant(name)
 
     def validate(self, row):
@@ -75,7 +80,8 @@ class Steps:
         sql.database(name)
         self.settings(name)
         raw = self.db.query(sql.release_row(), name)
-        expected = {key: row['manifest'][key] for key in ('rel', 'schema_version', 'recipes')}
+        expected = dict({key: row['manifest'][key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
+                        kind='frameworks')
         if not raw or decode(raw, 'frameworks release row') != expected:
             raise ValueError('restored release row differs from manifest')
 

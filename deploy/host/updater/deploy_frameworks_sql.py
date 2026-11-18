@@ -2,6 +2,7 @@ import re
 
 from . import deploy_corpus_sql as law
 from .deploy_corpus_sql import literal
+from .deploy_frameworks_schema import objects
 
 
 KIND = 'frameworks'
@@ -10,6 +11,36 @@ LOG_SETTINGS = (('log_min_messages', 'panic'), ('log_min_error_statement', 'pani
 LOG_OPTIONS = ' '.join('-c ' + name + '=' + value for name, value in LOG_SETTINGS)
 EFFECTIVE = ','.join(value for _, value in LOG_SETTINGS)
 ROLES = ('activator', 'corpus_reader')
+KINDS = ('view', 'materialized view', 'trigger', 'function', 'procedure', 'aggregate', 'rule', 'policy',
+         'event trigger', 'operator', 'cast', 'schema')
+SYSTEM = "('pg_catalog','information_schema')"
+SNAPSHOT = f"""SELECT kind, identity, definition FROM (
+ SELECT CASE WHEN c.relkind='v' THEN 'view' ELSE 'materialized view' END AS kind,
+  n.nspname::text||'.'||c.relname::text AS identity, pg_get_viewdef(c.oid) AS definition
+  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('v','m') AND n.nspname NOT IN {SYSTEM}
+ UNION ALL SELECT 'trigger', n.nspname::text||'.'||c.relname::text||' '||t.tgname::text, pg_get_triggerdef(t.oid)
+  FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT t.tgisinternal
+ UNION ALL SELECT CASE WHEN p.prokind='a' THEN 'aggregate' WHEN p.prokind='p' THEN 'procedure' ELSE 'function' END,
+  n.nspname::text||'.'||p.proname::text||'('||pg_get_function_identity_arguments(p.oid)||')',
+  CASE WHEN p.prokind='a' THEN '' ELSE pg_get_functiondef(p.oid) END
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN {SYSTEM}
+  AND NOT EXISTS (SELECT FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e')
+ UNION ALL SELECT 'rule', n.nspname::text||'.'||c.relname::text||' '||r.rulename::text, pg_get_ruledef(r.oid)
+  FROM pg_rewrite r JOIN pg_class c ON c.oid=r.ev_class JOIN pg_namespace n ON n.oid=c.relnamespace
+  WHERE r.rulename <> '_RETURN' AND n.nspname NOT IN {SYSTEM}
+ UNION ALL SELECT 'policy', n.nspname::text||'.'||c.relname::text||' '||p.polname::text, ''
+  FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+ UNION ALL SELECT 'event trigger', e.evtname::text, '' FROM pg_event_trigger e
+ UNION ALL SELECT 'operator', n.nspname::text||'.'||o.oprname::text||'('||format_type(o.oprleft,NULL)||','||
+  format_type(o.oprright,NULL)||')', ''
+  FROM pg_operator o JOIN pg_namespace n ON n.oid=o.oprnamespace WHERE n.nspname NOT IN {SYSTEM}
+  AND NOT EXISTS (SELECT FROM pg_depend d WHERE d.classid='pg_operator'::regclass AND d.objid=o.oid AND d.deptype='e')
+ UNION ALL SELECT 'cast', format_type(c.castsource,NULL)||' AS '||format_type(c.casttarget,NULL), '' FROM pg_cast c
+  WHERE c.oid >= 16384
+  AND NOT EXISTS (SELECT FROM pg_depend d WHERE d.classid='pg_cast'::regclass AND d.objid=c.oid AND d.deptype='e')
+ UNION ALL SELECT 'schema', n.nspname::text, '' FROM pg_namespace n
+  WHERE left(n.nspname,3) <> 'pg_' AND n.nspname NOT IN ('information_schema','public')
+) objects"""
 
 
 def database(name):
@@ -60,9 +91,39 @@ def apply(schema):
 
 
 def release_row():
-    return guard() + ("SELECT json_build_object('rel',rel,'schema_version',schema_version,'recipes',"
+    return guard() + ("SELECT json_build_object('kind',kind,'rel',rel,'schema_version',schema_version,"
+                      "'counts',json_build_object('versions',version_count,'controls',control_count),'recipes',"
                       "json_build_object('dense',dense_recipe,'chunk',chunk_recipe,'lexical',lexical_recipe,"
                       "'retrieval',retrieval_recipe)) FROM release WHERE singleton;")
+
+
+def identity(item):
+    if item[0] == 'VIEW':
+        return 'view', 'public.' + item[1]
+    if item[0] == 'FUNCTION':
+        return 'function', 'public.' + item[1] + '()'
+    return 'trigger', 'public.' + item[1] + ' ' + item[2]
+
+
+def executable(schema):
+    expected = sorted(identity(item) for item in objects(schema))
+    rows = ('SELECT kind, identity FROM (VALUES ' +
+            ','.join('(' + literal(kind) + ',' + literal(name) + ')' for kind, name in expected) +
+            ') e(kind, identity)' if expected else 'SELECT NULL::text AS kind, NULL::text AS identity WHERE false')
+    return ('BEGIN;\n' + guard() +
+            'CREATE TEMP TABLE frameworks_before ON COMMIT DROP AS ' + SNAPSHOT + ';\n' + schema + '\n' +
+            'CREATE TEMP TABLE frameworks_after ON COMMIT DROP AS ' + SNAPSHOT + ';\n'
+            'WITH expected AS (' + rows + '), differences AS (\n'
+            ' (SELECT kind, identity, definition FROM frameworks_before EXCEPT '
+            'SELECT kind, identity, definition FROM frameworks_after)\n'
+            ' UNION ALL (SELECT kind, identity, definition FROM frameworks_after EXCEPT '
+            'SELECT kind, identity, definition FROM frameworks_before)\n'
+            ' UNION ALL (SELECT kind, identity, NULL::text FROM frameworks_after EXCEPT '
+            'SELECT kind, identity, NULL::text FROM expected)\n'
+            ' UNION ALL (SELECT kind, identity, NULL::text FROM expected EXCEPT '
+            'SELECT kind, identity, NULL::text FROM frameworks_after))\n'
+            "SELECT coalesce((SELECT kind FROM differences ORDER BY kind LIMIT 1),'ok');\n"
+            'ROLLBACK;\n')
 
 
 def restored():
