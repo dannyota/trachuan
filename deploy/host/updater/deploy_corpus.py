@@ -81,10 +81,6 @@ class Corpus:
     def dump_path(self):
         return self.host.paths.releases / self.kind.staging(self.manifest) / self.kind.dump
 
-    def stage(self):
-        self.kind.admit(self.mode)
-        return self.download()
-
     def download(self):
         target = self.dump_path()
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -160,7 +156,7 @@ class Corpus:
                 if not self.check(image):
                     return True
                 self.step = 'recovery'
-                dump = self.stage() if self.mode == 'new' and row['step'] in ('started','creating','created','restoring') else None
+                dump = self.download() if self.mode == 'new' and row['step'] in ('started','creating','created','restoring') else None
                 return self.finish(self.engine.resume(row, dump, image, recheck=True))
         return None
 
@@ -226,7 +222,7 @@ class Corpus:
                                       self.hash, self.manifest, self.mode)
                     return True
                 self.step = 'download'
-                dump = self.stage() if self.mode == 'new' else None
+                dump = self.download() if self.mode == 'new' else None
                 self.step = 'activation'
                 return self.finish(self.engine.run(self.hash, self.manifest, dump, image))
         except ActivatorNotProvisioned:
@@ -240,7 +236,7 @@ class Corpus:
             reason = str(error) if isinstance(error, ValueError) else self.label + ' command failed or run interrupted'
             if isinstance(error, RecursionError):
                 reason = self.label + ' input nested too deeply'
-            cause = self.kind.cause(error.detail) if isinstance(error, CommandError) and error.detail else None
+            cause = self.kind.cause(error) if isinstance(error, CommandError) else None
             if cause:
                 reason += ': ' + cause
             if self.hash:

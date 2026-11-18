@@ -43,14 +43,11 @@ class Law:
     def steps(self, database):
         return database
 
-    def admit(self, mode):
-        pass
-
     def activation(self, database, row):
         return self.sql.activate(row, database.projection(row))
 
-    def cause(self, detail):
-        return detail
+    def cause(self, error):
+        return error.detail
 
     def discard(self, releases):
         pass
@@ -93,16 +90,14 @@ class Frameworks:
     def steps(self, database):
         return Steps(database)
 
-    def admit(self, mode):
-        if mode == 'new':
-            raise ValueError('frameworks restore not implemented')
-
     def activation(self, database, row):
         return self.sql.activate(row)
 
-    def cause(self, detail):
-        found = re.match(r'[^:]*: exit -?[0-9]+', detail)
-        return found[0] if found else None
+    def cause(self, error):
+        found = re.match(r'[^:]*: exit -?[0-9]+', error.detail or '')
+        if not found:
+            return None
+        return found[0] + (': ' + error.safe if error.safe else '')
 
     def discard(self, releases):
         if releases.is_symlink() or not releases.is_dir():

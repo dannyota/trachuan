@@ -90,7 +90,7 @@ def compatible(obj, report):
             and uncalibrated(recipes['retrieval']) in [uncalibrated(r) for r in report['retrieval_recipes']])
 
 
-def toc(text, extensions):
+def toc(text, extensions, omit=None):
     kept, seen = [], set()
     allowed = ('SCHEMA ', 'TABLE ', 'TABLE DATA ', 'SEQUENCE ', 'SEQUENCE SET ',
                'SEQUENCE OWNED BY ', 'DEFAULT ', 'CONSTRAINT ', 'FK CONSTRAINT ',
@@ -112,6 +112,8 @@ def toc(text, extensions):
             parts = entry.split()
             if len(parts) < 4 or parts[3] not in extensions:
                 raise ValueError('unlisted extension comment')
+        elif omit is not None and omit(entry):
+            continue
         elif not entry.startswith(allowed) or ' EXTENSION ' in entry:
             raise ValueError('unsafe dump TOC object')
         else:

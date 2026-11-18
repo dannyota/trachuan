@@ -5,12 +5,68 @@ from .deploy_corpus_sql import literal
 
 
 KIND = 'frameworks'
+LOG_SETTINGS = (('log_min_messages', 'panic'), ('log_min_error_statement', 'panic'),
+                ('log_min_duration_statement', '-1'), ('log_statement', 'none'))
+LOG_OPTIONS = ' '.join('-c ' + name + '=' + value for name, value in LOG_SETTINGS)
+EFFECTIVE = ','.join(value for _, value in LOG_SETTINGS)
+ROLES = ('activator', 'corpus_reader')
 
 
 def database(name):
     if not isinstance(name, str) or not re.fullmatch(r'frameworks_[0-9]{8}(?:_[0-9]{1,2})?', name):
         raise ValueError('invalid frameworks database name')
     return '"' + name + '"'
+
+
+def plain(name):
+    if not isinstance(name, str) or not re.fullmatch('[a-z_][a-z0-9_]{0,62}', name):
+        raise ValueError('invalid frameworks role or extension name')
+    return name
+
+
+def effective():
+    return "SELECT concat_ws(','," + ','.join("current_setting('" + name + "')" for name, _ in LOG_SETTINGS) + ');'
+
+
+def guard():
+    differs = ' OR '.join("current_setting('" + name + "') <> '" + value + "'" for name, value in LOG_SETTINGS)
+    return ('DO $guard$ BEGIN IF ' + differs +
+            " THEN RAISE EXCEPTION 'frameworks log settings refused'; END IF; END $guard$;\n")
+
+
+def configure(name, extensions, roles=ROLES):
+    target = database(name)
+    scopes = ['DATABASE ' + target] + ['ROLE "' + plain(role) + '" IN DATABASE ' + target for role in roles]
+    parameters = 'ARRAY[' + ','.join(literal(setting) for setting, _ in LOG_SETTINGS) + ']'
+    settings = ''.join('ALTER ' + scope + ' SET ' + setting + ' = ' + literal(value) + ';\n'
+                       for scope in scopes for setting, value in LOG_SETTINGS)
+    created = ''.join('CREATE EXTENSION IF NOT EXISTS ' + plain(extension) + ' VERSION ' + literal(version) + ';\n'
+                      for extension, version in extensions.items())
+    return ('SELECT EXISTS(SELECT FROM pg_parameter_acl a CROSS JOIN aclexplode(a.paracl) x '
+            'LEFT JOIN pg_roles r ON r.oid=x.grantee WHERE a.parname=ANY(' + parameters + ") "
+            "AND x.privilege_type='SET' AND r.rolsuper IS NOT TRUE) "
+            'OR EXISTS(SELECT FROM pg_roles r CROSS JOIN unnest(' + parameters + ') p '
+            "WHERE NOT r.rolsuper AND has_parameter_privilege(r.oid,p,'SET')) AS frameworks_log_granted \\gset\n"
+            '\\if :frameworks_log_granted\n'
+            "SELECT 'granted';\n"
+            '\\else\n'
+            'BEGIN;\n' + settings + created + 'COMMIT;\n'
+            "SELECT 'configured';\n"
+            '\\endif\n')
+
+
+def apply(schema):
+    return 'BEGIN;\n' + guard() + schema + '\nCOMMIT;\n'
+
+
+def release_row():
+    return guard() + ("SELECT json_build_object('rel',rel,'schema_version',schema_version,'recipes',"
+                      "json_build_object('dense',dense_recipe,'chunk',chunk_recipe,'lexical',lexical_recipe,"
+                      "'retrieval',retrieval_recipe)) FROM release WHERE singleton;")
+
+
+def restored():
+    return guard() + "SELECT to_regclass('public.release') IS NOT NULL;"
 
 
 def current(country):

@@ -81,16 +81,16 @@ class Activation:
                 self.steps.smoke(row, image)
             if row['mode'] == 'new':
                 if row['step'] == 'started':
-                    self.steps.inspect(row, dump)
+                    self.steps.inspect(row, dump, image)
                     row = self.db.append(row, 'creating')
                 if row['step'] == 'creating':
-                    self.steps.inspect(row, dump)
+                    self.steps.inspect(row, dump, image)
                     self.steps.create(row)
                     row = self.db.append(row, 'created')
                 if row['step'] == 'created':
                     row = self.db.append(row, 'restoring')
                 if row['step'] == 'restoring':
-                    self.steps.restore(row, dump)
+                    self.steps.restore(row, dump, image)
                     row = self.db.append(row, 'restored')
             elif row['step'] == 'started':
                 row = self.db.append(row, 'restored')

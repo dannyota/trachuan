@@ -69,10 +69,10 @@ class Database:
         self.created += 1
         self.databases.add(row['database_name'])
 
-    def inspect(self, row, dump):
+    def inspect(self, row, dump, image=None):
         pass
 
-    def restore(self, row, dump):
+    def restore(self, row, dump, image=None):
         if self.before == 'restore':
             self.before = None
             raise Crash()
