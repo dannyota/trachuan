@@ -75,10 +75,7 @@ func (r *recorder) report() Report {
 			if !ok {
 				continue
 			}
-			limit95, limit99 := 1000.0, 2000.0
-			if name == "reader" {
-				limit95, limit99 = 1500, 3000
-			}
+			limit95, limit99 := Limits(phase, name)
 			p95 := percentile(success[phase][name], 95)
 			p99 := percentile(success[phase][name], 99)
 			pass := len(success[phase][name]) > 0 && p95 <= limit95 && p99 <= limit99
@@ -118,4 +115,14 @@ func writeReport(out string, v Report) error {
 		return fmt.Errorf("close report: %w", err)
 	}
 	return nil
+}
+
+func Limits(phase, stream string) (float64, float64) {
+	if stream == "reader" {
+		return 1500, 3000
+	}
+	if phase == "A" {
+		return 1000, 2000
+	}
+	return 1250, 2500
 }

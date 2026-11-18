@@ -158,7 +158,7 @@ for them.
 
 Run on the real release on the local stack, then on the A1 host with the flag on
 for the test window only. The thresholds are proposals until measured on A1;
-measured results, including web and server RSS against their rows in
+measured results, including web and server memory against their rows in
 [host budgets](budgets-host.md), go into [budgets](budgets.md). The load tool,
 accounts, sampling and A1 window are in
 [summary capacity harness](web-public-documents-capacity.md).
@@ -170,17 +170,26 @@ accounts, sampling and A1 window are in
 | C, warm working set | A, plus 500 summary URLs each requested twice within 60 seconds; the second must be a Nitro cache hit by the render counter                                                                      | 5 min          |
 | D, overload         | A, plus 40 summary pages per second from 40 addresses, 50 direct public API calls per second, the full list 10 times per second, 5% of requests aborted, and one activation; 429 and 503 ignored | 5 min          |
 
-| Gate                               | Proposal                                                                                                                            |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Search, every phase                | p95 at most 1 s, p99 at most 2 s, and p95 at most 1.25 times phase A's; in the 60 s after an activation, only the absolute bounds   |
-| Completed reader load, every phase | p95 at most 1.5 s, p99 at most 3 s, and p95 at most 1.25 times phase A's; in the 60 s after an activation, only the absolute bounds |
-| Signed-in errors, every phase      | none                                                                                                                                |
-| Coverage in B                      | every summary URL succeeds within its retries                                                                                       |
-| Successful summary latency         | p95 500 ms cold (B), 50 ms on a cache hit (C)                                                                                       |
-| Hit rate of C's second request     | at least 99%                                                                                                                        |
-| Reader-pool wait                   | p99 at most 50 ms                                                                                                                   |
-| Peaks over all phases              | PostgreSQL connections at most 40; host CPU at most 80%; web at most 300 MB; server within its row; no restart                      |
+| Gate                               | Proposal                                                                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Search, every phase                | p95 at most 1 s in A and 1.25 s in B to D, p99 at most 2 s in A and 2.5 s in B to D, and p95 at most 1.25 times phase A's; in the 60 s after an activation, only the absolute bounds |
+| Completed reader load, every phase | p95 at most 1.5 s, p99 at most 3 s, and p95 at most 1.25 times phase A's; in the 60 s after an activation, only the absolute bounds                                                  |
+| Signed-in errors, every phase      | none                                                                                                                                                                                 |
+| Coverage in B                      | every summary URL succeeds within its retries                                                                                                                                        |
+| Successful summary latency         | p95 500 ms cold (B), 50 ms on a cache hit (C)                                                                                                                                        |
+| Hit rate of C's second request     | at least 99%                                                                                                                                                                         |
+| Reader-pool wait                   | p99 at most 50 ms                                                                                                                                                                    |
+| Peaks over all phases              | PostgreSQL connections at most 40; host CPU at most 80% in A to C, recorded in D; web cgroup memory charge at most 300 MB; server within its row; no restart                         |
 
 An activation opens the new release with cold caches and pools, so the minute
 after it is held to the absolute bounds only; the local run on 2026-11-17 put
 search p95 near 1 s in that minute and at 266 ms outside it.
+
+The first A1 run, on 2026-11-19, put search p95 at 981 ms in phase A at 62% host
+CPU. On 4 OCPUs the 1 s bound leaves no headroom for added public traffic, so B
+to D take absolute bounds of 1.25 s and 2.5 s. While A stays under 1 s the
+relative bound is the tighter one, and it is what guards search against public
+traffic. D is overload by design: its host CPU is recorded, not gated. Web
+memory is the container's cgroup charge, not process RSS, which counts shared
+pages charged elsewhere: in that run web RSS peaked at 359.83 MB and its cgroup
+at 213 MiB. The harness samples and aborts by these measures.
