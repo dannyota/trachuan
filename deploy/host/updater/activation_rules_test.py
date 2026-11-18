@@ -7,6 +7,7 @@ from unittest import mock
 from updater.deploy_activation_record import stamp
 from updater.deploy_corpus_kind import FRAMEWORKS
 from updater.deploy_io import canonical
+from updater.deploy_release_target import LockUnavailable
 from updater.world_test import Crash, FrameworksCase, LawCase, NOW
 from watch import observations, signals
 
@@ -60,20 +61,16 @@ class ModeRules(Base):
         self.assertNotIn(self.name, self.db.table_retired)
         self.assertEqual(self.db.table_retired[self.active_name]['dump_sha256'], self.dump)
 
-    def test_an_entry_with_another_digest_or_oid_waits_and_spends_nothing(self):
-        for name, entry_oid, dump in (('digest', 1500, 'f' * 64), ('oid', 1600, None)):
-            with self.subTest(name=name):
-                self.setUp()
-                self.baseline()
-                self.db.add(self.name, 1500)
-                (self.paths.state / self.kind.marker).write_bytes(canonical('2027-01-15'))
-                self.write_record(active=self.active_entry(),
-                                  retired=[self.retired(self.name, entry_oid, age=8 * DAY, dump=dump)])
-                self.assertTrue(self.run_phase())
-                self.assertEqual(self.result()['status'], 'waiting')
-                self.assertEqual(self.db.rows, [])
-                self.assertEqual(self.status(), 'pending')
-                self.assertIn(self.name, self.db.databases)
+    def test_an_aged_entry_with_another_oid_waits_and_spends_nothing(self):
+        self.baseline()
+        self.db.add(self.name, 1500)
+        (self.paths.state / self.kind.marker).write_bytes(canonical('2027-01-15'))
+        self.write_record(active=self.active_entry(), retired=[self.retired(self.name, 1600, age=8 * DAY)])
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.result()['status'], 'waiting')
+        self.assertEqual(self.db.rows, [])
+        self.assertEqual(self.status(), 'pending')
+        self.assertIn(self.name, self.db.databases)
 
     def test_retained_needs_a_pointer_row(self):
         self.baseline()
@@ -584,7 +581,7 @@ class RollbackAcrossVersions(Base):
 
 class Alerts(Base):
     CASES = ('pointer_changed', 'serving_database_gone', 'active_cleared', 'adoption_failed', 'record_rebuilt',
-             'journal_row_refused')
+             'journal_row_refused', 'lock_unavailable')
 
     def raise_code(self, code):
         self.baseline()
@@ -605,6 +602,9 @@ class Alerts(Base):
             self.write_record(active=self.active_entry())
         elif code == 'record_rebuilt':
             self.path.write_text('{')
+        elif code == 'lock_unavailable':
+            self.write_record(active=self.active_entry())
+            self.db.lock_error = LockUnavailable('activator cannot connect to auth')
         else:
             self.db.tamper = True
 
@@ -638,7 +638,7 @@ class Alerts(Base):
                 due = [message for message in signals.due(self.signals, NOW) if message['key'].endswith('_integrity')]
                 self.assertEqual(due[0]['priority'], 0)
                 self.db.failures.clear()
-                self.db.tamper = False
+                self.db.tamper, self.db.lock_error = False, None
                 active = self.stored()['active']
                 if active:
                     self.db.pointer_value = active['database']

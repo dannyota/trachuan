@@ -529,31 +529,3 @@ func TestActivationRecord_TableFailureWaitsWithoutSpendingTheManifest(t *testing
 		}
 	})
 }
-
-func TestActivationRecord_AdvisoryLockExcludesAConcurrentRunAcrossCodeShapes(t *testing.T) {
-	withLawReleases(t, 2, nil, func(t *testing.T, rels []string) {
-		fixture := newPhaseFixture(t, "law", rels, "--no-auth-tables")
-		ctx := t.Context()
-		config := fixture.planted.admin.Copy()
-		config.User, config.Password = fixture.planted.provisioned, fixture.password
-		holder, err := pgx.ConnectConfig(ctx, config)
-		if err != nil {
-			t.Fatal("connect lock holder")
-		}
-		defer func() { _ = holder.Close(context.Background()) }()
-		var held bool
-		if err = holder.QueryRow(ctx, `SELECT pg_try_advisory_lock(hashtextextended('activation',0))`).Scan(&held); err != nil || !held {
-			t.Fatalf("older code shape did not take the lock: %v %t", err, held)
-		}
-		manifest := fixture.manifest(1, rels[0], 2, "b")
-		got := fixture.run(t, manifest, nil)
-		wantOutcome(t, got, "skipped")
-		if !strings.Contains(got.Result.Message, "advisory lock busy") || fixture.pointer(t) != fixture.name(0) {
-			t.Fatalf("busy lock: %+v", got)
-		}
-		if _, err = holder.Exec(ctx, `SELECT pg_advisory_unlock(hashtextextended('activation',0))`); err != nil {
-			t.Fatal(err)
-		}
-		wantOutcome(t, fixture.run(t, manifest, nil), "ok")
-	})
-}

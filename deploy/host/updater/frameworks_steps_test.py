@@ -9,7 +9,7 @@ from updater import deploy_frameworks_sql as sql
 from updater.deploy_corpus_kind import FRAMEWORKS
 from updater.deploy_host import Host
 from updater.deploy_io import CommandError
-from updater.deploy_release_target import Waiting
+from updater.deploy_release_target import LockLost, Waiting
 from updater.deploy_store import Paths
 from updater.frameworks_toc_test import DATA, EXECUTABLE, HEADER, SPECIAL, executable_sql
 from updater.frameworks_verify_test import manifest, rules
@@ -36,9 +36,8 @@ def classify(args, text):
         return 'grant-corpus'
     if 'rm -f /run/pgbackrest/corpus-*.list' in args:
         return 'discard-lists'
-    for program in ('createdb', 'dropdb'):
-        if program in args:
-            return program
+    if 'CREATE DATABASE' in text:
+        return 'createdb'
     if 'pg_restore' in args:
         return 'list' if '--list' in args else 'pg_restore'
     if 'umask 077; cat > "$1"' in args:
@@ -133,9 +132,8 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
         self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'protected', 'catalog', 'strays', 'createdb',
                                         'owner', 'target-oid', 'configure', 'effective'])
         args, _ = self.call('createdb')
-        self.assertIn('--template=template0', args)
-        self.assertEqual(args[-1], self.name)
-        self.assertEqual(args[args.index('-U') + 1], 'activator')
+        self.assert_activator(args, 'postgres')
+        self.assertIn('CREATE DATABASE "' + self.name + '" TEMPLATE template0;', self.sql('createdb'))
         args, _ = self.call('configure')
         self.assert_postgres(args, self.name)
         sql = self.sql('configure')
@@ -234,7 +232,7 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
 
     def test_dead_advisory_lock_refuses_postgres_step(self):
         self.db.holder.poll.return_value = 1
-        with self.assertRaisesRegex(ValueError, 'activation advisory lock lost'):
+        with self.assertRaisesRegex(LockLost, 'activation advisory lock lost'):
             self.steps.create(self.row)
         self.assertEqual(self.calls, [])
 

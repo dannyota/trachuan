@@ -103,6 +103,14 @@ class SeedTest(Fixture):
         self.catalog = {ACTIVE: owned(100), OLD: owned(90)}
         self.assertIsNone(self.reconcile()['active'])
 
+    def test_an_artifact_whose_bytes_do_not_match_its_hash_gives_no_entry(self):
+        digest = self.manifest(ACTIVE)
+        forged = canonical(dict(database=OLD, dump=dict(sha256=DUMP), salt='forged'))
+        (self.root / LAW.artifacts / digest / 'manifest.json').write_bytes(forged)
+        self.accepted((digest, 'active'))
+        self.catalog = {ACTIVE: owned(100), OLD: owned(90)}
+        self.assertIsNone(self.reconcile()['active'])
+
     def test_newest_retained_manifest_wins_for_one_database(self):
         first = self.manifest(OLD, OTHER_DUMP, salt='1')
         second = self.manifest(OLD, DUMP, salt='2')

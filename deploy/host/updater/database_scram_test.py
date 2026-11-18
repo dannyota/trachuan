@@ -69,7 +69,7 @@ class ActivatorScramTest(LawFixture, unittest.TestCase):
         self.db.make(self.row)
         self.db.drop_database(LAW_NAME)
         self.db.load(self.row, '/synthetic/dump', '/run/pgbackrest/corpus-x.list')
-        for program in ('psql', 'createdb', 'pg_restore'):
+        for program in ('psql', 'pg_restore'):
             with self.subTest(program=program):
                 found = [args for args in self.calls if program in args and '-U' in args
                          and args[args.index('-U') + 1] == 'activator']

@@ -248,7 +248,7 @@ class ActivatorStaysInTheCatalogTest(unittest.TestCase):
             return b'[]'
         return b'f\n'
 
-    def test_activator_sessions_in_auth_are_catalog_only(self):
+    def test_activator_catalog_sessions_run_from_postgres_and_name_only_the_catalog(self):
         self.db.catalog()
         self.db.clear_leftovers()
         self.db.other_superuser()
@@ -257,7 +257,7 @@ class ActivatorStaysInTheCatalogTest(unittest.TestCase):
         self.db.owned('corpus_vn_20990101_1')
         self.assertTrue(self.seen)
         for args, text in self.seen:
-            self.assertEqual(args[args.index('-d') + 1], 'auth')
+            self.assertEqual(args[args.index('-d') + 1], 'postgres')
             option = next(arg for arg in args if arg.startswith('PGOPTIONS='))
             self.assertEqual(option, 'PGOPTIONS=-c search_path=pg_catalog')
             for word in ('public.', 'corpus_release', 'frameworks_release', 'release_journal', 'retired_release'):

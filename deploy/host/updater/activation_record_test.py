@@ -201,6 +201,33 @@ class AlertTest(RecordFixture):
         self.assertEqual(Record(self.path, law.database, lambda: self.now).integrity(), [])
 
 
+class NoteTest(RecordFixture):
+    def test_a_note_on_a_readable_file_is_saved_like_any_alert(self):
+        self.record.data = dict(sample(), alerts={})
+        self.record.save()
+        fresh = Record(self.path, law.database, lambda: self.now)
+        fresh.note('lock_unavailable')
+        self.assertEqual(json.loads(self.path.read_bytes())['alerts'], {'lock_unavailable': stamp(NOW)})
+        self.assertEqual(fresh.integrity(), ['lock_unavailable'])
+
+    def test_a_note_without_a_readable_file_writes_nothing_but_still_reports(self):
+        for content in (None, b'{'):
+            with self.subTest(content=content):
+                if content is not None:
+                    self.path.write_bytes(content)
+                record = Record(self.path, law.database, lambda: self.now)
+                record.note('lock_unavailable')
+                self.assertEqual(record.integrity(), ['lock_unavailable'])
+                self.assertEqual(self.path.exists(), content is not None)
+                if content is not None:
+                    self.assertEqual(self.path.read_bytes(), content)
+                    self.path.unlink()
+
+    def test_a_note_refuses_unknown_codes(self):
+        with self.assertRaises(ValueError):
+            self.record.note('database_on_fire')
+
+
 class OperationEditTest(RecordFixture):
     def setUp(self):
         super().setUp()

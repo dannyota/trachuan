@@ -35,7 +35,7 @@ class Database:
 
     def check_lock(self):
         if self.holder is None or self.holder.poll() is not None:
-            raise ValueError('activation advisory lock lost')
+            raise target.LockLost('activation advisory lock lost')
 
     def arguments(self, *args):
         return activator_arguments(*args)
@@ -52,9 +52,15 @@ class Database:
         self.check_lock()
         return self.host.activator(*args, **kwargs)
 
-    def query(self, text, database='auth', options=sql.CATALOG_PATH):
+    def query(self, text, database='postgres', options=sql.CATALOG_PATH):
         self.check_lock()
-        return self.host.activator_psql(self.target(database, 'auth', 'postgres'), text, options)
+        name = self.target(database, 'postgres')
+        try:
+            return self.host.activator_psql(name, text, options)
+        except CommandError as error:
+            if name == 'postgres' and error.returncode == 2 and not interrupted(error):
+                raise target.Unreachable('activator session unavailable') from error
+            raise
 
     def admin(self, database, statements, options=sql.CATALOG_PATH):
         self.check_lock()
@@ -96,10 +102,6 @@ class Database:
 
     def verify_target(self, row):
         self.on_target(row, '')
-
-    def client(self, program, *args):
-        return self.user('env', 'PGOPTIONS=' + sql.CATALOG_PATH, program, '--no-password', '-h', '127.0.0.1',
-                         '-U', 'activator', *args)
 
     def projection(self, row):
         if row['manifest']['schema_version'] >= 8:
@@ -146,7 +148,7 @@ class Database:
 
     def clear_leftovers(self):
         if self.backend is None:
-            raise ValueError('activation advisory lock lost')
+            raise target.LockLost('activation advisory lock lost')
         lines = self.query(target.end_backends(self.backend)).splitlines()
         if not lines or lines[-1] != 'f':
             raise target.Leftover(target.BACKEND_LEFT)
@@ -177,7 +179,7 @@ class Database:
         self.clear_leftovers()
         if exists:
             self.drop_target(row)
-        self.client('createdb', '--template=template0', name)
+        self.query('CREATE DATABASE ' + self.sql.database(name) + ' TEMPLATE template0;')
         if not self.owned(name):
             raise ValueError('activation target not owned by activator')
         self.remember_target(row)

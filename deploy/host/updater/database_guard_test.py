@@ -147,14 +147,17 @@ class LawGuardTest(LawFixture, unittest.TestCase):
             with self.subTest(path=name):
                 self.calls.clear()
                 action()
-                if name not in ('owned', 'remember_target', 'drop', 'drop_target'):
+                if name == 'make':
+                    self.assertTrue(any('CREATE DATABASE "' + LAW_NAME + '"' in text for text in self.scripts))
+                elif name not in ('owned', 'remember_target', 'drop', 'drop_target'):
                     self.assertTrue(any(LAW_NAME in args for args in self.calls))
 
-    def test_query_accepts_only_its_shared_databases_and_the_release(self):
-        for value in (*SHARED, LAW_NAME):
+    def test_query_accepts_only_postgres_and_the_release(self):
+        for value in ('postgres', LAW_NAME):
             self.calls.clear()
             self.db.query('SELECT 1;', value)
             self.assertEqual(self.calls[0][self.calls[0].index('-d') + 1], value)
+        self.assert_refused(lambda: self.db.query('SELECT 1;', 'auth'), 'auth')
 
     def test_active_pointer_is_checked_before_it_is_returned(self):
         for value in CONNECTION + (FRAMEWORKS_NAME, 'auth'):
@@ -233,10 +236,11 @@ class SessionGuardTest(LawFixture, unittest.TestCase):
     def test_leftover_sweep_keeps_catalog_names_out_of_client_arguments(self):
         with mock.patch.object(self.db, 'target', wraps=self.db.target) as guard:
             self.db.clear_leftovers()
-        self.assertEqual({call.args[0] for call in guard.call_args_list}, {'auth'})
+        self.assertEqual({call.args[0] for call in guard.call_args_list}, {'postgres'})
         self.assertEqual(len(self.calls), 4)
         for args in self.calls:
-            self.assertEqual(args[args.index('-d') + 1], 'auth')
+            role = args[args.index('-U') + 1]
+            self.assertEqual(args[args.index('-d') + 1], 'auth' if role == 'auth_owner' else 'postgres')
             self.assertFalse({'dropdb', 'createdb', 'pg_restore'} & set(args))
         self.assertIn("pg_catalog.format('DROP DATABASE %I',s.datname)", self.scripts[-1])
 
@@ -307,9 +311,10 @@ class FrameworksGuardTest(GuardAssertions, StepsFixture, unittest.TestCase):
         self.steps.smoke(self.row, 'image')
         self.db.make(self.row)
         self.db.load(self.row, '/d', '/run/pgbackrest/corpus-x.list')
-        for name in ('effective', 'restored', 'postgres', 'validate', 'release-check', 'createdb', 'pg_restore'):
+        for name in ('effective', 'restored', 'postgres', 'validate', 'release-check', 'pg_restore'):
             with self.subTest(client=name):
                 self.assertIn(self.name, self.call(name)[0])
+        self.assertIn('CREATE DATABASE "' + self.name + '"', self.sql('createdb'))
 
     def test_schema_version_must_be_a_positive_integer_before_the_container_starts(self):
         for value in ('1', '--help', '1 2', '', None, True, 0, -1, 1.5, [1]):

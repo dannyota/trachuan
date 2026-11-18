@@ -15,7 +15,7 @@ from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_corpus_sql import JournalRefused
 from updater.deploy_io import canonical
 from updater.deploy_release_tables import PointerRefused, TableFailure
-from updater.deploy_release_target import Leftover
+from updater.deploy_release_target import DATABASE_LEFT, Leftover, Waiting
 from updater.frameworks_verify_test import BLOCK, description as frameworks_description, manifest as frameworks_manifest
 
 
@@ -45,7 +45,7 @@ class World:
         self.created, self.tidied, self.lists_discarded = 0, 0, 0
         self.lists_removed, self.failures, self.crashes = [], {}, set()
         self.superuser, self.leftover, self.tamper, self.swap_error = False, None, False, None
-        self.swaps, self.locks = [], 0
+        self.swaps, self.locks, self.lock_error, self.before_drop = [], 0, None, None
         self.describe = mock.Mock()
         self.check_extensions = mock.Mock()
 
@@ -70,6 +70,8 @@ class World:
 
     def lock(self):
         self.locks += 1
+        if self.lock_error is not None:
+            raise self.lock_error
         return nullcontext()
 
     def discard_lists(self):
@@ -104,15 +106,21 @@ class World:
 
     def tidy(self):
         self.tidied += 1
-        self.clear_leftovers()
+        try:
+            self.clear_leftovers()
+        except Waiting:
+            pass
 
     def drop_database(self, name, oid=None):
         self.crash('drop:' + name)
+        if self.before_drop is not None:
+            self.before_drop(name)
         info = self.databases.get(name)
-        if info is None or info['owner'] != 'activator' or (oid is not None and info['oid'] != oid):
-            return
-        del self.databases[name]
-        self.dropped.append(name)
+        if info is not None and info['owner'] == 'activator' and (oid is None or info['oid'] == oid):
+            del self.databases[name]
+            self.dropped.append(name)
+        if name in self.databases:
+            raise Waiting(DATABASE_LEFT)
 
     def step(self, name, row):
         self.log.append(name)

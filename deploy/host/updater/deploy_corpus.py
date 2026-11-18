@@ -8,14 +8,14 @@ import time
 
 from .deploy_activation_reconcile import Records
 from .deploy_activation_record import BEFORE_SWAPPING
-from .deploy_corpus_activate import Activation
+from .deploy_corpus_activate import Activation, Refused
 from .deploy_corpus_database import Database
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_result import ReleaseResult
 from .deploy_corpus_sql import JournalRefused, REFUSED, SUPERUSER_REFUSED
-from .deploy_io import atomic, canonical, CommandError, Busy, interrupted
+from .deploy_io import atomic, canonical, CommandError, interrupted
 from .deploy_release_tables import PointerRefused
-from .deploy_release_target import Held, Waiting
+from .deploy_release_target import Held, LockUnavailable, Waiting
 from .deploy_verify import match
 
 
@@ -358,12 +358,15 @@ class Corpus:
                 self.record.raise_alert('journal_row_refused')
             self.result.write('waiting', self.step, REFUSED, self.hash, self.manifest, self.mode)
             return True
+        except Refused as error:
+            self.state.fail(self.hash, self.kind.key)
+            self.result.write('failed', self.step, str(error), self.hash, self.manifest, self.mode)
+            return False
         except Waiting as error:
             self.interrupted = interrupted(error)
+            if isinstance(error, LockUnavailable):
+                self.record.note('lock_unavailable')
             self.result.write('waiting', self.step, str(error), self.hash, self.manifest, self.mode)
-            return True
-        except Busy:
-            self.result.write('skipped', self.step, 'activation advisory lock busy; retry later', self.hash, self.manifest, self.mode)
             return True
         except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError, RecursionError) as error:
             self.interrupted = interrupted(error)

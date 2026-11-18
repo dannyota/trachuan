@@ -24,6 +24,22 @@ class Held(Waiting):
     pass
 
 
+class LockBusy(Waiting):
+    pass
+
+
+class LockUnavailable(Waiting):
+    pass
+
+
+class LockLost(Waiting):
+    pass
+
+
+class Unreachable(Waiting):
+    pass
+
+
 def number(value):
     if not isinstance(value, str) or not re.fullmatch('[1-9][0-9]*', value):
         raise ValueError(REFUSED)

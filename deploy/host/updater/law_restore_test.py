@@ -10,6 +10,7 @@ from updater.corpus_verify_test import manifest
 from updater.deploy_corpus_database import Database
 from updater.deploy_host import Host
 from updater.deploy_io import CommandError
+from updater.deploy_release_target import LockLost
 from updater.deploy_release_catalog import KINDS
 from updater.deploy_store import Paths
 from updater.frameworks_check_test import UNQUALIFIED
@@ -30,9 +31,8 @@ def classify(args, text):
         return 'release-check'
     if 'grant-corpus.sh' in joined:
         return 'grant-corpus'
-    for program in ('createdb', 'dropdb'):
-        if program in args:
-            return program
+    if 'CREATE DATABASE' in text:
+        return 'createdb'
     if 'pg_restore' in args:
         return 'list' if '--list' in args else 'pg_restore'
     if 'umask 077; cat > "$1"' in args:
@@ -114,10 +114,9 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'protected', 'catalog', 'strays',
                                         'createdb', 'owner', 'target-oid', 'prepare'])
         args, _ = self.call('createdb')
-        self.assertIn('--template=template0', args)
-        self.assertEqual(args[-1], self.name)
-        self.assertEqual(args[args.index('-U') + 1], 'activator')
-        self.assertEqual(self.options(args), ADMIN)
+        self.assert_activator(args, 'postgres')
+        self.assertEqual(self.sql('createdb'),
+                         'SET standard_conforming_strings=on;\nCREATE DATABASE "' + self.name + '" TEMPLATE template0;')
         args, _ = self.call('prepare')
         self.assertEqual(args[:8], ['podman', 'exec', '-i', '--env', ADMIN, '--env', 'PGREQUIREAUTH=scram-sha-256',
                                     'trachuan-postgres'])
@@ -155,7 +154,7 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertIn("operation_id <> '" + OPERATION + "'", protected[1])
         args, kwargs = self.call('drop')
         self.assertEqual(args[args.index('-U') + 1], 'activator')
-        self.assert_activator(args, 'auth')
+        self.assert_activator(args, 'postgres')
         self.assertIn('d.oid=16400::pg_catalog.oid', kwargs['input'].decode())
 
     def test_existing_target_activator_does_not_own_is_refused_without_a_postgres_session(self):
@@ -170,7 +169,7 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertIn('pg_catalog.pg_terminate_backend(a.pid,5000)', text)
         self.assertIn('a.usename=current_user', text)
         self.assertEqual(text.count('a.pid NOT IN (pg_catalog.pg_backend_pid(),77)'), 2)
-        self.assert_activator(self.call('end-backends')[0], 'auth')
+        self.assert_activator(self.call('end-backends')[0], 'postgres')
 
     def assert_leftover(self, reason):
         with self.assertRaises(target.Leftover) as caught:
@@ -190,7 +189,7 @@ class LawCreateTest(LawFixture, unittest.TestCase):
 
     def test_without_the_lock_backend_nothing_is_ended(self):
         self.db.backend = None
-        with self.assertRaisesRegex(ValueError, 'activation advisory lock lost'):
+        with self.assertRaisesRegex(LockLost, 'activation advisory lock lost'):
             self.db.create(self.row)
         self.assertNotIn('end-backends', self.names())
 
@@ -254,7 +253,7 @@ class LawCreateTest(LawFixture, unittest.TestCase):
 
     def test_dead_advisory_lock_refuses_the_postgres_step(self):
         self.db.holder.poll.return_value = 1
-        with self.assertRaisesRegex(ValueError, 'activation advisory lock lost'):
+        with self.assertRaisesRegex(LockLost, 'activation advisory lock lost'):
             self.db.admin(self.name, 'SELECT 1;')
         self.assertEqual(self.calls, [])
 

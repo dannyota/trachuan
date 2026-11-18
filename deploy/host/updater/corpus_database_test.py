@@ -7,6 +7,7 @@ from unittest import mock
 from updater.corpus_verify_test import manifest
 from updater import deploy_corpus_database as d
 from updater.deploy_host import Host
+from updater.deploy_release_target import LockLost
 from updater.deploy_store import Paths
 from updater.deploy_io import command
 
@@ -81,16 +82,16 @@ class CorpusDatabaseTest(unittest.TestCase):
 
     def test_dead_advisory_lock_refuses_catalog_reads(self):
         self.db.holder.poll.return_value = 1
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LockLost):
             self.db.catalog()
         self.assertEqual(self.calls, [])
 
-    def test_a_drop_runs_as_activator_in_auth_bound_to_the_recorded_oid(self):
+    def test_a_drop_runs_as_activator_from_postgres_bound_to_the_recorded_oid(self):
         self.response = b'f\n'
         self.db.drop_database(self.m['database'], 16400)
         args, kwargs = self.calls[0]
         self.assertEqual(args[args.index('-U') + 1], 'activator')
-        self.assertEqual(args[args.index('-d') + 1], 'auth')
+        self.assertEqual(args[args.index('-d') + 1], 'postgres')
         text = kwargs['input'].decode()
         self.assertIn('d.oid=16400::pg_catalog.oid', text)
         self.assertNotIn('OWNER TO', text)

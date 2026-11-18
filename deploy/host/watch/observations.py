@@ -6,7 +6,7 @@ from . import network, storage
 
 
 INTEGRITY = ('pointer_changed', 'serving_database_gone', 'active_cleared', 'adoption_failed', 'record_rebuilt',
-             'journal_row_refused')
+             'journal_row_refused', 'lock_unavailable')
 
 
 def result(path, kind):

@@ -12,6 +12,11 @@ ORDER = dict(new=('started', 'creating', 'created', 'restoring', 'restored', 'va
              retained=('started', 'restored', 'validated', 'checked'))
 POINTER_CHANGED = 'pointer changed'
 ADOPTION_FAILED = 'adoption check failed'
+TERMINAL = ('activated', 'reverted', 'aborted', 'pruned')
+
+
+class Refused(ValueError):
+    pass
 
 
 class Activation:
@@ -42,15 +47,15 @@ class Activation:
         name, label = manifest['database'], self.kind.label
         record, entry = self.record, self.record.entry(name)
         info = catalog.get(name)
+        if entry is not None and entry['dump_sha256'] != manifest['dump']['sha256']:
+            raise Refused('retained database dump digest differs')
         fresh = entry is not None and self.records.clock() - moment(entry['retired_at']) < RETENTION_SECONDS
-        if (fresh and entry['dump_sha256'] == manifest['dump']['sha256'] and info is not None
-                and info['oid'] == entry['oid'] and info['owner'] == OWNER):
+        if fresh and info is not None and info['oid'] == entry['oid'] and info['owner'] == OWNER:
             if pointer is None:
                 raise Waiting(label + ' pointer missing')
             return 'retained', entry['oid']
         previous, active = self.kind.previous(manifest), record.active
         if pointer != previous or (active is not None and active['database'] != previous):
-            record.raise_alert('pointer_changed')
             raise Waiting('new ' + label + ' previous does not equal active release')
         if entry is not None or (active is not None and active['database'] == name):
             raise Waiting('new ' + label + ' target is the active or a retired database')
@@ -84,6 +89,8 @@ class Activation:
         end = order.index(wanted)
         latest = next((row['step'] for row in self.tables.operations(operation['id'])
                        if row['operation_id'] == operation['id']), None)
+        if latest in TERMINAL:
+            return
         if latest is None:
             start = 0
         elif latest in order:
@@ -203,10 +210,11 @@ class Activation:
         self.record.step('aborted')
         row = self.row(operation, manifest)
         self.tables.append(row, 'aborted')
-        name = row['database_name']
-        if (row['mode'] == 'new' and self.db.exists(name) and self.db.owned(name)
-                and self.db.droppable(name, row['operation_id'])):
-            self.db.drop_database(name, row['oid'])
+        name, oid = row['database_name'], row['oid']
+        info = self.db.catalog().get(name)
+        if (row['mode'] == 'new' and info is not None and info['owner'] == OWNER
+                and (oid is None or info['oid'] == oid) and self.db.droppable(name, row['operation_id'])):
+            self.db.drop_database(name, oid)
         self.db.remove_list(row['operation_id'])
         self.spend(operation['manifest_hash'])
         self.record.clear_operation()

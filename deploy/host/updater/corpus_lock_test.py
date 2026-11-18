@@ -5,7 +5,8 @@ from updater.deploy_corpus_lock import AdvisoryLock
 from updater.deploy_corpus_database import Database
 from updater.deploy_host import Host
 from updater.deploy_store import Paths
-from updater.deploy_io import Busy, CommandError
+from updater.deploy_io import CommandError
+from updater.deploy_release_target import LockBusy, LockUnavailable
 
 
 class AdvisoryLockTest(unittest.TestCase):
@@ -65,15 +66,16 @@ class AdvisoryLockTest(unittest.TestCase):
                     self.fail('incomplete answer accepted')
 
     def test_busy_or_lost_lock_closes_session_without_mutation(self):
-        for response, error in ((b'f|4242\n', Busy), (b'', CommandError), (b't\n', CommandError), (b't|x\n', CommandError)):
+        for reads, error in (([b'f|4242\n', b'1|1\n'], LockBusy), ([b'f|4242\n', b'1|0\n'], LockUnavailable),
+                             ([b''], CommandError), ([b't\n'], CommandError), ([b't|x\n'], CommandError)):
             db = Database(Host(Paths(), user_prefix=[]), {})
             process = mock.Mock()
             selector = mock.MagicMock()
             selector.__enter__.return_value.select.return_value = [(None,None)]
             with mock.patch('updater.deploy_corpus_lock.subprocess.Popen', return_value=process), \
                  mock.patch('updater.deploy_corpus_lock.selectors.DefaultSelector', return_value=selector), \
-                 mock.patch('updater.deploy_corpus_lock.os.read', return_value=response):
-                with self.assertRaises(error):
+                 mock.patch('updater.deploy_corpus_lock.os.read', side_effect=reads):
+                with self.subTest(reads=reads), self.assertRaises(error):
                     with AdvisoryLock(db):
                         self.fail('unheld lock entered')
             process.stdin.close.assert_called_once()

@@ -3,6 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from updater.deploy_activation_record import ALERTS
+
 from . import messages, observations, signals, storage
 from .signals_test import NOW, record, sample
 
@@ -69,6 +71,10 @@ class IntegritySignalTest(unittest.TestCase):
 
 
 class IntegrityObservationTest(unittest.TestCase):
+    def test_the_watch_accepts_exactly_the_codes_the_updater_records(self):
+        self.assertEqual(observations.INTEGRITY, ALERTS)
+        self.assertEqual(self.result(list(ALERTS))['integrity'], list(ALERTS))
+
     def result(self, integrity):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'release.json'
