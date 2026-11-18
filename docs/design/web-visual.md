@@ -142,8 +142,10 @@ reads as a control by its icon, never by colour, so it keeps the colour rule
 that navy text never stands alone as an action. A button is never underlined.
 Chips are the third kind: compact tags that name a topic or a relation, shaped
 as pills without an underline, and they may navigate. Every link and button is a
-target at least 44 px tall. Icons are inline SVG with `aria-hidden`, never text
-arrows.
+target at least 44 px tall. Below 768 px the same holds for topic names in the
+topic tree, which are the main links of the topic pages; tighter row padding
+offsets most of the added height. Icons are inline SVG with `aria-hidden`, never
+text arrows.
 
 - A result's actions: "Đọc trong văn bản" / "Read in document" is the primary
   link, on the left, with an inline arrow icon; "Sao chép trích dẫn" / "Copy
@@ -152,10 +154,11 @@ arrows.
   icon for 2 seconds; when the clipboard refuses, it reads "Chưa sao chép được"
   / "Could not copy" with an alert icon for 2 seconds. The outcome stays inside
   the button, which keeps the width of its longest label in every state, so the
-  row never reflows; a hidden live region announces it, the existing failure
-  message included. Where the link and the button do not fit on one row (below
-  360 px), the button sits under the link, left aligned; in a search card the
-  rank stays with the stamp and number.
+  row never reflows; the label starts right after the icon, with the spare width
+  after it; a hidden live region announces it, the existing failure message
+  included. Where the link and the button do not fit on one row (below 360 px),
+  the button sits under the link, left aligned; in a search card the rank stays
+  with the stamp and number.
 - Below them, only when the document has an https source, a muted 13 px caption:
   "Nguồn:" / "Source:" and the source's host as a link with the external-link
   icon.

@@ -95,3 +95,22 @@ for (const width of [320, 390, 767, 768, 1023, 1024, 1280]) {
     })
   })
 }
+
+for (const [language, text] of [['vi', 'Ví dụ: xử lý dữ liệu cá nhân'], ['en', 'E.g. xử lý dữ liệu cá nhân']] as const) {
+  test(`home query placeholder fits whole at 360 px in ${language}`, async ({ page, baseURL }) => {
+    await page.context().addCookies([{ name: 'lang', value: language, url: baseURL! }])
+    await page.route('**/api/v1/me', route => route.fulfill({ status: 204 }))
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.goto('/')
+    const field = page.locator('#home-query')
+    await expect(field).toHaveAttribute('placeholder', text)
+    const result = await field.evaluate((element, value) => {
+      const style = getComputedStyle(element)
+      const context = document.createElement('canvas').getContext('2d')!
+      context.font = style.font
+      const available = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+      return { width: context.measureText(value).width, available }
+    }, text)
+    expect(result.width).toBeLessThanOrEqual(result.available)
+  })
+}
