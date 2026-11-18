@@ -146,11 +146,11 @@ these differences:
   Until a frameworks manifest is accepted, a missing `frameworks-production` tag
   in the shared package is status `current` with "no frameworks release
   published".
-- **Mode.** `retained` and `new` as for law, over `retired_release` rows of kind
-  `frameworks`. `new` requires `previous` to equal the active frameworks
-  release; with no `frameworks_release` row it requires `previous` null, the
-  first-release bootstrap. Once the row exists, a null `previous` is refused for
-  `new`.
+- **Mode.** `retained` and `new` as for law, from the frameworks
+  [activation record](activation-record.md). `new` requires `previous` to equal
+  the active frameworks release; with no `frameworks_release` row it requires
+  `previous` null, the first-release bootstrap. Once the row exists, a null
+  `previous` is refused for `new`.
 - **Compatibility.** `server release-check --kind frameworks` prints
   `{"schema_versions": [...], "retrieval_recipe_versions": [...], "lexical_recipe_versions": [...], "query_recipe_hash": "..."}`;
   the manifest's schema version and recipe versions must be listed and its dense
@@ -162,10 +162,10 @@ these differences:
 - **Logs, restore and smoke.** The steps between creating the database and the
   pointer swap, and what a dump may do, are in
   [frameworks restore](frameworks-release-restore.md).
-- **Pointer.** Step 4 swaps `frameworks_release.active_db` from the journaled
-  value, or inserts the row when there is none (bootstrap), and writes the old
-  database to `retired_release` with kind `frameworks`. The law phase never
-  writes `frameworks_release`; the frameworks phase never writes
+- **Pointer.** Step 4 swaps `frameworks_release.active_db` from the operation's
+  expected value, or inserts the row when there is none (bootstrap), and writes
+  the old database to `retired_release` with kind `frameworks`. The law phase
+  never writes `frameworks_release`; the frameworks phase never writes
   `corpus_release`.
 - **Result.** `/srv/trachuan/state/deploy/release-frameworks.json` (removed,
   with the frameworks prune marker, by an updater whose policy has no block) and
@@ -174,9 +174,9 @@ these differences:
   `release_waiting_age_seconds` with a `kind` dimension, and the alarms fire for
   either kind.
 
-The daily prune handles retired databases of both kinds, parsing each name by
-its kind's prefix. Recovery, protection and the seven-day window are the law
-rules, per kind; an open journal is resumed only by the phase of its kind.
+The daily prune handles retired databases of both kinds. Recovery, protection
+and the seven-day window are the [activation record](activation-record.md)
+rules, per kind; an operation is resumed only by the phase of its kind.
 
 ## Schema
 
@@ -190,8 +190,8 @@ since that updater may finish its own run after installing the image:
   prefix.
 - `frameworks_release` gains the checks of `corpus_release`: country `vn` and an
   `active_db` that is a `frameworks_<rel>` name.
-- `activator` may `SELECT`, `INSERT` and `UPDATE` `frameworks_release`;
-  `provision-activator.sh` reapplies that grant.
+- The updater writes `frameworks_release` as `auth_owner`
+  ([the updater and `auth`](corpus-release-activation.md#the-updater-and-auth)).
 
 The new updater's law phase reads only `law` rows; its frameworks phase only
 `frameworks` rows.

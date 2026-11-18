@@ -99,12 +99,12 @@ corpus release published"; after that it fails the run.
 1. Verify with `cosign verify-blob --bundle`, the identity from policy and the
    transparency log proof, then apply the
    [acceptance rule](pull-deployment.md#acceptance) for corpus sequences.
-2. Choose the mode: `retained` when `database` is listed in `retired_release`
-   and its recorded dump SHA-256 equals the manifest's; refuse when the name is
-   listed with another digest; else `new`. `new` also requires `previous` to
-   equal the active release, so every newly restored release was compared with
-   the release it replaces; `retained` is a rollback within the seven-day window
-   and is exempt.
+2. Choose the mode from the [activation record](activation-record.md#mode):
+   `retained` when the host retired `database` with the manifest's dump SHA-256;
+   refuse when the name is listed with another digest; else `new`. `new` also
+   requires `previous` to equal the active release, so every newly restored
+   release was compared with the release it replaces; `retained` is a rollback
+   within the seven-day window and is exempt.
 3. Check compatibility: `podman run --rm <server image> server release-check`
    prints the schema versions and recipes the deployed server serves and the
    running query embedder reports. A recipe difference is status `waiting`
@@ -133,7 +133,9 @@ The result goes to `/srv/trachuan/state/deploy/release.json` with the fields of
 the deploy result plus `rel` and mode. The metrics timer publishes
 `release_failed` and `release_waiting_age_seconds`; alarms on topic
 `trachuan-alarms` email the owner when `release_failed` is 1 or a release has
-waited more than 24 hours. Logs go to `/var/log/trachuan/release.log`.
+waited more than 24 hours, and within minutes on an
+[integrity alert](activation-record.md#alerts). Logs go to
+`/var/log/trachuan/release.log`.
 
 ## Proofs
 
@@ -156,3 +158,16 @@ refused by the check or removed by the create step and never runs in a stronger
 session; no `postgres` session follows the first dump byte; another superuser is
 refused; `activator`'s role-wide settings are reset; and an honest dump restores
 to the same tables, data and reader grants as before.
+
+The server's tables, on PostgreSQL: a trigger, view or policy planted by
+`auth_owner` on each release table never runs as `activator`, in either state of
+the provisioner flag; forged or altered journal rows do not resume, finish,
+abort or redirect an operation or reach a command; new activation, retained
+reactivation, prune and crash recovery work from the host record, including each
+row of the recovery table with the record lost, unreadable or disagreeing with
+the journal; a table failure waits without spending the manifest; the lock
+excludes a concurrent run across versions; a forged pointer or table never drops
+the host's active or retired database; every alert code reaches the result, the
+metric and the watch; the first run seeds the file from a real state shape and
+leaves a retained `postgres`-owned database alone; and a deploy and a rollback
+across the change both complete.

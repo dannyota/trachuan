@@ -188,6 +188,7 @@ OK.
 | data volume not mounted                                   | `/srv/trachuan/data` not mounted                                     | 5 min    | CRITICAL |
 | deploy not confirmed                                      | no successful updater run for over an hour                           | 10 min   | CRITICAL |
 | backup job failed, backup result absent, backup over 26 h | a backup failed, never succeeded, or the newest is over 26 h         | 5–15 min | CRITICAL |
+| release integrity                                         | a release [integrity alert](activation-record.md#alerts) is set      | 1 min    | CRITICAL |
 | deploy failed, corpus release failed, secrets failed      | every run failed                                                     | 30 min   | WARNING  |
 | deploy result absent                                      | no updater result recorded                                           | 30 min   | WARNING  |
 | corpus release waiting, secrets stale                     | a signed release waits over a day; secrets older than 2 h            | 10 min   | WARNING  |

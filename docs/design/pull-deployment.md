@@ -116,9 +116,9 @@ State in `/var/lib/trachuan-deploy/`, root 0700: active image and corpus
 manifest hashes, every accepted sequence with its manifest hash (image, rollback
 and corpus), consumed rollback authorizations, failed manifest hashes, retained
 manifests and bundles (the last five), installed bundle hash, Vault secret
-versions, and the journal. Application containers and the `trachuan` user cannot
-write policy or state. Lost state is not reset to zero: the updater stops with
-`deploy_failed` until [bootstrap](#bootstrap) runs again.
+versions, the journal and `<kind>-activation.json`. Application containers and
+the `trachuan` user cannot write policy or state. Lost state is not reset: the
+updater stops with `deploy_failed` until [bootstrap](#bootstrap).
 
 ## Updater
 
