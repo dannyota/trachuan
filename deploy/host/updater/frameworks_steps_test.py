@@ -14,12 +14,13 @@ from updater.frameworks_toc_test import DATA, EXECUTABLE, HEADER, SPECIAL, execu
 from updater.frameworks_verify_test import manifest, rules
 
 
-LOG = ('PGOPTIONS=-c log_min_messages=panic -c log_min_error_statement=panic '
-       '-c log_min_duration_statement=-1 -c log_statement=none')
+ADMIN = ('PGOPTIONS=-c log_min_messages=panic -c log_min_error_statement=panic '
+         '-c log_min_duration_statement=-1 -c log_statement=none -c search_path=pg_catalog')
 SETTINGS = ("log_min_messages = 'panic'", "log_min_error_statement = 'panic'",
             "log_min_duration_statement = '-1'", "log_statement = 'none'")
-GUARD = ("current_setting('log_min_messages') <> 'panic'", "current_setting('log_min_error_statement') <> 'panic'",
-         "current_setting('log_min_duration_statement') <> '-1'", "current_setting('log_statement') <> 'none'")
+GUARD = tuple("pg_catalog.current_setting('" + name + "') OPERATOR(pg_catalog.<>) '" + value + "'"
+              for name, value in (('log_min_messages', 'panic'), ('log_min_error_statement', 'panic'),
+                                  ('log_min_duration_statement', '-1'), ('log_statement', 'none')))
 
 
 def classify(args, text):
@@ -29,7 +30,9 @@ def classify(args, text):
     if 'release-check' in args:
         return 'release-check'
     if 'grant-corpus.sh' in joined:
-        return 'grant'
+        return 'grant-corpus'
+    if 'rm -f /run/pgbackrest/corpus-*.list' in args:
+        return 'discard-lists'
     if 'createdb' in args:
         return 'createdb'
     if 'pg_restore' in args:
@@ -43,7 +46,7 @@ def classify(args, text):
     for word, name in (('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
                        ('EXISTS(SELECT FROM pg_database', 'exists'), ("to_regclass('public.release')", 'restored'),
                        ('frameworks_before', 'check'), ('CREATE OR REPLACE', 'apply'),
-                       ('FROM release WHERE singleton', 'validate'),
+                       ('FROM public.release WHERE singleton', 'validate'), ('GRANT SELECT ON ALL TABLES', 'grants'),
                        ('current_setting', 'effective')):
         if word in text:
             return name
@@ -89,15 +92,17 @@ class StepsFixture:
     def sql(self, name):
         return self.call(name)[1]['input'].decode()
 
-    def assert_activator(self, args, database):
+    def assert_activator(self, args, database, path='pg_catalog'):
         self.assertIn('PGPASSWORD=$(cat /run/secrets/activator_db_password)', ' '.join(args))
         self.assertEqual(args[args.index('-U') + 1], 'activator')
         self.assertEqual(args[args.index('-d') + 1] if '-d' in args else args[args.index('--dbname') + 1], database)
         self.assertNotIn('postgres-admin.sh', ' '.join(args))
         self.assertFalse(any(arg.startswith('PGOPTIONS=') and 'log_' in arg for arg in args))
+        options = next(arg for arg in args if arg.startswith('PGOPTIONS='))
+        self.assertTrue(options.endswith(' -c search_path=' + path) or options == 'PGOPTIONS=-c search_path=' + path)
 
     def assert_postgres(self, args, database):
-        self.assertEqual(args[:6], ['podman', 'exec', '-i', '--env', LOG, 'trachuan-postgres'])
+        self.assertEqual(args[:6], ['podman', 'exec', '-i', '--env', ADMIN, 'trachuan-postgres'])
         self.assertEqual(args[6:], ['/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
                                     'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1'])
 
@@ -124,16 +129,21 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
                       'ROLE "corpus_reader" IN DATABASE ' + target):
             for setting in SETTINGS:
                 self.assertIn('ALTER ' + scope + ' SET ' + setting + ';\n', sql)
-        for text in ('pg_parameter_acl', "privilege_type='SET'", 'rolsuper', "has_parameter_privilege(r.oid,p,'SET')",
-                     "CREATE EXTENSION IF NOT EXISTS vector VERSION '0.8.1';",
-                     "CREATE EXTENSION IF NOT EXISTS ltree VERSION '1.3';"):
+        for text in ('FROM pg_catalog.pg_parameter_acl a', 'pg_catalog.aclexplode(a.paracl)', 'JOIN pg_catalog.pg_roles r',
+                     "privilege_type='SET'", 'rolsuper', 'pg_catalog.unnest(',
+                     "pg_catalog.has_parameter_privilege(r.oid,p,'SET')",
+                     'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n',
+                     'GRANT CONNECT ON DATABASE ' + target + ' TO "corpus_reader";\n',
+                     "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public VERSION '0.8.1';",
+                     "CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public VERSION '1.3';"):
             self.assertIn(text, sql)
         self.assertLess(sql.index('pg_parameter_acl'), sql.index('\\if'))
         self.assertLess(sql.index('\\if'), sql.index('ALTER DATABASE'))
         args, _ = self.call('effective')
         self.assert_activator(args, self.name)
         for setting in ('log_min_messages', 'log_min_error_statement', 'log_min_duration_statement', 'log_statement'):
-            self.assertIn("current_setting('" + setting + "')", self.sql('effective'))
+            self.assertIn("pg_catalog.current_setting('" + setting + "')", self.sql('effective'))
+        self.assertIn('pg_catalog.concat_ws(', self.sql('effective'))
 
     def test_existing_target_is_reconfigured_without_createdb(self):
         self.responses['exists'] = b't\n'
@@ -168,11 +178,12 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
         self.assertEqual(self.calls, [])
 
     def test_configure_refuses_names_that_are_not_plain_identifiers(self):
-        for name, extensions, roles in (('corpus_vn_20990102', {'vector': '0.8.1'}, ('activator',)),
-                                        (self.name, {'vector; DROP': '0.8.1'}, ('activator',)),
-                                        (self.name, {'vector': '0.8.1'}, ('Activator"',))):
+        for name, extensions, roles in (('corpus_vn_20990102', {'vector': '0.8.1'}, ('activator', 'corpus_reader')),
+                                        (self.name, {'vector; DROP': '0.8.1'}, ('activator', 'corpus_reader')),
+                                        (self.name, {'vector': '0.8.1'}, ('Activator"', 'corpus_reader')),
+                                        (self.name, {'vector': '0.8.1'}, ('activator', 'reader; DROP'))):
             with self.subTest(name=name, extensions=extensions, roles=roles), self.assertRaises(ValueError):
-                sql.configure(name, extensions, roles)
+                sql.configure(name, extensions, *roles)
 
     def test_dead_advisory_lock_refuses_postgres_step(self):
         self.db.holder.poll.return_value = 1
@@ -188,9 +199,10 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
     def test_restore_checks_settings_filters_toc_restores_applies_image_schema_then_grants(self):
         self.restore()
         self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'list', 'write-list', 'pg_restore',
-                                        'remove-list', 'apply', 'check', 'grant'])
+                                        'remove-list', 'apply', 'check', 'grants'])
         self.assert_activator(self.call('effective')[0], self.name)
-        self.assert_guard_first(self.sql('restored'), 'to_regclass')
+        self.assert_activator(self.call('restored')[0], self.name)
+        self.assert_guard_first(self.sql('restored'), "pg_catalog.to_regclass('public.release')")
         args, kwargs = self.call('schema')
         self.assertEqual(args, ['podman', 'run', '--rm', '--network=host', '--read-only', '--cap-drop=ALL',
                                 '--security-opt=no-new-privileges', '--env-file', str(self.paths.host / 'server.env'),
@@ -203,6 +215,7 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
         self.assertEqual(kwargs['input'].decode(), SPECIAL + DATA)
         args, kwargs = self.call('pg_restore')
         self.assert_activator(args, self.name)
+        self.assertEqual(args[args.index('pg_restore') - 1].split(' -c ')[-1], 'search_path=pg_catalog')
         for value in ('--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction'):
             self.assertIn(value, args)
         self.assertEqual(args[args.index('--use-list') + 1], listing)
@@ -213,14 +226,22 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
             self.assertIn(value, options)
         self.assertEqual(self.call('remove-list')[0][-1], listing)
         args, _ = self.call('apply')
-        self.assert_activator(args, self.name)
+        self.assert_activator(args, self.name, 'pg_catalog,public')
         self.assertIn('ON_ERROR_STOP=1', args)
         sql = self.sql('apply')
         self.assertTrue(sql.startswith('SET standard_conforming_strings=on;\nBEGIN;\nDO $guard$'))
-        self.assertIn(executable_sql(), sql)
+        self.assertIn('SET LOCAL search_path = public;\n' + executable_sql(), sql)
         self.assertTrue(sql.endswith('COMMIT;\n'))
-        self.assertEqual(self.call('grant')[0], ['podman', 'exec', 'trachuan-postgres', 'bash',
-                                                 '/usr/local/bin/grant-corpus.sh', self.name])
+        self.assert_activator(self.call('check')[0], self.name)
+        args, _ = self.call('grants')
+        self.assert_activator(args, self.name, 'pg_catalog,public')
+        sql = self.sql('grants')
+        self.assert_guard_first(sql, 'REVOKE')
+        for statement in ('REVOKE CREATE ON SCHEMA public FROM PUBLIC;', 'GRANT USAGE ON SCHEMA public TO "corpus_reader";',
+                          'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "corpus_reader";',
+                          'GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "corpus_reader";'):
+            self.assertIn(statement + '\n', sql)
+        self.assertNotIn('grant-corpus', self.names())
 
     def test_settings_refusal_stops_before_reading_the_dump(self):
         self.responses['effective'] = b'warning,panic,-1,none\n'
@@ -242,7 +263,7 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
                 self.assertEqual(self.names(), ['extensions', 'schema', 'list'])
                 with self.assertRaises(ValueError):
                     self.restore()
-                for name in ('write-list', 'pg_restore', 'apply', 'grant'):
+                for name in ('write-list', 'pg_restore', 'apply', 'grants'):
                     self.assertNotIn(name, self.names())
 
     def test_inspect_checks_extensions_and_toc_without_writing_a_list(self):
@@ -264,50 +285,13 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
     def test_resumed_restore_reapplies_schema_and_grants_without_pg_restore(self):
         self.responses['restored'] = b't\n'
         self.restore()
-        self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'apply', 'check', 'grant'])
-
-    def test_executable_check_reapplies_image_schema_between_snapshots_and_rolls_back(self):
-        self.restore()
-        args, _ = self.call('check')
-        self.assert_activator(args, self.name)
-        self.assertIn('ON_ERROR_STOP=1', args)
-        sql = self.sql('check')
-        self.assertTrue(sql.startswith('SET standard_conforming_strings=on;\nBEGIN;\nDO $guard$'))
-        self.assertTrue(sql.endswith('ROLLBACK;\n'))
-        self.assertLess(sql.index('CREATE TEMP TABLE frameworks_before'), sql.index(executable_sql()))
-        self.assertLess(sql.index(executable_sql()), sql.index('CREATE TEMP TABLE frameworks_after'))
-        for identity in ("('view','public.body_lexical_stats')", "('function','public.check_evidence_dependencies()')",
-                         "('trigger','public.release release_versions_sealed')"):
-            self.assertIn(identity, sql)
-        self.assertEqual(sql.count("('view','public."), 4)
-        self.assertEqual(sql.count("('function','public."), 6)
-        self.assertEqual(sql.count("('trigger','public."), 8)
-        for source in ('pg_class', 'pg_trigger', 'pg_proc', 'pg_rewrite', 'pg_policy', 'pg_event_trigger',
-                       'pg_operator', 'pg_cast', 'pg_get_viewdef', 'pg_get_functiondef', 'pg_get_triggerdef',
-                       "deptype='e'"):
-            self.assertIn(source, sql)
-        self.assertIn("SELECT 'schema', n.nspname::text, '' FROM pg_namespace n", sql)
-        self.assertIn("left(n.nspname,3) <> 'pg_'", sql)
-        self.assertIn("n.nspname NOT IN ('information_schema','public')", sql)
-        for unsafe in ('prokind||', 'relkind||', 'prokind ||', 'relkind ||'):
-            self.assertNotIn(unsafe, sql)
-
-    def test_executable_difference_fails_with_the_object_type_only(self):
-        for outcome, kind in ((b'function\n', 'function'), (b'view\n', 'view'), (b'trigger\n', 'trigger'),
-                              (b'event trigger\n', 'event trigger'), (b'cast\n', 'cast'), (b'schema\n', 'schema'),
-                              (b'invented secret body\n', 'object'), (b'\n', 'object')):
-            self.calls.clear()
-            self.responses['check'] = outcome
-            with self.subTest(outcome=outcome), self.assertRaises(ValueError) as caught:
-                self.restore()
-            self.assertEqual(str(caught.exception), 'frameworks database ' + kind + ' differs from image schema version')
-            self.assertNotIn('grant', self.names())
+        self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'apply', 'check', 'grants'])
 
     def test_schema_apply_failure_fails_the_restore_before_grants(self):
         self.failures['apply'] = CommandError('command failed', detail='psql: exit 3')
         with self.assertRaises(CommandError):
             self.restore()
-        self.assertNotIn('grant', self.names())
+        self.assertNotIn('grants', self.names())
 
     def test_pg_restore_failure_removes_the_list_and_skips_schema(self):
         self.failures['pg_restore'] = CommandError('command failed', detail='pg_restore: exit 1: invented')

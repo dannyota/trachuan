@@ -1,4 +1,5 @@
 import json
+import re
 
 from . import deploy_corpus_sql as sql
 from .deploy_corpus_kind import LAW
@@ -27,8 +28,9 @@ class Database:
         self.check_lock()
         return self.host.user(*self.arguments(*args), **kwargs)
 
-    def query(self, text, database='auth'):
-        return self.user('psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
+    def query(self, text, database='auth', options=None):
+        command = ('env', 'PGOPTIONS=' + options) if options else ()
+        return self.user(*command, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
                          '-v', 'ON_ERROR_STOP=1', '-d', database,
                          input=('SET standard_conforming_strings=on;\n' + text).encode()).decode().strip()
 
@@ -120,20 +122,31 @@ class Database:
     def listing(self, dump):
         return self.user('pg_restore', '--list', input_file=dump, timeout=300)
 
+    def list_path(self, operation):
+        if not isinstance(operation, str) or not re.fullmatch('[0-9a-f]{32}', operation):
+            raise ValueError('invalid activation operation id')
+        return '/run/pgbackrest/corpus-' + operation + '.list'
+
     def save_list(self, row, selected):
-        path = '/run/pgbackrest/corpus-' + row['operation_id'] + '.list'
+        path = self.list_path(row['operation_id'])
         self.host.user('podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
                        'umask 077; cat > "$1"', 'sh', path, input=selected.encode())
         return path
 
+    def remove_list(self, operation):
+        self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', self.list_path(operation))
+
+    def discard_lists(self):
+        self.host.user('podman', 'exec', 'trachuan-postgres', 'sh', '-c', 'rm -f /run/pgbackrest/corpus-*.list')
+
     def toc(self, row, dump):
         return self.save_list(row, toc(self.listing(dump).decode(), self.rules['extensions']))
 
-    def load(self, name, dump, listing):
+    def load(self, name, dump, listing, options=''):
         try:
             self.user('env', 'PGOPTIONS=-c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=2 '
                       '-c statement_timeout=0 -c lock_timeout=0 -c idle_in_transaction_session_timeout=0 '
-                      '-c transaction_timeout=0',
+                      '-c transaction_timeout=0' + options,
                       'pg_restore', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--dbname', name,
                       '--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction',
                       '--use-list', listing, input_file=dump, timeout=3600)

@@ -45,6 +45,7 @@ class Activation:
         if (row['mode'] == 'new' and not self.db.protected(name) and self.db.exists(name)
                 and not self.db.connections(name)):
             self.db.drop(name)
+        self.db.remove_list(row['operation_id'])
 
     def guarded(self, row):
         name = row['database_name']

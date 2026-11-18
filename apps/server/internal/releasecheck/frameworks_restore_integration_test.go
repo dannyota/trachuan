@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -107,8 +106,10 @@ func TestFrameworksRestore_UpdaterCommandsRestoreImageObjectsAndLogSettings(t *t
 	}
 	t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, "vn/"+rel) })
 
-	options, _ := frameworksUpdater(t, "sql", "LOG_OPTIONS")
-	configure, refused := frameworksUpdater(t, "sql", "configure", name, versions, []string{activator.Role, reader.Role})
+	options, _ := frameworksUpdater(t, "sql", "ADMIN_OPTIONS")
+	catalogPath, _ := frameworksUpdater(t, "sql", "CATALOG_PATH")
+	schemaPath, _ := frameworksUpdater(t, "sql", "SCHEMA_PATH")
+	configure, refused := frameworksUpdater(t, "sql", "configure", name, versions, activator.Role, reader.Role)
 	if refused != "" {
 		t.Fatal(refused)
 	}
@@ -123,7 +124,7 @@ func TestFrameworksRestore_UpdaterCommandsRestoreImageObjectsAndLogSettings(t *t
 	want, _ := frameworksUpdater(t, "sql", "EFFECTIVE")
 	checkSettings := func(t *testing.T) {
 		t.Helper()
-		if got := frameworksPsql(t, psqlPath, activatorTarget, "", "SET standard_conforming_strings=on;\n"+effective); got != want {
+		if got := frameworksPsql(t, psqlPath, activatorTarget, catalogPath, "SET standard_conforming_strings=on;\n"+effective); got != want {
 			t.Fatalf("activator effective log settings %q", got)
 		}
 		for _, login := range []string{activator.URL, reader.URL} {
@@ -172,47 +173,44 @@ func TestFrameworksRestore_UpdaterCommandsRestoreImageObjectsAndLogSettings(t *t
 	}
 	pgCommand(t, activatorTarget, restorePath, dump, "--dbname", name, "--no-owner", "--no-privileges", "--exit-on-error", "--single-transaction", "--use-list", listPath)
 	apply, _ := frameworksUpdater(t, "sql", "apply", executable)
-	frameworksPsql(t, psqlPath, activatorTarget, "", "SET standard_conforming_strings=on;\n"+apply)
-	check, refused := frameworksUpdater(t, "sql", "executable", executable)
+	runApply := func() {
+		frameworksPsql(t, psqlPath, activatorTarget, schemaPath, "SET standard_conforming_strings=on;\n"+apply)
+	}
+	runApply()
+	check, refused := frameworksUpdater(t, "check", "executable", executable, versions, activator.Role, reader.Role)
 	if refused != "" {
 		t.Fatal(refused)
 	}
 	runCheck := func(want string) {
 		t.Helper()
-		if got := frameworksPsql(t, psqlPath, activatorTarget, "", "SET standard_conforming_strings=on;\n"+check); got != want {
-			t.Fatalf("executable object check: got %q, want %q", got, want)
+		if got := frameworksPsql(t, psqlPath, activatorTarget, catalogPath, "SET standard_conforming_strings=on;\n"+check); got != want {
+			t.Fatalf("restored database check: got %q, want %q", got, want)
 		}
 	}
 	runCheck("ok")
-	frameworksPsql(t, psqlPath, adminTarget, options, "CREATE FUNCTION invented_extra() RETURNS integer LANGUAGE sql AS 'SELECT 1';\n")
-	runCheck("function")
-	frameworksPsql(t, psqlPath, adminTarget, options, "DROP FUNCTION invented_extra();\n")
-	runCheck("ok")
-	frameworksPsql(t, psqlPath, adminTarget, options, "CREATE OR REPLACE VIEW public_lexical_stats AS SELECT count(*) AS chunk_count, coalesce(avg(token_count),0) AS avg_length FROM public_chunk WHERE false;\n")
-	runCheck("view")
-	frameworksPsql(t, psqlPath, activatorTarget, "", "SET standard_conforming_strings=on;\n"+apply)
-	runCheck("ok")
-	frameworksPsql(t, psqlPath, adminTarget, options, "CREATE SCHEMA invented_extra;\n")
-	runCheck("schema")
-	frameworksPsql(t, psqlPath, adminTarget, options, "DROP SCHEMA invented_extra;\n")
-	runCheck("ok")
-	root, err := filepath.Abs("../../../..")
-	if err != nil {
-		t.Fatal(err)
+	for _, tc := range []struct{ plant, undo, want string }{
+		{"CREATE FUNCTION invented_extra() RETURNS integer LANGUAGE sql AS 'SELECT 1'", "DROP FUNCTION invented_extra()", "function"},
+		{"CREATE OR REPLACE VIEW public_lexical_stats AS SELECT count(*) AS chunk_count, coalesce(avg(token_count),0) AS avg_length FROM public_chunk WHERE false", "", "view"},
+		{"CREATE SCHEMA invented_extra", "DROP SCHEMA invented_extra", "schema"},
+		{"CREATE EXTENSION pg_trgm; CREATE FUNCTION invented_hidden() RETURNS integer LANGUAGE sql AS 'SELECT 1'; ALTER EXTENSION pg_trgm ADD FUNCTION invented_hidden()", "DROP EXTENSION pg_trgm", "extension"},
+		{"ALTER DATABASE " + pgx.Identifier{name}.Sanitize() + " SET search_path = public, pg_catalog", "ALTER DATABASE " + pgx.Identifier{name}.Sanitize() + " RESET search_path", "setting"},
+		{"CREATE TYPE invented_type AS ENUM ('invented')", "DROP TYPE invented_type", "type"},
+		{"CREATE DOMAIN invented_domain AS integer", "DROP DOMAIN invented_domain", "domain"},
+		{"CREATE TABLE public.pg_proc (oid oid, proname name, prokind \"char\", pronamespace oid); CREATE FUNCTION invented_extra() RETURNS integer LANGUAGE sql AS 'SELECT 1'", "DROP FUNCTION invented_extra()", "function"},
+	} {
+		frameworksPsql(t, psqlPath, activatorTarget, "", tc.plant+";\n")
+		runCheck(tc.want)
+		if tc.undo == "" {
+			runApply()
+		} else {
+			frameworksPsql(t, psqlPath, activatorTarget, "", tc.undo+";\n")
+		}
+		runCheck("ok")
 	}
-	script, err := os.ReadFile(filepath.Join(root, "deploy/host/grant-corpus.sh"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	blocks := regexp.MustCompile(`(?s)<<'SQL'\n(.*?)\nSQL\n`).FindAllStringSubmatch(string(script), -1)
-	if len(blocks) != 2 {
-		t.Fatal("grant-corpus.sh SQL blocks changed")
-	}
-	grants := strings.NewReplacer("corpus_reader", pgx.Identifier{reader.Role}.Sanitize(), "FOR ROLE postgres", "FOR ROLE "+pgx.Identifier{admin.Config().User}.Sanitize())
-	adminPostgres := admin.Config().Copy()
-	adminPostgres.Database = "postgres"
-	frameworksPsql(t, psqlPath, adminPostgres, "", grants.Replace(blocks[0][1])+"\n", "--set", "database="+name)
-	frameworksPsql(t, psqlPath, adminTarget, options, grants.Replace(blocks[1][1])+"\n")
+	frameworksPsql(t, psqlPath, activatorTarget, "", "DROP TABLE public.pg_proc;\n")
+	runCheck("ok")
+	grants, _ := frameworksUpdater(t, "sql", "grants", reader.Role)
+	frameworksPsql(t, psqlPath, activatorTarget, schemaPath, "SET standard_conforming_strings=on;\n"+grants)
 	checkSettings(t)
 
 	restoredURL := *base

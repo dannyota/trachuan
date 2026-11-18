@@ -114,6 +114,7 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
     def test_new_bootstrap_downloads_restores_and_activates(self):
         law_before = json.dumps(self.state.data['accepted']['corpus'])
         self.assertTrue(self.run_phase())
+        self.assertEqual(self.db.lists_discarded, 1)
         result = self.result()
         self.assertEqual((result['status'], result['step'], result['message'], result['mode']),
                          ('ok', 'complete', 'frameworks release activated', 'new'))

@@ -182,6 +182,7 @@ class Corpus:
                 return True
             self.step = 'provision'
             self.provision()
+            self.db.discard_lists()
             recovered = self.recover(mode)
             if recovered is not None:
                 return recovered

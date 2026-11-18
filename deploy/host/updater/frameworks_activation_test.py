@@ -106,6 +106,7 @@ class FrameworksActivationTest(unittest.TestCase):
             self.activate()
         self.assertEqual([r['step'] for r in self.db.rows][-1], 'aborted')
         self.assertEqual(self.db.dropped, [self.m['database']])
+        self.assertEqual(self.db.lists_removed, [self.db.rows[0]['operation_id']])
         self.assertIsNone(self.db.active)
         del self.db.restore
         self.db.bad_release = True

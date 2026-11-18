@@ -117,7 +117,7 @@ def describe(args, stderr, returncode):
 def safe_line(pattern, stderr):
     if pattern is None:
         return None
-    found = [match[1] for line in stderr.decode('utf-8', errors='replace').splitlines()
+    found = [match[1] for line in stderr.decode('utf-8', errors='replace').split('\n')
              if (match := pattern.fullmatch(line))]
     return found[-1] if found else None
 

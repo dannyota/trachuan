@@ -84,8 +84,8 @@ func frameworksUpdater(t *testing.T, module, name string, args ...any) (string, 
 	}
 	script := `import json,sys
 sys.path.insert(0,sys.argv[1])
-from updater import deploy_frameworks_schema, deploy_frameworks_sql
-module={'schema':deploy_frameworks_schema,'sql':deploy_frameworks_sql}[sys.argv[2]]
+from updater import deploy_frameworks_check, deploy_frameworks_schema, deploy_frameworks_sql
+module={'check':deploy_frameworks_check,'schema':deploy_frameworks_schema,'sql':deploy_frameworks_sql}[sys.argv[2]]
 value=getattr(module,sys.argv[3])
 try:
     print(json.dumps({'value':value(*json.load(sys.stdin)) if callable(value) else value}))

@@ -2,7 +2,6 @@ import re
 
 from . import deploy_corpus_sql as law
 from .deploy_corpus_sql import literal
-from .deploy_frameworks_schema import objects
 
 
 KIND = 'frameworks'
@@ -10,37 +9,9 @@ LOG_SETTINGS = (('log_min_messages', 'panic'), ('log_min_error_statement', 'pani
                 ('log_min_duration_statement', '-1'), ('log_statement', 'none'))
 LOG_OPTIONS = ' '.join('-c ' + name + '=' + value for name, value in LOG_SETTINGS)
 EFFECTIVE = ','.join(value for _, value in LOG_SETTINGS)
-ROLES = ('activator', 'corpus_reader')
-KINDS = ('view', 'materialized view', 'trigger', 'function', 'procedure', 'aggregate', 'rule', 'policy',
-         'event trigger', 'operator', 'cast', 'schema')
-SYSTEM = "('pg_catalog','information_schema')"
-SNAPSHOT = f"""SELECT kind, identity, definition FROM (
- SELECT CASE WHEN c.relkind='v' THEN 'view' ELSE 'materialized view' END AS kind,
-  n.nspname::text||'.'||c.relname::text AS identity, pg_get_viewdef(c.oid) AS definition
-  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('v','m') AND n.nspname NOT IN {SYSTEM}
- UNION ALL SELECT 'trigger', n.nspname::text||'.'||c.relname::text||' '||t.tgname::text, pg_get_triggerdef(t.oid)
-  FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT t.tgisinternal
- UNION ALL SELECT CASE WHEN p.prokind='a' THEN 'aggregate' WHEN p.prokind='p' THEN 'procedure' ELSE 'function' END,
-  n.nspname::text||'.'||p.proname::text||'('||pg_get_function_identity_arguments(p.oid)||')',
-  CASE WHEN p.prokind='a' THEN '' ELSE pg_get_functiondef(p.oid) END
-  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN {SYSTEM}
-  AND NOT EXISTS (SELECT FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e')
- UNION ALL SELECT 'rule', n.nspname::text||'.'||c.relname::text||' '||r.rulename::text, pg_get_ruledef(r.oid)
-  FROM pg_rewrite r JOIN pg_class c ON c.oid=r.ev_class JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE r.rulename <> '_RETURN' AND n.nspname NOT IN {SYSTEM}
- UNION ALL SELECT 'policy', n.nspname::text||'.'||c.relname::text||' '||p.polname::text, ''
-  FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace
- UNION ALL SELECT 'event trigger', e.evtname::text, '' FROM pg_event_trigger e
- UNION ALL SELECT 'operator', n.nspname::text||'.'||o.oprname::text||'('||format_type(o.oprleft,NULL)||','||
-  format_type(o.oprright,NULL)||')', ''
-  FROM pg_operator o JOIN pg_namespace n ON n.oid=o.oprnamespace WHERE n.nspname NOT IN {SYSTEM}
-  AND NOT EXISTS (SELECT FROM pg_depend d WHERE d.classid='pg_operator'::regclass AND d.objid=o.oid AND d.deptype='e')
- UNION ALL SELECT 'cast', format_type(c.castsource,NULL)||' AS '||format_type(c.casttarget,NULL), '' FROM pg_cast c
-  WHERE c.oid >= 16384
-  AND NOT EXISTS (SELECT FROM pg_depend d WHERE d.classid='pg_cast'::regclass AND d.objid=c.oid AND d.deptype='e')
- UNION ALL SELECT 'schema', n.nspname::text, '' FROM pg_namespace n
-  WHERE left(n.nspname,3) <> 'pg_' AND n.nspname NOT IN ('information_schema','public')
-) objects"""
+ADMIN_OPTIONS = LOG_OPTIONS + ' -c search_path=pg_catalog'
+CATALOG_PATH = '-c search_path=pg_catalog'
+SCHEMA_PATH = '-c search_path=pg_catalog,public'
 
 
 def database(name):
@@ -56,78 +27,64 @@ def plain(name):
 
 
 def effective():
-    return "SELECT concat_ws(','," + ','.join("current_setting('" + name + "')" for name, _ in LOG_SETTINGS) + ');'
+    return ("SELECT pg_catalog.concat_ws(','," +
+            ','.join("pg_catalog.current_setting('" + name + "')" for name, _ in LOG_SETTINGS) + ');')
 
 
 def guard():
-    differs = ' OR '.join("current_setting('" + name + "') <> '" + value + "'" for name, value in LOG_SETTINGS)
+    differs = ' OR '.join("pg_catalog.current_setting('" + name + "') OPERATOR(pg_catalog.<>) '" + value + "'"
+                          for name, value in LOG_SETTINGS)
     return ('DO $guard$ BEGIN IF ' + differs +
             " THEN RAISE EXCEPTION 'frameworks log settings refused'; END IF; END $guard$;\n")
 
 
-def configure(name, extensions, roles=ROLES):
+def configure(name, extensions, activator='activator', reader='corpus_reader'):
     target = database(name)
-    scopes = ['DATABASE ' + target] + ['ROLE "' + plain(role) + '" IN DATABASE ' + target for role in roles]
+    scopes = ['DATABASE ' + target] + ['ROLE "' + plain(role) + '" IN DATABASE ' + target for role in (activator, reader)]
     parameters = 'ARRAY[' + ','.join(literal(setting) for setting, _ in LOG_SETTINGS) + ']'
     settings = ''.join('ALTER ' + scope + ' SET ' + setting + ' = ' + literal(value) + ';\n'
                        for scope in scopes for setting, value in LOG_SETTINGS)
-    created = ''.join('CREATE EXTENSION IF NOT EXISTS ' + plain(extension) + ' VERSION ' + literal(version) + ';\n'
-                      for extension, version in extensions.items())
-    return ('SELECT EXISTS(SELECT FROM pg_parameter_acl a CROSS JOIN aclexplode(a.paracl) x '
-            'LEFT JOIN pg_roles r ON r.oid=x.grantee WHERE a.parname=ANY(' + parameters + ") "
+    created = ''.join('CREATE EXTENSION IF NOT EXISTS ' + plain(extension) + ' WITH SCHEMA public VERSION ' +
+                      literal(version) + ';\n' for extension, version in extensions.items())
+    return ('SELECT EXISTS(SELECT FROM pg_catalog.pg_parameter_acl a CROSS JOIN pg_catalog.aclexplode(a.paracl) x '
+            'LEFT JOIN pg_catalog.pg_roles r ON r.oid=x.grantee WHERE a.parname=ANY(' + parameters + ") "
             "AND x.privilege_type='SET' AND r.rolsuper IS NOT TRUE) "
-            'OR EXISTS(SELECT FROM pg_roles r CROSS JOIN unnest(' + parameters + ') p '
-            "WHERE NOT r.rolsuper AND has_parameter_privilege(r.oid,p,'SET')) AS frameworks_log_granted \\gset\n"
+            'OR EXISTS(SELECT FROM pg_catalog.pg_roles r CROSS JOIN pg_catalog.unnest(' + parameters + ') p '
+            "WHERE NOT r.rolsuper AND pg_catalog.has_parameter_privilege(r.oid,p,'SET')) "
+            'AS frameworks_log_granted \\gset\n'
             '\\if :frameworks_log_granted\n'
             "SELECT 'granted';\n"
             '\\else\n'
-            'BEGIN;\n' + settings + created + 'COMMIT;\n'
+            'BEGIN;\n'
+            'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n'
+            'GRANT CONNECT ON DATABASE ' + target + ' TO "' + plain(reader) + '";\n' + settings + created +
+            'COMMIT;\n'
             "SELECT 'configured';\n"
             '\\endif\n')
 
 
 def apply(schema):
-    return 'BEGIN;\n' + guard() + schema + '\nCOMMIT;\n'
+    return 'BEGIN;\n' + guard() + 'SET LOCAL search_path = public;\n' + schema + '\nCOMMIT;\n'
+
+
+def grants(reader='corpus_reader'):
+    role = '"' + plain(reader) + '"'
+    return ('BEGIN;\n' + guard() + 'REVOKE CREATE ON SCHEMA public FROM PUBLIC;\n'
+            'GRANT USAGE ON SCHEMA public TO ' + role + ';\n'
+            'GRANT SELECT ON ALL TABLES IN SCHEMA public TO ' + role + ';\n'
+            'GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ' + role + ';\n'
+            'COMMIT;\n')
 
 
 def release_row():
-    return guard() + ("SELECT json_build_object('kind',kind,'rel',rel,'schema_version',schema_version,"
-                      "'counts',json_build_object('versions',version_count,'controls',control_count),'recipes',"
-                      "json_build_object('dense',dense_recipe,'chunk',chunk_recipe,'lexical',lexical_recipe,"
-                      "'retrieval',retrieval_recipe)) FROM release WHERE singleton;")
-
-
-def identity(item):
-    if item[0] == 'VIEW':
-        return 'view', 'public.' + item[1]
-    if item[0] == 'FUNCTION':
-        return 'function', 'public.' + item[1] + '()'
-    return 'trigger', 'public.' + item[1] + ' ' + item[2]
-
-
-def executable(schema):
-    expected = sorted(identity(item) for item in objects(schema))
-    rows = ('SELECT kind, identity FROM (VALUES ' +
-            ','.join('(' + literal(kind) + ',' + literal(name) + ')' for kind, name in expected) +
-            ') e(kind, identity)' if expected else 'SELECT NULL::text AS kind, NULL::text AS identity WHERE false')
-    return ('BEGIN;\n' + guard() +
-            'CREATE TEMP TABLE frameworks_before ON COMMIT DROP AS ' + SNAPSHOT + ';\n' + schema + '\n' +
-            'CREATE TEMP TABLE frameworks_after ON COMMIT DROP AS ' + SNAPSHOT + ';\n'
-            'WITH expected AS (' + rows + '), differences AS (\n'
-            ' (SELECT kind, identity, definition FROM frameworks_before EXCEPT '
-            'SELECT kind, identity, definition FROM frameworks_after)\n'
-            ' UNION ALL (SELECT kind, identity, definition FROM frameworks_after EXCEPT '
-            'SELECT kind, identity, definition FROM frameworks_before)\n'
-            ' UNION ALL (SELECT kind, identity, NULL::text FROM frameworks_after EXCEPT '
-            'SELECT kind, identity, NULL::text FROM expected)\n'
-            ' UNION ALL (SELECT kind, identity, NULL::text FROM expected EXCEPT '
-            'SELECT kind, identity, NULL::text FROM frameworks_after))\n'
-            "SELECT coalesce((SELECT kind FROM differences ORDER BY kind LIMIT 1),'ok');\n"
-            'ROLLBACK;\n')
+    return guard() + ("SELECT pg_catalog.json_build_object('kind',kind,'rel',rel,'schema_version',schema_version,"
+                      "'counts',pg_catalog.json_build_object('versions',version_count,'controls',control_count),"
+                      "'recipes',pg_catalog.json_build_object('dense',dense_recipe,'chunk',chunk_recipe,"
+                      "'lexical',lexical_recipe,'retrieval',retrieval_recipe)) FROM public.release WHERE singleton;")
 
 
 def restored():
-    return guard() + "SELECT to_regclass('public.release') IS NOT NULL;"
+    return guard() + "SELECT pg_catalog.to_regclass('public.release') IS NOT NULL;"
 
 
 def current(country):

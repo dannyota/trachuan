@@ -85,6 +85,7 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
                     self.db.lock.assert_not_called()
                     self.registry.fetch.assert_not_called()
                     self.prepare.assert_not_called()
+                    self.assertEqual(self.db.lists_discarded, 0)
 
     def test_next_corpus_run_repairs_first_upgrade_from_previous_updater(self):
         role = dict(exists=False, grants=False, migration_skipped_grants=False)
@@ -133,6 +134,7 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
 
     def test_new_activation_current_noop_and_daily_prune(self):
         self.assertTrue(self.run_phase())
+        self.assertEqual(self.db.lists_discarded, 1)
         self.assertEqual(self.result()['status'], 'ok')
         self.assertEqual(self.result()['rel'], self.m['rel'])
         self.assertEqual(self.result()['mode'], 'new')

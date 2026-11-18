@@ -17,9 +17,10 @@ class FrameworksValidateTest(StepsFixture, unittest.TestCase):
         args, _ = self.call('validate')
         self.assert_activator(args, self.name)
         sql = self.sql('validate')
-        self.assert_guard_first(sql, 'FROM release WHERE singleton')
+        self.assert_guard_first(sql, 'FROM public.release WHERE singleton')
         self.assertNotIn('country', sql)
-        for column in ("'kind',kind", "'versions',version_count", "'controls',control_count"):
+        for column in ("'kind',kind", "'versions',version_count", "'controls',control_count",
+                       'SELECT pg_catalog.json_build_object(', 'pg_catalog.json_build_object(\'versions\''):
             self.assertIn(column, sql)
 
     def test_validate_refuses_any_difference_from_manifest(self):
@@ -47,16 +48,9 @@ class FrameworksValidateTest(StepsFixture, unittest.TestCase):
 
 
 class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
-    def test_smoke_prewarms_as_postgres_with_log_options_then_runs_frameworks_release_check(self):
+    def test_smoke_runs_only_the_frameworks_release_check_without_prewarm(self):
         self.steps.smoke(self.row, 'server-image')
-        self.assertEqual(self.names(), ['prewarm', 'release-check'])
-        args, _ = self.call('prewarm')
-        self.assert_postgres(args, self.name)
-        sql = self.sql('prewarm')
-        self.assert_guard_first(sql, 'pg_prewarm')
-        for text in ('SET statement_timeout=0;', 'SET lock_timeout=0;', 'SET idle_in_transaction_session_timeout=0;',
-                     'SET transaction_timeout=0;', 'DROP EXTENSION pg_prewarm;'):
-            self.assertIn(text, sql)
+        self.assertEqual(self.names(), ['release-check'])
         args, kwargs = self.call('release-check')
         self.assertEqual(args, ['podman', 'run', '--rm', '--network=host', '--read-only', '--cap-drop=ALL',
                                 '--security-opt=no-new-privileges', '--env-file', str(self.paths.host / 'server.env'),
@@ -71,7 +65,7 @@ class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, '^frameworks release-check did not report ok$'):
                 self.steps.smoke(self.row, 'server-image')
 
-    def test_dead_advisory_lock_refuses_prewarm(self):
+    def test_dead_advisory_lock_refuses_smoke(self):
         self.db.holder.poll.return_value = 1
         with self.assertRaisesRegex(ValueError, 'activation advisory lock lost'):
             self.steps.smoke(self.row, 'server-image')
@@ -99,8 +93,15 @@ class FrameworksCauseTest(unittest.TestCase):
                      'server: frameworks release-check search: invented licensed text',
                      'server: frameworks release-check search: Go type invented text',
                      'frameworks release-check search: SQLSTATE 42P01',
+                     'server: frameworks release-check invented step: SQLSTATE 42P01',
+                     'server: frameworks release-check search results: SQLSTATE 42P01',
                      'server: invalid release-check arguments'):
             self.assertIsNone(SAFE.fullmatch(line))
+        for step in ('configuration', 'create reader pool', 'connect reader', 'log settings', 'release row',
+                     'release identity or schema', 'create smoke key', 'open engine', 'engine release identity',
+                     'search', 'search hits', 'read', 'read result'):
+            line = 'server: frameworks release-check ' + step + ': Go type serve.failure'
+            self.assertEqual(SAFE.fullmatch(line)[1], line[len('server: '):])
 
     def test_command_keeps_only_the_last_safe_stderr_line(self):
         script = ('import sys; sys.stderr.write("Error: invented licensed marker\\n"'
@@ -115,6 +116,12 @@ class FrameworksCauseTest(unittest.TestCase):
         with self.assertRaises(CommandError) as raised:
             command([sys.executable, '-I', '-c', script])
         self.assertIsNone(raised.exception.safe)
+        for separator in ('\\r', '\\x1c', '\\x85', '\\u2028'):
+            joined = ('import sys; sys.stderr.write("server: frameworks release-check read: SQLSTATE 57014' + separator +
+                      'invented licensed marker\\n"); sys.exit(1)')
+            with self.subTest(separator=separator), self.assertRaises(CommandError) as raised:
+                command([sys.executable, '-I', '-c', joined], safe=SAFE)
+            self.assertIsNone(raised.exception.safe)
 
     def test_frameworks_cause_is_program_exit_and_safe_line_only(self):
         error = CommandError('command failed', detail='podman run: exit 1',

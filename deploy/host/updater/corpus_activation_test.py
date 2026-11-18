@@ -21,9 +21,17 @@ class Database:
         self.before = None
         self.bad_release = False
         self.created = 0
+        self.lists_removed = []
+        self.lists_discarded = 0
 
     def lock(self):
         return nullcontext()
+
+    def remove_list(self, operation):
+        self.lists_removed.append(operation)
+
+    def discard_lists(self):
+        self.lists_discarded += 1
 
     def append(self, row, step):
         row = dict(row, step=step)
@@ -205,6 +213,7 @@ class CorpusActivationTest(unittest.TestCase):
             self.activate()
         self.assertEqual(self.db.operations()[0]['step'], 'aborted')
         self.assertEqual(self.db.dropped, [self.m['database']])
+        self.assertEqual(self.db.lists_removed, [self.db.rows[0]['operation_id']])
 
     def test_prune_resumes_drop_row_delete_gap_and_never_drops_protected(self):
         expired = 'corpus_vn_20990104_1'
