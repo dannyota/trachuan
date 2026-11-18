@@ -44,11 +44,11 @@ privilege:
   default-privilege row. A `retained` database is checked with its reader grants
   allowed. Any difference aborts the activation, naming only the kind of object.
 - The updater feeds the provisioner from the activated bundle over stdin,
-  because a running container keeps the old file behind its bind mount. It runs
-  as `postgres` before each activation and resets `activator`'s role-wide
-  settings and its settings in every database but the frameworks ones, whose
-  four log settings the [frameworks check](frameworks-release-restore.md)
-  verifies.
+  because a running container keeps the old file behind its bind mount. Before
+  each activation its role statements run as `postgres` in database `postgres`,
+  resetting `activator`'s role-wide settings and its settings in every database
+  but the frameworks ones, whose four log settings the
+  [frameworks check](frameworks-release-restore.md) verifies.
 
 Before an operation starts, the corpus phase refuses to proceed while a role
 other than `postgres` is a superuser or a member of one: the result is
@@ -69,11 +69,11 @@ databases it creates, and may write only `corpus_release`, `release_journal` and
 phase requires the installed `provision-activator.sh` on the host, and
 `postgres-admin.sh` and `/run/secrets/activator_db_password` readable in the
 running PostgreSQL container; otherwise it waits with reason
-`activator not provisioned`. It runs the idempotent provisioner as `postgres`
-before connecting and before each activation: it creates the role with
-`CREATEDB` when missing, sets its password from the Vault secret
-`activator_db_password`, and reapplies the table grants even when the auth
-migrations ran before the role existed.
+`activator not provisioned`. It runs the idempotent provisioner before
+connecting and before each activation: as `postgres` in database `postgres` it
+creates the role with `CREATEDB` when missing and sets its password from the
+Vault secret `activator_db_password`; as `auth_owner` it reapplies the table
+grants, even when the auth migrations ran before the role existed.
 
 0. Take the `activation` advisory lock in `auth`; append `release_journal`
    (`started`, mode, target database, manifest hash, dump SHA-256, expected

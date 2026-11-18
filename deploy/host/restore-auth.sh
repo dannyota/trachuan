@@ -39,7 +39,7 @@ postgres -D "$data" "${settings[@]}" -c listen_addresses= -c archive_mode=off \
 server=$!
 cleanup() {
  code=$?
- kill -TERM "$server" 2>/dev/null || true
+ kill -INT "$server" 2>/dev/null || true
  wait "$server" 2>/dev/null || true
  if ((code != 0)); then tail -n 40 "$runtime/postgres.log" >&2; fi
 }
