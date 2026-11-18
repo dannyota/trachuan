@@ -52,6 +52,11 @@ floors or a failed rejection check (development floors that are `not_run`
 because the file is empty do not count), for future automation; it cannot turn
 an incomplete run into a passing report.
 
+The stage compares with the previous report the run froze at start, and its
+report is the one a release uploads
+([selected report](release-evidence.md#selected-report)); the CLI is a
+diagnostic.
+
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
 verified build artifact hash, fixture and mapping hashes, previous report hash
 or empty string, frozen date, and mode list in fixed order. Recipe hash covers
@@ -197,11 +202,11 @@ when the release serves nodes, every taxonomy classification floor that applies
 to the release passes (a failed or unavailable applicable row fails), and all
 three rejection checks pass; legacy has no gate. `release_eligible` is always
 false in this baseline, including when `quality_pass` is true. Measured failures
-leave the stage done and the run evaluated, with `quality_pass:false` and
-`release_eligible:false`. Per-case `mapping_incomplete` is a reported
-diagnostic, not a run failure. Malformed fixture/map files, incomplete case
-execution or infrastructure failure fail the stage. CLI and status must
-distinguish completed evaluation from passed quality gates.
+leave the stage done and the run on its way to `evaluated`, with
+`quality_pass:false` and `release_eligible:false`. Per-case `mapping_incomplete`
+is a reported diagnostic, not a run failure. Malformed fixture/map files,
+incomplete case execution or infrastructure failure fail the stage. CLI and
+status must distinguish completed evaluation from passed quality gates.
 
 ## Cache and report format
 
@@ -273,11 +278,11 @@ previous report scored by `agent-eval/3` stays comparable with `agent-eval/4`
 for the product cohorts, because the two differ only in legacy matching: the
 non-regression checks and the old product and development case diffs run, the
 diff names both scorers, and legacy cases are left out of it. Every other scorer
-difference skips the comparison with the reason `incompatible scorer version`. A
-previous report under another retrieval recipe version stays comparable: the
-diff and the non-regression checks run, and the report labels the comparison
-with both recipe versions, as for corpus changes. Corpus changes are labeled
-coverage changes, not an isolated model effect. Report low sample size and
-old-cohort reuse; no superiority interval or claim is needed here. MRR@8 on a
-corpus-only release is judged by the
-[MRR@8 tolerance](evaluation-mrr-tolerance.md).
+difference skips the comparison with the reason `incompatible scorer version`,
+which fails the stage for a run that froze a previous report. A previous report
+under another retrieval recipe version stays comparable: the diff and the
+non-regression checks run, and the report labels the comparison with both recipe
+versions, as for corpus changes. Corpus changes are labeled coverage changes,
+not an isolated model effect. Report low sample size and old-cohort reuse; no
+superiority interval or claim is needed here. MRR@8 on a corpus-only release is
+judged by the [MRR@8 tolerance](evaluation-mrr-tolerance.md).

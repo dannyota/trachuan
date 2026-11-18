@@ -135,3 +135,7 @@ knowledge.
   with `exact` and `named`, and provision validity rows; the change list binds
   the predecessor's summary and records a hand-over's key change; one hash
   format.
+- 2026-11-18: the selected report is the `eval` stage's own, compared with a
+  previous report the run freezes at start; the uploader requires that previous
+  to be the production release. Reviewed knowledge lives in
+  `sources/<cc>-knowledge.yaml`.

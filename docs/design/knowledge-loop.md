@@ -38,11 +38,14 @@ never reports zero findings.
   (detector versions and semantics numbers), detector configuration and the
   serialization rules of the files it writes. A changed recipe needs a new run,
   as for every stage.
-- **Input hash**: the build artifact, the selected evaluation report with that
+- **Input hash**: the build artifact, the
+  [selected evaluation report](release-evidence.md#selected-report) with that
   report's gap snapshot, the reviewed knowledge bytes of the build input, and
   the predecessor's evidence ([Findings](#findings)).
 - It commits under the run's fence like every stage, and the run becomes
-  `evaluated` only when it is done.
+  `evaluated` only when it is done. A run created before the previous-report
+  rule has no `evidence` stage
+  ([selected report](release-evidence.md#selected-report)).
 
 ### First cross-signal detectors
 
@@ -75,12 +78,16 @@ that fired it.
 A finding has no stored state. `findings.json` of a release is a pure function
 of the evidence item's frozen inputs:
 
-- **Predecessor.** The release named by the selected evaluation report's
-  `previous_diff`, frozen in the evidence item; it is separate from the run's
-  ingest baseline. When that release predates evidence, its identity is recorded
-  and its findings are the empty set. When no release exists, there is no
-  predecessor. A release that has evidence whose artifact is missing or corrupt
-  fails the stage.
+- **Predecessor.** The release named by `previous_diff.previous` of the selected
+  report, frozen in the evidence item; it is separate from the run's ingest
+  baseline. A run started with `--no-previous-report` has none. The named
+  release's run row decides the rest. A snapshot without a
+  [decision](release-evidence.md#selected-report) predates evidence: its
+  identity is recorded and its findings are the empty set. A snapshot with one
+  must be `evaluated` or `released`, with a done, verified evidence artifact
+  whose bound report SHA-256, without its `sha256:` prefix, equals the frozen
+  previous report. Anything else fails the stage, including a named release with
+  no run row.
 - **Occurrence.** Each finding carries `first_rel`. It is inherited only from a
   finding that fired or was carried in the predecessor with the same fingerprint
   and semantics number; otherwise it is this release. So a finding that changes
@@ -105,6 +112,11 @@ never reads the current Git tree or other runs.
 ## Reviewed knowledge
 
 ### The contract
+
+Entries of the new kinds live in `sources/<cc>-knowledge.yaml`. Build freezes
+the file's bytes in its input and copies them into the build artifact, so
+`evidence` reads them there and never from the Git tree. With no entries the
+build's input hash and artifact stay as they are today.
 
 A reviewed entry of a new kind carries `id` (unique in its file), `kind`,
 `target`, `claim`, `evidence`, `depends` and `reviewed` (date, reviewer, and
