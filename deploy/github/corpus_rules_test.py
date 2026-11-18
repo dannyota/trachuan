@@ -38,6 +38,23 @@ class CorpusRulesTest(unittest.TestCase):
         for signing in (False, True):
             self.assertFalse(corpus_rules.older_shape_allowed('us', '20000101_1', signing=signing))
 
+    @patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': '20990102_2'}, clear=True)
+    def test_first_signing_without_a_decision_needs_exactly_the_cutoff(self):
+        allowed = {rel: corpus_rules.first_signing_allowed('vn', rel, {})
+                   for rel in ('20990101_1', '20990102_1', '20990102_2', '20990102_3')}
+        self.assertEqual(allowed, {'20990101_1': False, '20990102_1': False, '20990102_2': True, '20990102_3': False})
+        self.assertFalse(corpus_rules.first_signing_allowed('us', '20990102_2', {}))
+
+    def test_first_signing_with_a_decision_is_not_limited_by_the_cutoff(self):
+        for field in corpus_rules.DECISION_FIELDS:
+            self.assertTrue(corpus_rules.first_signing_allowed('vn', '20990103_1', {field: 'a' * 64}))
+
+    def test_decision_fields_are_refused_until_the_sidecar_gate(self):
+        corpus_rules.refuse_until_sidecar_gate(dict(run={}))
+        for field in corpus_rules.DECISION_FIELDS:
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'sidecar gate'):
+                corpus_rules.refuse_until_sidecar_gate(dict(run={field: 'a' * 64}))
+
     def test_status_endpoint_serves_only_vietnam(self):
         corpus_rules.require_status_country('vn')
         with self.assertRaises(ValueError):

@@ -9,7 +9,7 @@ from manifest import canonical, positive, require_match
 from corpus_cohorts import cohort_counts
 from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
-from corpus_rules import older_shape_allowed, require_status_country
+from corpus_rules import DECISION_FIELDS, has_decision, older_shape_allowed, refuse_until_sidecar_gate, require_status_country
 
 
 def unique_object(pairs):
@@ -171,13 +171,11 @@ def extensions(value):
 
 def validate_selected_report(row, report, report_bytes, signing):
     run = row['run']
-    fields = ('eval_report_sha256', 'previous_report_sha256')
-    present = [field for field in fields if field in run]
-    if not present:
+    if not has_decision(run):
         if not older_shape_allowed(row['country'], row['rel'], signing):
             raise ValueError('release run has no selected report decision')
         return
-    if len(present) != len(fields):
+    if not all(field in run for field in DECISION_FIELDS):
         raise ValueError('release run has only one selected report hash')
     if hashlib.sha256(report_bytes).hexdigest() != run['eval_report_sha256']:
         raise ValueError('report differs from the selected report')
@@ -292,7 +290,7 @@ def read_manifest(data):
     return obj
 
 
-def create(commit, sequence, country, rel, directory, report_path, previous_report=None, heading_reviews_path=None):
+def manifest_fields(commit, sequence, country, rel, directory, report_path, previous_report=None):
     row, report, evidence = validated_inputs(country, rel, directory, report_path, signing=True)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
@@ -305,11 +303,16 @@ def create(commit, sequence, country, rel, directory, report_path, previous_repo
                build_artifact_sha256=report['build_artifact_sha256'],
                schema_version=row['schema_version'], extensions=row['extensions'],
                recipes={name: row[name + '_recipe'] for name in ('dense', 'chunk', 'lexical', 'retrieval')})
+    if evidence is not None:
+        obj['heading_evidence'] = evidence
+    return obj
+
+
+def create(commit, sequence, country, rel, directory, report_path, previous_report=None, heading_reviews_path=None):
+    obj = manifest_fields(commit, sequence, country, rel, directory, report_path, previous_report)
     review = heading_review(rel, heading_reviews_path)
     if review is not None:
         obj['heading_review'] = review
-    if evidence is not None:
-        obj['heading_evidence'] = evidence
     return canonical(validate_manifest(obj))
 
 
@@ -325,6 +328,7 @@ def main():
     if args.command == 'validate':
         require_status_country(args.country)
         row, _ = validate_inputs(args.country, args.rel, args.directory, args.report)
+        refuse_until_sidecar_gate(row)
         if args.list_files:
             print('\n'.join(release_files(row['schema_version'])))
     else:
@@ -334,6 +338,7 @@ def main():
             raise ValueError('dispatch corpus release from main')
         from corpus_previous import check_remote
         row, report = validate_inputs(args.country, args.rel, args.directory, args.report, signing=True)
+        refuse_until_sidecar_gate(row)
         previous_report = check_remote(report, release_row=row)
         (args.directory / 'manifest.json').write_bytes(create(
             os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),
