@@ -120,12 +120,13 @@ target then keeps its status but is not eligible for the default current list
 and appears in the non-current group as unresolved. When the source's article is
 unresolved or missing, the relation changes nothing and becomes a review entry
 `replaces_unverified` with the article text, so a manual correction can settle
-it. `repeals` relations and `partial` targets only add a review entry. Reason,
-measured on `vn/20261110_4`: the parser read few effect articles (1,081
-unresolved), and rule C fired 24 times on unread articles, hiding texts that are
-only partly replaced, such as `23/2024/TT-NHNN` and `15/2019/TT-NHNN` (the
-replacing circular names single articles). Hiding valid law is as harmful as
-showing replaced law, so an unread article is never evidence.
+it. A diagram `repeals` relation, or a diagram `replaces` relation to a
+`partial` target, only adds a review entry. Reason, measured on `vn/20261110_4`:
+the parser read few effect articles (1,081 unresolved), and rule C fired 24
+times on unread articles, hiding texts that are only partly replaced, such as
+`23/2024/TT-NHNN` and `15/2019/TT-NHNN` (the replacing circular names single
+articles). Hiding valid law is as harmful as showing replaced law, so an unread
+article is never evidence.
 
 Partial effects never change document status in this release; provision-level
 validity is later work.

@@ -35,7 +35,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		if !ok || actor.consolidated || target.consolidated {
 			continue
 		}
-		if rel.kind != "replaces" && rel.kind != "repeals" {
+		if (rel.kind != "replaces" && rel.kind != "repeals") || !rel.diagram() {
 			continue
 		}
 		a := e.outputs[actor.key].values
@@ -58,7 +58,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		if e.corrections[target.key].Hold {
 			continue
 		}
-		if target.sourceClass != "in_force" || !rel.diagram() {
+		if target.sourceClass != "in_force" {
 			continue
 		}
 		if actor.article == nil || !actor.article.Usable {

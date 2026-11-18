@@ -55,17 +55,17 @@ func TestRuleC_ReplacesUnverifiedOnlyForDiagramRelations(t *testing.T) {
 	}
 }
 
-func TestRuleC_PartialTargetAndRepealsReviewAnyMethod(t *testing.T) {
+func TestRuleC_PartialTargetAndRepealsReviewOnlyForDiagramRelations(t *testing.T) {
 	for _, tc := range []struct {
 		kind, class, review string
 	}{{"replaces", "partial", "partial_target"}, {"repeals", "in_force", "repeals_current"}} {
-		for _, method := range []string{"vbpl_diagram", "text_rule/1"} {
+		for method, want := range map[string]bool{"vbpl_diagram": true, "vbpl_references,vbpl_diagram": true, "text_rule/1": false, "vbpl_references": false, "": false} {
 			target, actor := diagramPair()
 			target.sourceClass = tc.class
 			actor.article = testArticle("1/3/2099", "")
 			v := runAt2099(t, []validityDocument{target, actor}, []validityRelation{{source: "b", target: "a", kind: tc.kind, method: method, id: 5}})
-			if v.documents["a"].values.Conflict || !hasReview(v, tc.review) {
-				t.Fatalf("%s %s: reviews=%+v", tc.review, method, v.reviews)
+			if v.documents["a"].values.Conflict || hasReview(v, tc.review) != want {
+				t.Fatalf("%s %q: reviews=%+v", tc.review, method, v.reviews)
 			}
 		}
 	}

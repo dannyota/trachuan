@@ -87,7 +87,7 @@ func TestValidity_ManualStartPrecedesRuleA(t *testing.T) {
 func TestRuleC_RepealsOnlyReview(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", id: 1}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", method: "vbpl_diagram", id: 1}}, nil)
 	if v.documents["a"].values.Conflict || !hasReview(v, "repeals_current") {
 		t.Fatal(v)
 	}
@@ -292,7 +292,7 @@ func TestRuleB_RecordsRelationAgreement(t *testing.T) {
 func TestReview_HoldDoesNotHideCurrentRepeal(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", method: "vbpl_diagram", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
 	if !hasReview(v, "repeals_current") {
 		t.Fatal(v.reviews)
 	}
