@@ -11,7 +11,7 @@
 - [x] sc365 read the contract on 2026-11-15; its seven points on `identity.jsonl` and `changes.jsonl` (hash definition, validity dates, removed documents, provenance flag, JSON Lines, upload list, schema line and taxonomy codes) and its claim codes are in knowledge-loop.md.
 
 ## 16.1 Registry and evidence stage
-- [ ] Go detector registry as the only list (`corpus detectors list`): subject types, discriminators, completeness declaration, semantics numbers, registry hash; stage gap validation rejects an unregistered kind at run time, and a test checks every kind constant against the registry.
+- [x] Go detector registry as the only list (`corpus detectors list`): subject types, discriminators, completeness declaration, semantics numbers, registry hash; stage gap validation rejects an unregistered kind at run time, and a test checks every kind constant against the registry.
 - [ ] `evidence` stage after `eval` as one item: frozen recipe (registry, configuration, serialization), input hash (build artifact, selected report and its gap snapshot, knowledge bytes, predecessor evidence), normal commit fencing, run `evaluated` only after it; fails with `detector_incomplete`; one immutable artifact.
 - [ ] `findings.json` as a pure function: predecessor from the selected report's `previous_diff` (empty when it predates evidence, failure when its artifact is missing), `first_rel` inherited only from an unchanged fired or carried finding, `gone` or `carried` for every previous key, status and `unmatched` decisions computed in this stage; `corpus findings list|show <cc> <rel>` reads the artifact only.
 
