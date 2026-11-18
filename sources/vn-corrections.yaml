@@ -424,8 +424,8 @@
   reviewed: "2026-11-18"
 - key: vn:vbpl:174948
   number: "21/2024/TT-BTTTT"
-  set: {eff_from: "2025-02-15", eff_to: "2026-07-01"}
-  reason: "Điều 2 states 2025-02-15, not the source date 2015-02-15. Ends when 48/2026/TT-BCA takes effect, which Điều 2 khoản 1 states as 2026-07-01."
+  set: {eff_from: "2025-02-15"}
+  reason: "Điều 2 states 2025-02-15, not the source date 2015-02-15."
   evidence:
     anchor: "dieu-2"
     quote: "Thông tư này có hiệu lực thi hành kể từ ngày 15 tháng 02 năm 2025"
@@ -1540,7 +1540,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-279"
-    quote: "01/2005/TT-NHNN ngày 10/03/2005"
+    quote: "01/2005/TT-NHNN ngày 10/03/2005\nHướng dẫn thi hành Nghị định số 202/2004/NĐ-CP của Chính phủ ngày 10/12/2004 về xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và hoạt động ngân hàng\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9255
   number: "01/CT-NH20"
@@ -1549,7 +1549,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-199"
-    quote: "01-CT/NH20 ngày 03/01/1996\nVề mở rộng dịch vụ thanh toán của Ngân hàng trong khu vực dân cư"
+    quote: "01-CT/NH20 ngày 03/01/1996\nVề mở rộng dịch vụ thanh toán của Ngân hàng trong khu vực dân cư\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:8666
   number: "02/CT-NH12"
@@ -1558,7 +1558,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-354"
-    quote: "02/1997/CT-NH12 ngày 19/03/1997\nTăng cường tuyên truyền hoạt động Ngân hàng trên các phương tiện thông tin đại chúng"
+    quote: "02/1997/CT-NH12 ngày 19/03/1997\nTăng cường tuyên truyền hoạt động Ngân hàng trên các phương tiện thông tin đại chúng\nBị bãi bỏ bởi Thông tư 25/2012/TT-NHNN ngày 06/9/2012 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n20/10/2012"
   reviewed: "2026-11-18"
 - key: vn:vbpl:109248
   number: "03/2001/TTLT/NHNN-BTP-BCA-BTC-TCÐC"
@@ -1567,7 +1567,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-357"
-    quote: "03/2001/TTLT/NHNN-BTP-BCA-BTC-TCĐC ngày 23/04/2001\nHướng dẫn việc xử lý tài sản bảo đảm tiền vay để thu hồi nợ cho các tổ chức tín dụng"
+    quote: "03/2001/TTLT/NHNN-BTP-BCA-BTC-TCĐC ngày 23/04/2001\nHướng dẫn việc xử lý tài sản bảo đảm tiền vay để thu hồi nợ cho các tổ chức tín dụng\nThông tư liên tịch này hướng dẫn Nghị định số 165/1999/NĐ-CP và Nghị định số 178/1999/NĐ-CP hết hiệu lực do Nghị định số 165/1999/NĐ-CP và Nghị định số 178/1999/NĐ-CP bị thay thế, bãi bỏ bởi Nghị định số 163/2006/NĐ-CP ngày 29/12/2006 về giao dịch bảo đảm\n27/01/2007"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9857
   number: "03/CT-NH2"
@@ -1576,7 +1576,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-315"
-    quote: "Chỉ thị\n03-CT/NH2 ngày 26/5/1995\nVề việc chấn chỉnh công tác thanh toán liên hàng và cập nhật công tác kế toán trong ngành Ngân hàng"
+    quote: "Chỉ thị\n03-CT/NH2 ngày 26/5/1995\nVề việc chấn chỉnh công tác thanh toán liên hàng và cập nhật công tác kế toán trong ngành Ngân hàng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:8244
   number: "04/1997/TT-NHNN1"
@@ -1585,7 +1585,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-129"
-    quote: "04/1997/TT-NHNN1 ngày 23/10/1997\nHướng dẫn xác nhận và phong toả tín phiếu, trái phiếu ghi sổ phát hành qua Ngân hàng Nhà nước trong quan hệ tín dụng"
+    quote: "04/1997/TT-NHNN1 ngày 23/10/1997\nHướng dẫn xác nhận và phong toả tín phiếu, trái phiếu ghi sổ phát hành qua Ngân hàng Nhà nước trong quan hệ tín dụng\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9281
   number: "04/CT-NH3"
@@ -1594,7 +1594,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-265"
-    quote: "04-CT/NH3 ngày 17/5/1996"
+    quote: "04-CT/NH3 ngày 17/5/1996\nTiếp tục tăng cường công tác thanh tra, kiểm soát và kiểm toán trong ngành ngân hàng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9788
   number: "04/TT-NH1"
@@ -1603,7 +1603,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-125"
-    quote: "04-TT/NH1 ngày 19/9/1995"
+    quote: "04-TT/NH1 ngày 19/9/1995\nHướng dẫn thực hiện Quy chế dự trữ bắt buộc\nBị hết hiệu lực bởi Quyết định số 396/1997/QĐ-NHNN ngày 01/12/1997 về việc ban hành “Quy chế dự trữ bắt buộc đối với ngân hàng, tổ chức tín dụng”\n01/01/1998"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9259
   number: "04/TT-NH14"
@@ -1612,12 +1612,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-219"
-    quote: "04/TT-NH14 16/5/1996"
+    quote: "04/TT-NH14 16/5/1996\nHướng dẫn thực hiện Quyết định số 256/TTg ngày 24/4/1996 của Thủ tướng Chính phủ về việc cho hộ gia đình thuộc diện chính sách và hộ nghèo vùng đồng bằng sông Cửu Long vay vốn để tôn nền hoặc làm sàn nhà trên cọc\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:21512
   number: "05/2003/TT-NHNN"
   set: {eff_to: "2015-12-10"}
-  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force."
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force. The row continues in doan-232, which opens with its end-date cell 10/12/2015."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-231"
@@ -1635,7 +1635,7 @@
 - key: vn:vbpl:9260
   number: "05/CT-NH1"
   set: {eff_to: "2015-10-16"}
-  reason: "211/QĐ-NHNN Phụ lục 2 lists 05-CT/NH1 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 05-CT/NH1 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-220, which opens with its end-date cell 16/10/2015."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-219"
@@ -1657,7 +1657,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-249"
-    quote: "05-NH/QĐ ngày 07/01/1991\nBan hành Quy chế cấp giấy phép hoạt động cho các tổ chức tín dụng Việt Nam"
+    quote: "05-NH/QĐ ngày 07/01/1991\nBan hành Quy chế cấp giấy phép hoạt động cho các tổ chức tín dụng Việt Nam\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9099
   number: "05/TT-NH1"
@@ -1666,12 +1666,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-128"
-    quote: "05-TT/NH1 ngày 17/8/1996\nHướng dẫn về phạm vi áp dụng trần lãi suất cho vay trên địa bàn nông thôn và phương pháp tính chênh lệch lãi suất bình quân"
+    quote: "05-TT/NH1 ngày 17/8/1996\nHướng dẫn về phạm vi áp dụng trần lãi suất cho vay trên địa bàn nông thôn và phương pháp tính chênh lệch lãi suất bình quân\nBị bãi bỏ bởi Quyết định số 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9798
   number: "05/TT-NH5"
   set: {eff_to: "2015-10-16"}
-  reason: "211/QĐ-NHNN Phụ lục 2 lists 05-TT/NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 05-TT/NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-262, which holds its reason cell and its end-date cell 16/10/2015."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-261"
@@ -1684,7 +1684,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-167"
-    quote: "Thông tư\n05/TT-NH7 ngày 10/3/1994\nHướng dẫn thực hiện Quy chế quản lý các hoạt động điều tra địa chất, khai thác mỏ, chế tác và buôn bán đá quý, ban hành kèm theo Nghị định số 67-CP ngày 7-1-1993 của"
+    quote: "Thông tư\n05/TT-NH7 ngày 10/3/1994\nHướng dẫn thực hiện Quy chế quản lý các hoạt động điều tra địa chất, khai thác mỏ, chế tác và buôn bán đá quý, ban hành kèm theo Nghị định số 67-CP ngày 7-1-1993 của Chính phủ\nBị thay thế bởi Quyết định 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản quy phạm pháp luật trong ngành ngân hàng\n11/11/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:13117
   number: "06/2007/TT-NHNN"
@@ -1693,7 +1693,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-285"
-    quote: "06/2007/TT-NHNN ngày 06/11/2007\nSửa đổi, bổ sung Thông tư số 08/2005/TT-NHNN ngày 30/12/2005 của Ngân hàng Nhà nước hướng dẫn thực hiện Nghị định số 48/2001/NĐ-CP ngày 13/8/2001 về tổ chức và hoạt"
+    quote: "06/2007/TT-NHNN ngày 06/11/2007\nSửa đổi, bổ sung Thông tư số 08/2005/TT-NHNN ngày 30/12/2005 của Ngân hàng Nhà nước hướng dẫn thực hiện Nghị định số 48/2001/NĐ-CP ngày 13/8/2001 về tổ chức và hoạt động của Quỹ tín dụng nhân dân và Nghị định số 69/2005/NĐ-CP ngày 26/5/2005 về việc sửa đổi, bổ sung một số Điều của Nghị định số 48/2001/NĐ-CP ngày 13/8/2001 về tổ chức và hoạt động của Quỹ tín dụng nhân dân\nThông tư số 06/2007/TT-NHNN sửa đổi, bổ sung Thông tư số 08/2005/TT-NHNN quy định chi tiết Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực do Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực\n01/7/2018"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10860
   number: "07-NHNN/TT"
@@ -1702,7 +1702,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-251"
-    quote: "Thông tư\n07/TT-NH ngày 02/6/1992\nHướng dẫn việc mở hoặc chấm dứt hoạt động của chi nhánh, văn phòng đại diện ở trong nước thuộc Ngân hàng Thương mại cổ phần"
+    quote: "Thông tư\n07/TT-NH ngày 02/6/1992\nHướng dẫn việc mở hoặc chấm dứt hoạt động của chi nhánh, văn phòng đại diện ở trong nước thuộc Ngân hàng Thương mại cổ phần\nHết hiệu lực bởi Quyết định 175-QĐ/NH5 ngày 3/7/1996 về việc ban hành Quy chế mở, hoạt động và chấm dứt hoạt động chi nhánh, văn phòng đại diện trong nước của Ngân hàng thương mại cổ phần Việt Nam\n3/7/1996"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10589
   number: "07/NH-TT"
@@ -1720,7 +1720,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-281"
-    quote: "Thông tư số 08/2005/TT-NHNN quy định chi tiết Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực do Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực"
+    quote: "Thông tư số 08/2005/TT-NHNN quy định chi tiết Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực do Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực\n01/7/2018"
   reviewed: "2026-11-18"
 - key: vn:vbpl:26511
   number: "08/2011/TT-NHNN"
@@ -1729,7 +1729,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-238"
-    quote: "08/2011/TT-NHNN ngày 08/4/2011\nQuy định chi tiết về tín dụng kinh doanh xuất khẩu gạo theo Nghị định 109/2010/NĐ-CP ngày 04/11/2010 của Chính phủ\nThông tư 08/2011/QĐ-NHNN quy định chi tiết Nghị định"
+    quote: "08/2011/TT-NHNN ngày 08/4/2011\nQuy định chi tiết về tín dụng kinh doanh xuất khẩu gạo theo Nghị định 109/2010/NĐ-CP ngày 04/11/2010 của Chính phủ\nThông tư 08/2011/QĐ-NHNN quy định chi tiết Nghị định số 109/2010/NĐ-CP hết hiệu lực do Nghị định số 109/2010/NĐ-CP hết hiệu lực do bị thay thế bởi Nghị định số 107/2018/NĐ-CP ngày 15/8/2018 về kinh doanh xuất khẩu gạo\n01/10/2018"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9152
   number: "08/CT-NH1"
@@ -1738,7 +1738,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-220"
-    quote: "08-CT/NH1 ngày 01/8/1996\nVề một số biện pháp chấn chỉnh việc chấp hành quy định một khách hàng vay vốn nhiều tổ chức tín dụng"
+    quote: "08-CT/NH1 ngày 01/8/1996\nVề một số biện pháp chấn chỉnh việc chấp hành quy định một khách hàng vay vốn nhiều tổ chức tín dụng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:27458
   number: "10/2012/TT-NHNN"
@@ -1747,7 +1747,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-291"
-    quote: "10/2012/TT-NHNN ngày 16/04/2012\nQuy định xử lý sau thanh tra, giám sát đối với các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một"
+    quote: "10/2012/TT-NHNN ngày 16/04/2012\nQuy định xử lý sau thanh tra, giám sát đối với các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9709
   number: "10/CT-NH17"
@@ -1756,12 +1756,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-262"
-    quote: "10-CT/NH17 ngày 26/10/1995"
+    quote: "10-CT/NH17 ngày 26/10/1995\nVề công tác kiểm soát, thanh tra, giám sát đối với hệ thống quỹ tín dụng nhân dân và hợp tác xã tín dụng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9431
   number: "10/QĐ-NH1"
   set: {eff_to: "1996-05-01"}
-  reason: "211/QĐ-NHNN Phụ lục 2 lists 10/QĐ-NH1 as wholly expired, replaced by Decision 107/QĐ-NH1 of 3/5/1996, and its own row gives 01/5/1996 as the end date, so eff_to is 1996-05-01; Điều 2 of 107/QĐ-NH1 applies its rate from 01-05-1996, which explains an end date before that decision was issued."
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 10/QĐ-NH1 as wholly expired, replaced by Decision 107/QĐ-NH1 of 3/5/1996, and its own row gives 01/5/1996 as the end date, so eff_to is 1996-05-01; Điều 2 of 107/QĐ-NH1 applies its rate from 01-05-1996, which explains an end date before that decision was issued. The row continues in doan-127, which opens with its end-date cell 01/5/1996."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-126"
@@ -1770,7 +1770,7 @@
 - key: vn:vbpl:23155
   number: "1004/2001/QĐ-NHNN"
   set: {eff_to: "2018-11-01"}
-  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired because Nghị định 70/2000/NĐ-CP expired, and that row gives 2018-11-01 as the end date."
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired because Nghị định 70/2000/NĐ-CP expired, and that row gives 2018-11-01 as the end date. The row continues in doan-274, which holds its reason cell and its end-date cell 01/11/2018."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-273"
@@ -1783,7 +1783,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-264"
-    quote: "104/QĐ-NH5 ngày 02/5/1996"
+    quote: "104/QĐ-NH5 ngày 02/5/1996\nVề việc ban hành Mẫu điều lệ công ty tài chính trong tổng công ty Nhà nước\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10859
   number: "106-NH/QĐ"
@@ -1792,7 +1792,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-251"
-    quote: "Quyết định\n106-QĐ/NH5 ngày 09/6/1992\nBan hành Quy chế trích lập và sử dụng các quỹ dự trữ của tổ chức tín dụng"
+    quote: "Quyết định\n106-QĐ/NH5 ngày 09/6/1992\nBan hành Quy chế trích lập và sử dụng các quỹ dự trữ của tổ chức tín dụng\nBãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9829
   number: "11/CT-NH17"
@@ -1801,7 +1801,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-262"
-    quote: "11/CT-NH17 ngày 04/12/1995"
+    quote: "11/CT-NH17 ngày 04/12/1995\nVề việc tăng cường chỉ đạo công tác thí điểm thành lập Quỹ tín dụng Nhân dân\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10855
   number: "11/TT-NH5"
@@ -1810,7 +1810,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-252"
-    quote: "11/TT-NH5 ngày 06/7/1992\nVề việc hướng dẫn thực hiện Quy chế dự trữ bắt buộc\nHết hiệu lực bởi Thông tư 04/TT-NH1 ngày 19/9/1995 hướng dẫn thực hiện Quy chế dự trữ bắt buộc"
+    quote: "11/TT-NH5 ngày 06/7/1992\nVề việc hướng dẫn thực hiện Quy chế dự trữ bắt buộc\nHết hiệu lực bởi Thông tư 04/TT-NH1 ngày 19/9/1995 hướng dẫn thực hiện Quy chế dự trữ bắt buộc\n01/10/1995"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10125
   number: "12/TT-NH7"
@@ -1819,12 +1819,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-170"
-    quote: "Thông tư\n12/TT-NH7 ngày 05/9/1994\nVề việc hướng dẫn thi hành Quyết định số 396-TTg ngày 4/8/1994 của Thủ tướng Chính phủ về việc bổ sung, sửa đổi một số điểm về quản lý ngoại tệ trong tình hình mới"
+    quote: "Thông tư\n12/TT-NH7 ngày 05/9/1994\nVề việc hướng dẫn thi hành Quyết định số 396-TTg ngày 4/8/1994 của Thủ tướng Chính phủ về việc bổ sung, sửa đổi một số điểm về quản lý ngoại tệ trong tình hình mới\nBị bãi bỏ bởi Quyết định 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản quy phạm pháp luật trong ngành ngân hàng\n11/11/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9276
   number: "125/QĐ-NH5"
   set: {eff_to: "2015-10-16"}
-  reason: "211/QĐ-NHNN Phụ lục 2 lists 125-QĐ/NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 125-QĐ/NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-265, which holds its reason cell and its end-date cell 16/10/2015."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-264"
@@ -1837,7 +1837,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-179"
-    quote: "Quyết định\n1278/2001/QĐ-NHNN ngày 09/10/2001\nBan hành Quy chế hoạt động của Ban Điều hành quản lý dự trữ ngoại hối nhà nước"
+    quote: "Quyết định\n1278/2001/QĐ-NHNN ngày 09/10/2001\nBan hành Quy chế hoạt động của Ban Điều hành quản lý dự trữ ngoại hối nhà nước\nBị bãi bỏ theo quy định tại Khoản 2 Điều 8 Quyết định số 12/QĐ-NHNN.m ngày 30/01/2005 về việc thành lập và tổ chức hoạt động của Ban Điều hành, quản lý dự trữ ngoại hối Nhà nước\n30/01/2005"
   reviewed: "2026-11-18"
 - key: vn:vbpl:13994
   number: "13/2007/QĐ-NHNN"
@@ -1846,7 +1846,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-372"
-    quote: "13/2007/QĐ-NHNN ngày 30/03/2007\nSửa đổi Quy chế tổ chức và hoạt động của Vụ Tổng kiểm soát ban hành kèm theo Quyết định số 1128/2004/QĐ-NHNN ngày 09/9/2004 của Thống đốc Ngân hàng Nhà n­ước"
+    quote: "13/2007/QĐ-NHNN ngày 30/03/2007\nSửa đổi Quy chế tổ chức và hoạt động của Vụ Tổng kiểm soát ban hành kèm theo Quyết định số 1128/2004/QĐ-NHNN ngày 09/9/2004 của Thống đốc Ngân hàng Nhà n­ước\nBị thay thế bởi Quyết định số 2210/QĐ-NHNN ngày 06/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Vụ Kiểm toán nội bộ.\n6/10/2008"
   reviewed: "2026-11-18"
 - key: vn:vbpl:8937
   number: "13/CT-NH14"
@@ -1855,7 +1855,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-333"
-    quote: "13-CT-NH14 ngày 07/11/1996\nVề củng cố tăng cường công tác thông tin tín dụng trong ngành ngân hàng"
+    quote: "13-CT-NH14 ngày 07/11/1996\nVề củng cố tăng cường công tác thông tin tín dụng trong ngành ngân hàng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9852
   number: "135/QĐ-NH6"
@@ -1864,7 +1864,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-300"
-    quote: "135-QĐ/NH6 ngày 06/5/1995"
+    quote: "135-QĐ/NH6 ngày 06/5/1995\nBan hành Quy chế tiêu huỷ các loại tiền giấy rách nát, hư hỏng và tiền đình chỉ lưu hành\nBị thay thế bởi Quyết định 81/1999/QĐ-NH6 ngày 10/03/1999 về việc ban hành Quy chế tiêu hủy tiền\n25/3/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9853
   number: "136/QĐ-NH2"
@@ -1873,7 +1873,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-314"
-    quote: "136-QĐ/NH2 ngày 10/5/1995"
+    quote: "136-QĐ/NH2 ngày 10/5/1995\nVề việc bổ sung một số tài khoản vào hệ thống tài khoản kế toán tổ chức tín dụng\nBị thay thế bởi Quyết định 435/1998/QĐ-NHNN2 ngày 25/12/1998 về việc ban hành Hệ thống tài khoản kế toán các tổ chức tín dụng\n01/4/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9854
   number: "139/QĐ-NH1"
@@ -1882,7 +1882,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-124"
-    quote: "139-QĐ/NH1 ngày 18/5/1995"
+    quote: "139-QĐ/NH1 ngày 18/5/1995\nBan hành “Quy chế phát hành trái phiếu quốc tế của các Ngân hàng thương mại quốc doanh”\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:7458
   number: "14-1998/QĐ-NHNN2"
@@ -1891,7 +1891,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-317"
-    quote: "14/1998/QĐ-NHNN2 ngày 10/01/1998\nBan hành Quy định về quản lý tài chính, tài sản đối với Ban quản lý các dự án ngân hàng"
+    quote: "14/1998/QĐ-NHNN2 ngày 10/01/1998\nBan hành Quy định về quản lý tài chính, tài sản đối với Ban quản lý các dự án ngân hàng\nBị bãi bỏ bởi Quyết định số 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:16268
   number: "14/2006/QĐ-NHNN"
@@ -1900,7 +1900,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-281"
-    quote: "14/2006/QĐ-NHNN ngày 04/04/2006"
+    quote: "14/2006/QĐ-NHNN ngày 04/04/2006\nSửa đổi, bổ sung một số điều của Quy định về tổ chức và hoạt động của Hội đồng quản trị, Ban kiểm soát, Tổng giám đốc (Giám đốc) Tổ chức tín dụng phi ngân hàng ban hành kèm theo Quyết định số 516/2003/QĐ-NHNN ngày 26/5/2003 của Thống đốc Ngân hàng Nhà nước\nBị hết hiệu lực bởi Thông tư số 22/2018/TT-NHNN ngày 05/9/2018 hướng dẫn về thủ tục, hồ sơ chấp thuận danh sách dự kiến nhân sự của ngân hàng thương mại, tổ chức tín dụng phi ngân hàng và chi nhánh ngân hàng nước ngoài\n01/11/2018"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9855
   number: "140/QĐ-NH4"
@@ -1909,7 +1909,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-300"
-    quote: "Quyết định\n140-QĐ/NH4 ngày 18/5/1995\nBan hành Quy chế giám sát tiêu huỷ các loại tiền giấy rách nát, hư hỏng và tiền đình chỉ lưu hành"
+    quote: "Quyết định\n140-QĐ/NH4 ngày 18/5/1995\nBan hành Quy chế giám sát tiêu huỷ các loại tiền giấy rách nát, hư hỏng và tiền đình chỉ lưu hành\nBị bãi bỏ bởi Quyết định số 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản quy phạm pháp luật trong ngành ngân hàng\n11/11/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9275
   number: "142/QĐ-NH17"
@@ -1918,7 +1918,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-265"
-    quote: "142/QĐ-NH17 ngày 21/5/1996"
+    quote: "142/QĐ-NH17 ngày 21/5/1996\nVề việc bổ sung, sửa đổi một số điểm về Quy chế tổ chức hoạt động của Quỹ tín dụng khu vực\nBị bãi bỏ bởi Nghị định 48/2001/NĐ-CP ngày 13/08/2001 về tổ chức và hoạt động của Quỹ tín dụng nhân dân\n28/8/2001"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9858
   number: "149/QĐ-NH5"
@@ -1927,7 +1927,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-261"
-    quote: "Quyết định\n149-QĐ/NH5 ngày 27/5/1995\nVề việc ban hành Thể lệ Tín dụng thuê mua"
+    quote: "Quyết định\n149-QĐ/NH5 ngày 27/5/1995\nVề việc ban hành Thể lệ Tín dụng thuê mua\nBị hủy bỏ bởi Quyết định số 278/QĐ-NH5 ngày 11/10/1996 về việc hủy bỏ Quyết định 149-QĐ/NH5 ngày 27/5/1995 của Thống đốc Ngân hàng Nhà nước ban hành Thể lệ tín dụng thuê mua\n11/10/1996"
   reviewed: "2026-11-18"
 - key: vn:vbpl:32582
   number: "156/2013/NĐ-CP"
@@ -1936,7 +1936,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-335"
-    quote: "156/2013/NĐ-CP ngày 11/11/2013\nQuy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam\nBị hết hiệu lực bởi Nghị định số 16/2017/NĐ-CP ngày 17/02/2017 quy định chức"
+    quote: "156/2013/NĐ-CP ngày 11/11/2013\nQuy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam\nBị hết hiệu lực bởi Nghị định số 16/2017/NĐ-CP ngày 17/02/2017 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam\n17/02/2017"
   reviewed: "2026-11-18"
 - key: vn:vbpl:8854
   number: "16/CT-NH9"
@@ -1945,7 +1945,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-353"
-    quote: "16-CT/NH9 ngày 31/12/1996\nVề công tác tổ chức cán bộ trong thời gian tới"
+    quote: "16-CT/NH9 ngày 31/12/1996\nVề công tác tổ chức cán bộ trong thời gian tới\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10122
   number: "174/QĐ-NH5"
@@ -1954,7 +1954,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-258"
-    quote: "Quyết định\n174/QĐ-NH5 ngày 26/8/1994\nVề việc bổ sung, sửa đổi về nội dung phạm vi hoạt động của chi nhánh ngân hàng nước ngoài, ngân hàng liên doanh hoạt động tại Việt Nam"
+    quote: "Quyết định\n174/QĐ-NH5 ngày 26/8/1994\nVề việc bổ sung, sửa đổi về nội dung phạm vi hoạt động của chi nhánh ngân hàng nước ngoài, ngân hàng liên doanh hoạt động tại Việt Nam\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10123
   number: "175/QĐ-NH5"
@@ -1963,7 +1963,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-169"
-    quote: "Quyết định\n175-QĐ/NH5 ngày 26/8/1994\nVề việc cho vay ngoại tệ của chi nhánh ngân hàng nước ngoài, Ngân hàng liên doanh đối với các Ngân hàng trong nước"
+    quote: "Quyết định\n175-QĐ/NH5 ngày 26/8/1994\nVề việc cho vay ngoại tệ của chi nhánh ngân hàng nước ngoài, Ngân hàng liên doanh đối với các Ngân hàng trong nước\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9859
   number: "180/QĐ-NH1"
@@ -1972,7 +1972,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-124"
-    quote: "Quyết định\n180-QĐ/NH1 ngày 29/6/1995\nVề điều chỉnh lãi suất tiền gửi của tổ chức kinh tế"
+    quote: "Quyết định\n180-QĐ/NH1 ngày 29/6/1995\nVề điều chỉnh lãi suất tiền gửi của tổ chức kinh tế\nBị hết hiệu lực bởi Quyết định số 241-QĐ/NH1 ngày 09/09/1995 về điều chỉnh lãi suất tiền gửi của tổ chức kinh tế\n15/9/1995"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10100
   number: "185-QĐ/NH5"
@@ -1981,7 +1981,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-215"
-    quote: "Quyết định\n185-QĐ/NH5 ngày 6/9/1994\nVề việc ban hành Quy chế dịch vụ cầm cố"
+    quote: "Quyết định\n185-QĐ/NH5 ngày 6/9/1994\nVề việc ban hành Quy chế dịch vụ cầm cố\nBị thay thế bởi Quyết định 324/1998/QĐ-NHNN1 ngày 30/9/1998 về việc ban hành Quy chế cho vay của tổ chức tín dụng đối với khách hàng\n15/10/1998"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10070
   number: "196-NH14/QĐ"
@@ -1999,7 +1999,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-193"
-    quote: "196/TTg ngày 01/4/1997\nSử dụng các dữ liệu thông tin trên vật mang tin để làm chứng từ kế toán và thanh toán vốn của các ngân hàng và tổ chức tín dụng"
+    quote: "196/TTg ngày 01/4/1997\nSử dụng các dữ liệu thông tin trên vật mang tin để làm chứng từ kế toán và thanh toán vốn của các ngân hàng và tổ chức tín dụng\nBị thay thế bởi Quyết định 44/2002/QĐ-TTg ngày 21/3/2002 của Thủ tướng Chính phủ về sử dụng chứng từ điện tử làm chứng từ kế toán để hạch toán và thanh toán vốn của các Tổ chức cung ứng dịch vụ thanh toán\n06/04/2002"
   reviewed: "2026-11-18"
 - key: vn:vbpl:25761
   number: "20/2010/TT-NHNN"
@@ -2008,7 +2008,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-151"
-    quote: "20/2010/TT-NHNN ngày 29/9/2010\nHướng dẫn thực hiện các biện pháp điều hành công cụ chính sách tiền tệ để hỗ trợ tổ chức tín dụng cho vay phát triển nông nghiệp, nông thôn\nBị hết hiệu lực bởi Thông tư"
+    quote: "20/2010/TT-NHNN ngày 29/9/2010\nHướng dẫn thực hiện các biện pháp điều hành công cụ chính sách tiền tệ để hỗ trợ tổ chức tín dụng cho vay phát triển nông nghiệp, nông thôn\nBị hết hiệu lực bởi Thông tư số 14/2018/TT-NHNN ngày 29/5/2018 hướng dẫn thực hiện các biện pháp điều hành công cụ chính sách tiền tệ để hỗ trợ các tổ chức tín dụng cho vay phát triển nông nghiệp, nông thôn\n13/7/2018"
   reviewed: "2026-11-18"
 - key: vn:vbpl:11429
   number: "203/NH-TT"
@@ -2017,7 +2017,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-161"
-    quote: "203/NH-TT ngày 31/10/1991\nHướng dẫn thi hành Quyết định số 337-HĐBT ngày 25/10/1991 của Hội đồng Bộ trưởng về một số biện pháp quản lý ngoại tệ trong thời gian trước mắt"
+    quote: "203/NH-TT ngày 31/10/1991\nHướng dẫn thi hành Quyết định số 337-HĐBT ngày 25/10/1991 của Hội đồng Bộ trưởng về một số biện pháp quản lý ngoại tệ trong thời gian trước mắt\nBị bãi bỏ bởi Quyết định số 389/1999/QĐ-NHNN10 ngày 27/10/1999 bãi bỏ một số văn bản trong ngành ngân hàng\n11/11/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:14128
   number: "22/2007/QĐ-NHNN"
@@ -2026,7 +2026,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-372"
-    quote: "22/2007/QĐ-NHNN ngày 28/05/2007\nBan hành Quy chế về công tác văn thư và lưu trữ\nBị bãi bỏ bởi Quyết định số 2899/QĐ-NHNN ngày 06/12/2013 ban hành Quy chế công tác văn thư và lưu trữ của NHNN Việt Nam"
+    quote: "22/2007/QĐ-NHNN ngày 28/05/2007\nBan hành Quy chế về công tác văn thư và lưu trữ\nBị bãi bỏ bởi Quyết định số 2899/QĐ-NHNN ngày 06/12/2013 ban hành Quy chế công tác văn thư và lưu trữ của NHNN Việt Nam\n10/12/2013"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10127
   number: "22/QĐ-NH1"
@@ -2035,7 +2035,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-197"
-    quote: "Quyết định\n22/QĐ-NH1 ngày 21/02/1994\nBan hành \"Thể lệ thanh toán không dùng tiền mặt\""
+    quote: "Quyết định\n22/QĐ-NH1 ngày 21/02/1994\nBan hành \"Thể lệ thanh toán không dùng tiền mặt\"\nBị thay thế bởi Quyết định 226/2002/QĐ-NHNN ngày 26/03/2002 về việc ban hành quy chế hoạt động thanh toán qua các tổ chức cung ứng dịch vụ thanh toán\n10/4/2002"
   reviewed: "2026-11-18"
 - key: vn:vbpl:1907
   number: "222/NH-TT"
@@ -2044,7 +2044,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-159"
-    quote: "222/NH-TT ngày 20/10/1990"
+    quote: "222/NH-TT ngày 20/10/1990\nHướng dẫn thi hành Chỉ thị 330-CT ngày 13-9-1990 của Chủ tịch Hội đồng Bộ trưởng về việc tăng cường quản lý ngoại hối\nBị bãi bỏ bởi Quyết định số 389/1999/QĐ-NHNN10 ngày 27/10/1999 bãi bỏ một số văn bản trong ngành ngân hàng\n11/11/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9065
   number: "224/QĐ-NH6"
@@ -2053,7 +2053,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-301"
-    quote: "224/QĐ-NH6 ngày 24/8/1996\nVề việc bổ sung chế độ quản lý kho, quỹ trong ngành ngân hàng ban hành theo Quyết định 184-QĐ/NH ngày 10/10/1991"
+    quote: "224/QĐ-NH6 ngày 24/8/1996\nVề việc bổ sung chế độ quản lý kho, quỹ trong ngành ngân hàng ban hành theo Quyết định 184-QĐ/NH ngày 10/10/1991\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:11356
   number: "228-NH/QĐ"
@@ -2062,7 +2062,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-161"
-    quote: "228-NH/QĐ ngày 02/12/1991\nThay Điều 12 Quy chế tổ chức và hoạt động của Trung tâm giao dịch ngoại tệ về phí giao dịch"
+    quote: "228-NH/QĐ ngày 02/12/1991\nThay Điều 12 Quy chế tổ chức và hoạt động của Trung tâm giao dịch ngoại tệ về phí giao dịch\nBị bãi bỏ bởi Quyết định số 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10608
   number: "228/QĐ-NH5"
@@ -2071,7 +2071,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-257"
-    quote: "Quyết định\n228/QĐ-NH5 ngày 02/12/1993\nBan hành quy định việc các tổ chức tín dụng Việt Nam gọi vốn cổ phần từ cổ đông nước ngoài"
+    quote: "Quyết định\n228/QĐ-NH5 ngày 02/12/1993\nBan hành quy định việc các tổ chức tín dụng Việt Nam gọi vốn cổ phần từ cổ đông nước ngoài\nBị thay thế bởi Thông tư 07/2007/TT-NHNN ngày 29/11/2007 hướng dẫn thi hành một số nội dung của Nghị định số 69/2007/NĐ-CP ngày 20/4/2007của Chính phủ về việc nhà đầu tư nước ngoài mua cổ phần của Ngân hàng thương mại Việt Nam\n24/12/2007"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9817
   number: "230/QĐ-NH5"
@@ -2080,7 +2080,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-261"
-    quote: "230-QĐ/NH5 ngày 01/9/1995"
+    quote: "230-QĐ/NH5 ngày 01/9/1995\nVề việc thành lập Ngân hàng phục vụ người nghèo\nBị bãi bỏ bởi Quyết định 131/2002/QĐ-TTg ngày 04/10/2002 về việc thành lập Ngân hàng Chính sách xã hội\n04/10/2002"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9815
   number: "236/QĐ-NH9"
@@ -2089,7 +2089,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-352"
-    quote: "236-QĐ/NH9 ngày 09/9/1995"
+    quote: "236-QĐ/NH9 ngày 09/9/1995\nBan hành Quy chế về trách nhiệm phối hợp công tác giữa các Vụ, Cục ở Ngân hàng Nhà nước Trung ương\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10099
   number: "259-QĐ/NH6"
@@ -2098,7 +2098,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-299"
-    quote: "Quyết định\n259-QĐ/NH6 ngày 22/10/1994\nVề việc ban hành Quy chế về nhận bảo quản tài sản quý hiếm"
+    quote: "Quyết định\n259-QĐ/NH6 ngày 22/10/1994\nVề việc ban hành Quy chế về nhận bảo quản tài sản quý hiếm\nBị thay thế bởi Quyết định 247/QĐ-NH6 ngày 14/07/1999 Ban hành Chế độ giao nhận, bảo quản, vận chuyển tiền mặt, tài sản quý, giấy tờ có giá\n29/07/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9794
   number: "261/QĐ-NH1"
@@ -2107,12 +2107,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-125"
-    quote: "261-QĐ/NH1 ngày 19/9/1995"
+    quote: "261-QĐ/NH1 ngày 19/9/1995\nVề tỷ lệ và cơ cấu dự trữ bắt buộc đối với tổ chức tín dụng\nBị bãi bỏ bởi Quyết định số 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9833
   number: "262/QĐ-NH14"
   set: {eff_to: "2000-09-09"}
-  reason: "211/QĐ-NHNN Phụ lục 2 lists 262-QĐ/NH14 as wholly expired, replaced by Decision 283/2000/QĐ-NHNN14 of 25/08/2000, and its own row gives 9/9/2000 as the end date, so eff_to is 2000-09-09."
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 262-QĐ/NH14 as wholly expired, replaced by Decision 283/2000/QĐ-NHNN14 of 25/08/2000, and its own row gives 9/9/2000 as the end date, so eff_to is 2000-09-09. The row continues in doan-218, which opens with its end-date cell 9/9/2000."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-217"
@@ -2125,7 +2125,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-221"
-    quote: "263/1997/QĐ-NH21 ngày 04/08/1997\nQuản lý và sử dụng nguồn vốn vay lại của ngân hàng Đầu tư và phát triển Việt Nam trong khuôn khổ Dự án hiện đại hoá ngân hàng và hệ thống thanh toán"
+    quote: "263/1997/QĐ-NH21 ngày 04/08/1997\nQuản lý và sử dụng nguồn vốn vay lại của ngân hàng Đầu tư và phát triển Việt Nam trong khuôn khổ Dự án hiện đại hoá ngân hàng và hệ thống thanh toán\nBị bãi bỏ bởi Thông tư 25/2012/TT-NHNN ngày 06/9/2012 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước ban hành\n20/10/2012"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9837
   number: "263/QĐ-NH14"
@@ -2134,7 +2134,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-218"
-    quote: "263-QĐ/NH14 ngày 19/9/1995"
+    quote: "263-QĐ/NH14 ngày 19/9/1995\nVề việc sửa một số điều của Quy chế bảo lãnh và tái bảo lãnh vay vốn nước ngoài ban hành kèm theo Quyết định số 23-QĐ/NH14 ngày 21/02/1994 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 283/2000/QĐ-NHNN14 ngày 25/08/2000 về việc ban hành Quy chế bảo lãnh ngân hàng\n9/9/2000"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9800
   number: "269/QĐ-NH9"
@@ -2143,12 +2143,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-352"
-    quote: "269-QĐ/ NH9 ngày 23/9/1995"
+    quote: "269-QĐ/ NH9 ngày 23/9/1995\nVề thành lập Ban quản lý dự án Ngân hàng\nBị thay thế bởi Quyết định 75/1999/QĐ-NHNN9 ngày 03/03/1999 về việc ban hành “Quy chế tổ chức và hoạt động của Ban Quản lý các dự án tín dụng quốc tế”\n18/3/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:15380
   number: "272/2005/QĐ-NHNN"
   set: {eff_to: "2005-09-01"}
-  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 1247/2005/QĐ-NHNN of 2005-08-26, with 01/09/2005 in the Ngày hết hiệu lực column, so 2005-09-01 is the first day it is out of force."
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 1247/2005/QĐ-NHNN of 2005-08-26, with 01/09/2005 in the Ngày hết hiệu lực column, so 2005-09-01 is the first day it is out of force. The row continues in doan-146, which opens with its end-date cell 01/09/2005."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-145"
@@ -2161,7 +2161,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-315"
-    quote: "273-QĐ/NH2 ngày 26/9/1995"
+    quote: "273-QĐ/NH2 ngày 26/9/1995\nVề việc huỷ bỏ một số tài khoản trong hệ thống tài khoản kế toán các tổ chức tín dụng\nBị thay thế bởi Quyết định số 435/1998/QĐ-NHNN2 ngày 25/12/1998 về hệ thống tài khoản kế toán của các tổ chức tín dụng\n01/4/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:15631
   number: "28/2006/QĐ-NHNN"
@@ -2170,7 +2170,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-370"
-    quote: "28/2006/QĐ-NHNN ngày 30/06/2006"
+    quote: "28/2006/QĐ-NHNN ngày 30/06/2006\nBan hành Quy chế đào tạo, bồi dưỡng cán bộ, công chức, viên chức Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 1280/QĐ-NHNN ngày 27/6/2012 về việc ban hành Quy chế đào tạo, bồi dưỡng cán bộ, công chức, viên chức Ngân hàng Nhà nước\n27/6/2012"
   reviewed: "2026-11-18"
 - key: vn:vbpl:13889
   number: "30/2007/QĐ-NHNN"
@@ -2179,7 +2179,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-373"
-    quote: "30/2007/QĐ-NHNN ngày 29/06/2007\nSửa đổi, bổ sung một số điều Quy chế Tổ chức và hoạt động của Vụ Kế toán - Tài chính ban hành kèm theo Quyết định số 01/2006/QĐ-NHNN ngày 16/01/2006 của Thống đốc Ngân"
+    quote: "30/2007/QĐ-NHNN ngày 29/06/2007\nSửa đổi, bổ sung một số điều Quy chế Tổ chức và hoạt động của Vụ Kế toán - Tài chính ban hành kèm theo Quyết định số 01/2006/QĐ-NHNN ngày 16/01/2006 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 2236/QĐ-NHNN ngày 07/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Vụ Tài chính – Kế toán\n7/10/2008"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9821
   number: "308/QĐ-NH6"
@@ -2188,7 +2188,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-301"
-    quote: "308-QĐ/NH6 ngày 31/10/1995"
+    quote: "308-QĐ/NH6 ngày 31/10/1995\nBan hành Quy định về quản lý nghiệp vụ kho quĩ và điều hoà tiền mặt thực hiện trên máy vi tính\nBị thay thế bởi Quyết định 247/1999/QĐ-NHNN6 ngày 14/07/1999 ban hành Chế độ giao nhận, bảo quản, vận chuyển tiền mặt, tài sản quý, giấy tờ có giá\n29/7/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:13888
   number: "31/2007/QĐ-NHNN"
@@ -2197,7 +2197,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-373"
-    quote: "31/2007/QĐ-NHNN ngày 29/06/2007\nSửa đổi Quy chế tổ chức và hoạt động của Văn phòng đại diện tại Thành phố Hồ Chí Minh ban hành kèm theo Quyết định số 1050/2004/QĐ-NHNN ngày 23/8/2004 của Thống đốc"
+    quote: "31/2007/QĐ-NHNN ngày 29/06/2007\nSửa đổi Quy chế tổ chức và hoạt động của Văn phòng đại diện tại Thành phố Hồ Chí Minh ban hành kèm theo Quyết định số 1050/2004/QĐ-NHNN ngày 23/8/2004 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 2221/QĐ-NHNN ngày 06/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Văn phòng đại diện tại thành phố Hồ Chí Minh\n6/10/2008"
   reviewed: "2026-11-18"
 - key: vn:vbpl:13883
   number: "34/2007/QĐ-NHNN"
@@ -2206,12 +2206,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-373"
-    quote: "34/2007/QĐ-NHNN ngày 06/07/2007\nSửa đổi, bổ sung Quy chế tổ chức và hoạt động của Sở Giao dịch Ngân hàng Nhà nước ban hành kèm theo Quyết định số 1136/2004/QĐ-NHNN ngày 09/9/2004 của Thống đốc Ngân"
+    quote: "34/2007/QĐ-NHNN ngày 06/07/2007\nSửa đổi, bổ sung Quy chế tổ chức và hoạt động của Sở Giao dịch Ngân hàng Nhà nước ban hành kèm theo Quyết định số 1136/2004/QĐ-NHNN ngày 09/9/2004 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 2213/QĐ-NHNN ngày 06/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Sở Giao dịch\n6/10/2008"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9827
   number: "342/QĐ-NH17"
   set: {eff_to: "2015-10-16"}
-  reason: "211/QĐ-NHNN Phụ lục 2 lists 342-QĐ/NH17 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 342-QĐ/NH17 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-126, which opens with its end-date cell 16/10/2015."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-125"
@@ -2224,7 +2224,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-262"
-    quote: "343-QĐ/NH17 ngày 04/12/1995"
+    quote: "343-QĐ/NH17 ngày 04/12/1995\nVề việc bổ sung, sửa đổi một số điểm về điều hành vốn trong hệ thống Quỹ tín dụng nhân dân\nBị bãi bỏ bởi Quyết định 1232/2004/QĐ-NHNN ngày 24/09/2004 về việc bãi bỏ các quy định về nhận tiền gửi và cho vay áp dụng đối với hệ thống Quỹ tín dụng nhân dân trong giai đoạn thí điểm\n17/10/2004"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9700
   number: "367/QĐ-NH1"
@@ -2233,7 +2233,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-219"
-    quote: "367-QĐ/NH1 21/12/1995"
+    quote: "367-QĐ/NH1 21/12/1995\nQuy định về thể lệ tín dụng trung và dài hạn đối với các tổ chức kinh tế\nBị thay thế bởi Quyết định số 324/1998/QĐ-NHNN1 ngày 30/09/1998 về việc ban hành Quy chế cho vay của tổ chức tín dụng đối với khách hàng\n15/10/1998"
   reviewed: "2026-11-18"
 - key: vn:vbpl:6028
   number: "37/2000/QĐ-NHNN1"
@@ -2242,7 +2242,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-133"
-    quote: "37/2000/QĐ-NHNN1 ngày 24/01/2000\nBan hành Quy chế quản lý vốn khả dụng\nBị hết hiệu lực bởi Quyết định số 2795/QĐ-NHNN ngày 29/12/2014 về việc dự báo vốn khả dụng của tổ chức tín dụng, chi nhánh ngân"
+    quote: "37/2000/QĐ-NHNN1 ngày 24/01/2000\nBan hành Quy chế quản lý vốn khả dụng\nBị hết hiệu lực bởi Quyết định số 2795/QĐ-NHNN ngày 29/12/2014 về việc dự báo vốn khả dụng của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\n29/12/2014"
   reviewed: "2026-11-18"
 - key: vn:vbpl:6010
   number: "38/2000/QĐ-NHNN1"
@@ -2251,7 +2251,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-133"
-    quote: "38/2000/QĐ-NHNN1 ngày 24/01/2000\nVề kỳ dự báo và định kỳ cung cấp thông tin cho công tác quản lý vốn khả dụng\nBị hết hiệu lực bởi Quyết định số 2795/QĐ-NHNN ngày 29/12/2014 về việc dự báo vốn khả"
+    quote: "38/2000/QĐ-NHNN1 ngày 24/01/2000\nVề kỳ dự báo và định kỳ cung cấp thông tin cho công tác quản lý vốn khả dụng\nBị hết hiệu lực bởi Quyết định số 2795/QĐ-NHNN ngày 29/12/2014 về việc dự báo vốn khả dụng của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\n29/12/2014"
   reviewed: "2026-11-18"
 - key: vn:vbpl:18396
   number: "425/2005/QĐ-NHNN"
@@ -2260,7 +2260,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-184"
-    quote: "425/2005/QĐ-NHNN ngày 13/4/2005"
+    quote: "425/2005/QĐ-NHNN ngày 13/4/2005\nSửa đổi khoản 3 Điều 7 và khoản 3 Điều 18 quy chế tổ chức thực hiện những nhiệm vụ về quản lý dự trữ ngoại hối nhà nước ban hành kèm theo Quyết định số 653/2001/QĐ-NHNN ngày 17/5/2001 của Thống đốc\nBị thay thế bởi Thông tư 01/2014/TT-NHNN.m ngày 10/12/2014 hướng dẫn việc tổ chức thực hiện hoạt động quản lý dự trữ ngoại hối nhà nước\n01/02/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10380
   number: "45/QĐ-NH1"
@@ -2269,7 +2269,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-118"
-    quote: "Quyết định\n45-QĐ/NH1 ngày 23/3/1994\nVề lãi suất tái cấp vốn của Ngân hàng Nhà nước đối với các tổ chức tín dụng"
+    quote: "Quyết định\n45-QĐ/NH1 ngày 23/3/1994\nVề lãi suất tái cấp vốn của Ngân hàng Nhà nước đối với các tổ chức tín dụng\nBị thay thế bởi Quyết định số 244-QĐ/NH1 ngày 01/10/1994 về việc điều chỉnh lãi suất tái cấp vốn của Ngân hàng nhà nước đối với các tổ chức tín dụng\n01/10/1994"
   reviewed: "2026-11-18"
 - key: vn:vbpl:15149
   number: "508/2004/QĐ-NHNN"
@@ -2278,7 +2278,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-362"
-    quote: "508/2004/QĐ-NHNN ngày 11/05/2004"
+    quote: "508/2004/QĐ-NHNN ngày 11/05/2004\nBan hành Quy chế tổ chức và hoạt động của Trung tâm Thông tin tín dụng\nBị thay thế bởi Quyết định số 3289/QĐ-NHNN ngày 31/12/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Trung tâm Thông tin tín dụng.\n15/1/2009"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10864
   number: "51-NH/QĐ"
@@ -2287,12 +2287,12 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-163"
-    quote: "51/NH-QĐ ngày 14/3/1992\nBan hành Quy chế quản lý Nhà nước về kinh doanh đá quý"
+    quote: "51/NH-QĐ ngày 14/3/1992\nBan hành Quy chế quản lý Nhà nước về kinh doanh đá quý\nBị hết hiệu lực bởi Thông tư số 05-TT/NH7 ngày 10/3/1994 hướng dẫn thực hiện Quy chế quản lý các hoạt động điều tra địa chất, khai thác mỏ, chế tác và buôn bán đá quý ban hành kèm theo Nghị định số 67-CP ngày 7/10/1993 của Chính phủ\n10/3/1994"
   reviewed: "2026-11-18"
 - key: vn:vbpl:21129
   number: "516/2003/QĐ-NHNN"
   set: {eff_to: "2018-11-01"}
-  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: ended by 22/2018/TT-NHNN of 2018-09-05, with 01/11/2018 in the Ngày hết hiệu lực column, so 2018-11-01 is the first day it is out of force."
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: ended by 22/2018/TT-NHNN of 2018-09-05, with 01/11/2018 in the Ngày hết hiệu lực column, so 2018-11-01 is the first day it is out of force. The row continues in doan-277, which holds its reason cell and its end-date cell 01/11/2018."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-276"
@@ -2305,7 +2305,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-248"
-    quote: "525-TTg ngày 31/8/1995"
+    quote: "525-TTg ngày 31/8/1995\nVề thành lập Ngân hàng phục vụ người nghèo\nBị bãi bỏ bởi Quyết định 131/2002/QĐ-TTg ngày 04/10/2002 thành lập Ngân hàng Chính sách xã hội\n04/10/2002"
   reviewed: "2026-11-18"
 - key: vn:vbpl:14866
   number: "54/2006/QĐ-NHNN"
@@ -2314,7 +2314,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-371"
-    quote: "54/2006/QĐ-NHNN ngày 31/10/2006"
+    quote: "54/2006/QĐ-NHNN ngày 31/10/2006\nSửa đổi, bổ sung Quy chế tổ chức và hoạt động của Thời báo Ngân hàng ban hành kèm theo Quyết định số 1049/2004/QĐ-NHNN ngày 23/8/2004\nBị thay thế Quyết định số 3290/QĐ-NHNN ngày 31/12/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Thời báo ngân hàng.\n31/12/2008"
   reviewed: "2026-11-18"
 - key: vn:vbpl:11276
   number: "56-NHNN/TT"
@@ -2328,7 +2328,7 @@
 - key: vn:vbpl:21497
   number: "648/2003/QĐ-NHNN"
   set: {eff_to: "2015-12-10"}
-  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force."
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force. The row continues in doan-143, which opens with its end-date cell 10/12/2015."
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-142"
@@ -2341,7 +2341,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-178"
-    quote: "653/2001/QĐ-NHNN ngày 17/05/2001\nBan hành Quy chế tổ chức thực hiện những nhiệm vụ về quản lý dự trữ ngoại hối nhà nước\nBị thay thế bởi Thông tư số 01/2014/TT-NHNN.m ngày 10/12/2014 của Thống đốc"
+    quote: "653/2001/QĐ-NHNN ngày 17/05/2001\nBan hành Quy chế tổ chức thực hiện những nhiệm vụ về quản lý dự trữ ngoại hối nhà nước\nBị thay thế bởi Thông tư số 01/2014/TT-NHNN.m ngày 10/12/2014 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn việc tổ chức thực hiện hoạt động quản lý dự trữ ngoại hối nhà nước\n01/02/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9253
   number: "67/QĐ-NH5"
@@ -2350,7 +2350,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-264"
-    quote: "67/QĐ-NH5 ngày 27/3/1996\nVề mức vốn điều lệ tối thiểu đối với các tổ chức tín dụng thành lập từ năm 1996"
+    quote: "67/QĐ-NH5 ngày 27/3/1996\nVề mức vốn điều lệ tối thiểu đối với các tổ chức tín dụng thành lập từ năm 1996\nBị bãi bỏ bởi Quyết định 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản trong ngành Ngân hàng\n11/11/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:10372
   number: "7/TT-NH7"
@@ -2359,7 +2359,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-168"
-    quote: "Thông tư\n07-TT/NH7 ngày 26/3/1994\nHướng dẫn việc quản lý vay và trả nợ nước ngoài của các doanh nghiệp"
+    quote: "Thông tư\n07-TT/NH7 ngày 26/3/1994\nHướng dẫn việc quản lý vay và trả nợ nước ngoài của các doanh nghiệp\nBị hết hiệu lực bởi Thông tư 03/1999/TT-NHNN7 ngày 12/8/1999 hướng dẫn việc vay và trả nợ nước ngoài của các doanh nghiệp\n27/8/1999"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9881
   number: "74/QĐ-NH14"
@@ -2368,7 +2368,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-217"
-    quote: "Quyết định\n74-QĐ/NH14 ngày 17/3/1995\nVề việc lập Quỹ cho vay ưu đãi hộ nghèo thiếu vốn sản xuất của Ngân hàng Nông nghiệp"
+    quote: "Quyết định\n74-QĐ/NH14 ngày 17/3/1995\nVề việc lập Quỹ cho vay ưu đãi hộ nghèo thiếu vốn sản xuất của Ngân hàng Nông nghiệp\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:9889
   number: "76/QĐ-NH14"
@@ -2377,7 +2377,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-349"
-    quote: "Quyết định\n76-QĐ/NH14 ngày 18/3/1995\nVề việc ban hành Quy chế tổ chức và hoạt động của thị trường mua bán lại tín phiếu"
+    quote: "Quyết định\n76-QĐ/NH14 ngày 18/3/1995\nVề việc ban hành Quy chế tổ chức và hoạt động của thị trường mua bán lại tín phiếu\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
   reviewed: "2026-11-18"
 - key: vn:vbpl:18146
   number: "826/2005/QĐ-NHNN"
@@ -2386,7 +2386,7 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-368"
-    quote: "826/2005/QĐ-NHNN ngày 06/06/2005"
+    quote: "826/2005/QĐ-NHNN ngày 06/06/2005\nSửa đổi, bổ sung Điều 5 Quy chế tổ chức và hoạt động của Tạp chí Ngân hàng\nBị thay thế bởi Quyết định số 202/QĐ-NHNN ngày 04/02/2009 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Tạp chí ngân hàng.\n4/2/2009"
   reviewed: "2026-11-18"
 - key: vn:vbpl:111146
   number: "92/2016/TTLT-BTC-NHNN"
@@ -2395,5 +2395,5 @@
   evidence:
     key: vn:vbpl:hhtquyetdinh_65
     anchor: "doan-190"
-    quote: "92/2016/TTLT-BTC-NHNN ngày 27/6/2016\nHướng dẫn việc phát hành tín phiếu kho bạc qua Ngân hàng Nhà nước Việt Nam do Bộ trưởng Bộ Tài chính - Thống đốc Ngân hàng Nhà nước Việt Nam ban hành"
+    quote: "92/2016/TTLT-BTC-NHNN ngày 27/6/2016\nHướng dẫn việc phát hành tín phiếu kho bạc qua Ngân hàng Nhà nước Việt Nam do Bộ trưởng Bộ Tài chính - Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\nBị thay thế bởi Thông tư Thông tư 111/2018/TT-BTC ngày 15/11/2018 hướng dẫn phát hành và thanh toán công cụ nợ của Chính phủ tại thị trường trong nước do Bộ trưởng Bộ Tài chính ban hành\n01/01/2019"
   reviewed: "2026-11-18"
