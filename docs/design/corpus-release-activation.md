@@ -62,13 +62,14 @@ The host activator lives under `deploy/host/updater/` and works through
 0003; [system](system.md#database-roles)), which has `CREATEDB`, owns the corpus
 databases it creates, and may write only `corpus_release`, `release_journal` and
 `retired_release` in `auth`. Before its first activator connection, the corpus
-phase requires both `/usr/local/bin/provision-activator.sh` and
-`/run/secrets/activator_db_password` to be readable in the running PostgreSQL
-container; otherwise it waits with reason `activator not provisioned`. It runs
-the idempotent provisioner as `postgres` before connecting and before each
-activation: it creates the role with `CREATEDB` when missing, sets its password
-from the Vault secret `activator_db_password`, and reapplies the table grants
-even when the auth migrations ran before the role existed.
+phase requires the installed `provision-activator.sh` on the host, and
+`postgres-admin.sh` and `/run/secrets/activator_db_password` readable in the
+running PostgreSQL container; otherwise it waits with reason
+`activator not provisioned`. It runs the idempotent provisioner as `postgres`
+before connecting and before each activation: it creates the role with
+`CREATEDB` when missing, sets its password from the Vault secret
+`activator_db_password`, and reapplies the table grants even when the auth
+migrations ran before the role existed.
 
 0. Take the `activation` advisory lock in `auth`; append `release_journal`
    (`started`, mode, target database, manifest hash, dump SHA-256, expected

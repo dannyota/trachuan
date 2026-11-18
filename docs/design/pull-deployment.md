@@ -169,9 +169,9 @@ retries. A run has three phases, each skipped when nothing changed: secrets
    - Stop Caddy, web, server, migrate and queryembed. Restart PostgreSQL only
      when its image or rendered unit changed; then wait for it and run
      `pgbackrest check`.
-   - Run `provision-activator.sh` when the PostgreSQL container provides its
-     script and password mount ([steps](corpus-release-activation.md#steps));
-     older units skip it. After a restart `activator` prewarms the active corpus
+   - Run the installed `provision-activator.sh` when the container has its admin
+     script and password ([steps](corpus-release-activation.md#steps)); older
+     units skip it. After a restart `activator` prewarms the active corpus
      database ([rules](corpus-release-activation.md#trust-in-the-dump)). Start
      queryembed, then migrate, a oneshot unit, and require success; start server
      and web.
