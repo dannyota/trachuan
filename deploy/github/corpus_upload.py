@@ -18,10 +18,10 @@ def etag(result):
     return value
 
 
-def upload_file(path, key, client, part_size=64 * 1024**2):
+def upload_file(path, key, client, part_size=64 * 1024**2, bucket='trachuan-releases'):
     size = path.stat().st_size
     positive(size, 'upload size')
-    common = ['--bucket', 'trachuan-releases', '--key', key]
+    common = ['--bucket', bucket, '--key', key]
     if size <= part_size:
         result = client(['put-object', *common, '--body', str(path), '--content-length', str(size)])
         return dict(ContentLength=size, ETag=etag(result))
@@ -53,6 +53,13 @@ def upload_file(path, key, client, part_size=64 * 1024**2):
         raise
 
 
+def verify_receipts(receipts, client, bucket='trachuan-releases'):
+    for key, receipt in receipts.items():
+        current = client(['head-object', '--bucket', bucket, '--key', key])
+        if type(current.get('ContentLength')) is not int or current['ContentLength'] != receipt['ContentLength'] or current.get('ETag') != receipt['ETag']:
+            raise ValueError('uploaded object size or ETag changed: ' + key.rsplit('/', 1)[1])
+
+
 def upload(country, rel, directory, report):
     identity(country, rel)
     command = ['aws', '--profile', 'trachuan-release-upload', '--endpoint-url',
@@ -73,10 +80,7 @@ def upload(country, rel, directory, report):
         source = report if name == 'report.json' else directory / name
         key = f'{country}/{rel}/{name}'
         receipts[key] = upload_file(source, key, client)
-    for key, receipt in receipts.items():
-        current = client(['head-object', '--bucket', 'trachuan-releases', '--key', key])
-        if type(current.get('ContentLength')) is not int or current['ContentLength'] != receipt['ContentLength'] or current.get('ETag') != receipt['ETag']:
-            raise ValueError('uploaded object size or ETag changed: ' + key.rsplit('/', 1)[1])
+    verify_receipts(receipts, client)
 
 
 def main():

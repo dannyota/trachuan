@@ -1,0 +1,71 @@
+name: Frameworks release
+
+on:
+  workflow_dispatch:
+    inputs:
+      rel:
+        description: Frameworks release YYYYMMDD or YYYYMMDD_N
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    environment: frameworks-release
+    concurrency:
+      group: frameworks-release-production
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      REL: ${{ inputs.rel }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Require main and valid release identity
+        run: |
+          [[ $GITHUB_REF == refs/heads/main ]]
+          [[ $REL =~ ^[0-9]{8}(_[0-9]{1,2})?$ ]]
+          mkdir -m 700 "$RUNNER_TEMP/trachuan-frameworks-release"
+          mkdir -m 700 "$RUNNER_TEMP/trachuan-frameworks-release/tmp"
+          echo "RELEASE_DIR=$RUNNER_TEMP/trachuan-frameworks-release" >> "$GITHUB_ENV"
+          echo "TMPDIR=$RUNNER_TEMP/trachuan-frameworks-release/tmp" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install AWS CLI
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o awscliv2.zip https://awscli.amazonaws.com/awscli-exe-linux-aarch64-2.40.0.zip
+          printf '%s\n' 'd293743e9e79dc69dc79dcbc23e26d1258193f0dd1253ba0c09ccf56b6123c6e  awscliv2.zip' | sha256sum --check --strict
+          unzip -q awscliv2.zip
+          ./aws/install --install-dir "$RUNNER_TEMP/aws-cli" --bin-dir "$RUNNER_TEMP/aws-bin"
+          [[ $("$RUNNER_TEMP/aws-bin/aws" --version) == 'aws-cli/2.40.0 '* ]]
+          echo "$RUNNER_TEMP/aws-bin" >> "$GITHUB_PATH"
+      - name: Download frameworks objects with size checks
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FRAMEWORKS_READ_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FRAMEWORKS_READ_KEY_SECRET }}
+          OCI_S3_ENDPOINT: ${{ vars.OCI_S3_ENDPOINT }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+        run: python3 deploy/github/frameworks_storage.py "$REL" "$RELEASE_DIR/objects"
+      - name: Install signing and registry tools
+        run: bash deploy/github/install-tools.sh
+      - name: Validate, sign, verify and publish frameworks release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin
+          trap 'oras logout ghcr.io' EXIT
+          python3 deploy/github/frameworks_publish.py "$REL" "$RELEASE_DIR"
+      - name: Delete downloaded frameworks objects
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/trachuan-frameworks-release"
