@@ -7,21 +7,15 @@ fails on every run. The result shows `invalid release journal row` (step
 `recovery`, `activation` or `prune`), or `invalid corpus database name` or
 `invalid frameworks database name` (step `manifest`, `activation` or `prune`).
 Treat it as a possible compromise of the server. These queries print counts
-only. Run them as `trachuan`, connected as `auth_owner`, never as `postgres`:
+only, as `|`-separated lines. The first prints a line only for a kind that has
+journal rows, so an empty result is normal for a kind that has none. Run them as
+`trachuan`; the script connects as `auth_owner`, never as `postgres`.
+
+Journal rows, latest per operation. After the kind comes the row count, and
+every later number must be 0:
 
 ```sh
-auth_check() {
-  podman exec -i trachuan-postgres sh -c 'export PGPASSWORD
-    PGPASSWORD=$(cat /run/secrets/auth_db_password)
-    exec env PGREQUIREAUTH=scram-sha-256 PGOPTIONS="-c search_path=pg_catalog" \
-      psql --no-password -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U auth_owner -d auth'
-}
-```
-
-Every `bad_*` column must be 0. Journal rows, latest per operation:
-
-```sh
-auth_check <<'SQL'
+bash /srv/trachuan/host/auth-psql.sh <<'SQL'
 WITH latest AS (
   SELECT DISTINCT ON (corpus_kind, operation_id)
     corpus_kind, operation_id, country, rel, mode, database_name,
@@ -48,10 +42,12 @@ ORDER BY corpus_kind;
 SQL
 ```
 
-Pointers and retired names:
+Pointers and retired names. After the kind the numbers are pointer rows, bad
+pointers, retired rows and bad retired names, so the second and fourth must be
+0:
 
 ```sh
-auth_check <<'SQL'
+bash /srv/trachuan/host/auth-psql.sh <<'SQL'
 WITH names AS (
   SELECT 'law'::text AS corpus_kind, 'pointer'::text AS source, active_db AS name FROM public.corpus_release
   UNION ALL SELECT 'frameworks', 'pointer', active_db FROM public.frameworks_release
@@ -71,11 +67,11 @@ ORDER BY k.corpus_kind;
 SQL
 ```
 
-A schema named `activator` would be searched before `public` by the updater's
-sessions and hide what these queries read, so this count must be 0:
+An older updater's sessions search a schema named `activator` before `public`,
+so one could hide what these queries read. This count must be 0:
 
 ```sh
-auth_check <<'SQL'
+bash /srv/trachuan/host/auth-psql.sh <<'SQL'
 SELECT pg_catalog.count(*) AS activator_schema
 FROM pg_catalog.pg_namespace
 WHERE nspname OPERATOR(pg_catalog.=) 'activator';

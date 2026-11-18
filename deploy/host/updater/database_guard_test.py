@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from updater.activation_test import sql_text
 from updater.corpus_verify_test import manifest
 from updater.deploy_corpus import Corpus
 from updater.deploy_corpus_database import Database
@@ -54,7 +55,7 @@ class LawFixture(GuardAssertions):
 
     def runner(self, args, **kwargs):
         self.calls.append(args)
-        text = (kwargs.get('input') or b'').decode()
+        text = sql_text(args, kwargs.get('input')).decode()
         self.scripts.append(text)
         if 'release-check' in args:
             return b'{}'
@@ -179,8 +180,11 @@ class HostGuardTest(LawFixture, unittest.TestCase):
             with self.subTest(value=value):
                 self.assert_refused(lambda: self.host.psql(value, 'SELECT 1;'), value)
 
-    def test_admin_psql_accepts_shared_databases_and_both_release_kinds(self):
-        for value in (*SHARED, LAW_NAME, FRAMEWORKS_NAME):
+    def test_admin_psql_refuses_auth_without_a_process(self):
+        self.assert_refused(lambda: self.host.psql('auth', 'SELECT 1;'), 'auth')
+
+    def test_admin_psql_accepts_postgres_and_both_release_kinds(self):
+        for value in ('postgres', LAW_NAME, FRAMEWORKS_NAME):
             self.calls.clear()
             self.host.psql(value, 'SELECT 1;')
             self.assertEqual(self.calls[0][self.calls[0].index('-d') + 1], value)

@@ -53,12 +53,13 @@ class PostgresPrewarmTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertNotIn('postgres-admin.sh', ' '.join(args))
         self.assertEqual(self.logged(), [])
 
-    def test_no_postgres_session_touches_the_active_database(self):
+    def test_superuser_sessions_stay_out_of_auth_and_the_active_database(self):
         self.host.postgres()
-        for args, _ in self.calls:
-            if 'postgres-admin.sh' in ' '.join(args) and 'psql' in args:
-                self.assertEqual(args[args.index('-d') + 1], 'auth')
-                self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public', args)
+        sessions = [args for args, _ in self.calls if 'postgres-admin.sh' in ' '.join(args) and 'psql' in args]
+        self.assertTrue(sessions)
+        for args in sessions:
+            self.assertEqual(args[args.index('-d') + 1], 'postgres')
+            self.assertIn('PGOPTIONS=-c search_path=pg_catalog', args)
 
     def test_database_activator_does_not_own_is_skipped_with_a_log_line(self):
         self.owner = b'postgres\n'
@@ -95,7 +96,7 @@ class PostgresPrewarmTest(fixture.ActivationFixture, unittest.TestCase):
 
     def test_invalid_active_database_name_refuses_before_any_activator_session(self):
         def runner(args, input=None, **kwargs):
-            if input and b'active_db' in input:
+            if b'active_db' in fixture.sql_text(args, input):
                 return b'auth\n'
             return self.prewarm_runner(args, input=input, **kwargs)
         self.host.runner = runner
@@ -105,7 +106,7 @@ class PostgresPrewarmTest(fixture.ActivationFixture, unittest.TestCase):
 
     def test_active_database_without_a_release_suffix_is_prewarmed(self):
         def runner(args, input=None, **kwargs):
-            if input and b'active_db' in input:
+            if b'active_db' in fixture.sql_text(args, input):
                 return b'corpus_vn_20990101\n'
             return self.prewarm_runner(args, input=input, **kwargs)
         self.host.runner = runner

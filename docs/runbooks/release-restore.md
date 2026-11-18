@@ -201,10 +201,12 @@ podman exec trachuan-postgres bash /usr/local/bin/grant-corpus.sh "$DB"
 
 [Prewarm](#prewarm-a-corpus-database) `$DB`, then select it:
 
+`auth` belongs to `auth_owner`, so read and write it as that role, never as
+`postgres` ([database roles](../design/system.md#database-roles)):
+
 ```sh
-podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \
-  psql -X -v ON_ERROR_STOP=1 -U postgres -d auth -v database="$DB" <<'SQL'
-INSERT INTO corpus_release (country, active_db, activated_at, activated_by)
+bash /srv/trachuan/host/auth-psql.sh -v database="$DB" <<'SQL'
+INSERT INTO public.corpus_release (country, active_db, activated_at, activated_by)
 VALUES ('vn', :'database', now(), 'owner')
 ON CONFLICT (country) DO UPDATE SET active_db = EXCLUDED.active_db,
 activated_at = EXCLUDED.activated_at, activated_by = EXCLUDED.activated_by;
@@ -234,11 +236,10 @@ row there and stays until it is dropped once by hand. Confirm it is not
 
 ```sh
 DB=corpus_vn_20261112_2
-podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
-  -U postgres -d auth -v db="$DB" <<'SQL'
-SELECT (SELECT count(*) FROM corpus_release WHERE active_db = :'db'),
-       (SELECT count(*) FROM retired_release WHERE db_name = :'db'),
-       (SELECT count(*) FROM pg_stat_activity WHERE datname = :'db');
+bash /srv/trachuan/host/auth-psql.sh -v db="$DB" <<'SQL'
+SELECT (SELECT count(*) FROM public.corpus_release WHERE active_db = :'db'),
+       (SELECT count(*) FROM public.retired_release WHERE db_name = :'db'),
+       (SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE datname = :'db');
 SQL
 podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh dropdb -U postgres "$DB"
 ```
@@ -276,15 +277,18 @@ SQL
 ```
 
 After a [manual restore](#restore-a-corpus-manually) of a dump you trust, as
-`postgres`; the extension is dropped so the release keeps no extra object:
+`postgres`, with a `$DB` you typed yourself, never one read from `auth`; the
+extension is dropped so the release keeps no extra object:
 
 ```sh
-podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \
+podman exec -i --env PGOPTIONS='-c search_path=pg_catalog' trachuan-postgres \
+  /usr/local/bin/postgres-admin.sh \
   psql -X -v ON_ERROR_STOP=1 -U postgres -d "$DB" <<'SQL'
-CREATE EXTENSION pg_prewarm;
+CREATE EXTENSION pg_prewarm WITH SCHEMA public;
 \timing on
-SELECT sum(pg_prewarm(c.oid)) AS blocks FROM pg_class c
-JOIN pg_namespace n ON n.oid = c.relnamespace
+SELECT pg_catalog.sum(public.pg_prewarm(c.oid::pg_catalog.regclass)) AS blocks
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't');
 DROP EXTENSION pg_prewarm;
 SQL

@@ -71,7 +71,7 @@ class HoldTest(fixture.ActivationFixture, unittest.TestCase):
                         probes.append(True)
                     fail = (stage == 'caddy' and 'start' in args and 'trachuan-caddy.service' in args
                             or stage == 'edge' and args[-1] == 'https://trachuan.vn/'
-                            or stage == 'schema' and probes and input and b'max(version_id)' in input)
+                            or stage == 'schema' and probes and b'max(version_id)' in fixture.sql_text(args, input))
                     if fail:
                         self.assertFalse(self.hold.exists())
                         raise CommandError('injected later failure')

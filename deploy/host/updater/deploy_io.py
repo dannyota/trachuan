@@ -92,7 +92,7 @@ class CommandError(Exception):
 
 
 PROGRAMS = ('pg_restore', 'pg_dump', 'psql', 'createdb', 'dropdb', 'oras', 'cosign', 'podman', 'systemctl', 'curl')
-STDERR_TAIL = ('oras', 'cosign', 'pg_restore')
+STDERR_TAIL = ('oras', 'cosign')
 
 
 def describe(args, stderr, returncode):

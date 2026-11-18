@@ -5,6 +5,7 @@ import tarfile
 import unittest
 from unittest import mock
 
+from updater import activation_test as activation_fixture
 from updater import deploy_run
 from updater import secrets_test as fixture
 from updater.deploy_activate import Activator
@@ -141,6 +142,32 @@ class SecretPresenceTest(fixture.SecretsFixture, unittest.TestCase):
         self.assertIsNone(state.data['journal'])
         self.assertEqual(self.changes(), [])
         self.assertEqual(self.result()[:2], ('failed', 'secrets'))
+
+    def rollback_ready(self):
+        previous = self.with_units(13)
+        self.state = State.bootstrap(self.state.path, previous.hash, 13, 7, previous.manifest['host_bundle']['sha256'])
+        self.store.retain(previous)
+        self.state.accept('image', self.new.hash, 15)
+        Activator(self.state, self.store, self.host).activate(self.new)
+        self.rollback_artifact(self.new.hash, previous.hash)
+        self.secret_calls.clear()
+
+    def vault_fetches(self):
+        return [i for i, (args, _, _) in enumerate(self.secret_calls) if any('deploy_vault.py' in arg for arg in args)]
+
+    def test_rollback_reconciles_secrets_before_the_first_auth_read(self):
+        self.rollback_ready()
+        self.app.run()
+        reads = [i for i, (args, data, _) in enumerate(self.secret_calls)
+                 if b'max(version_id)' in activation_fixture.sql_text(args, data)]
+        self.assertTrue(reads)
+        self.assertLess(self.vault_fetches()[0], reads[0])
+
+    def test_rollback_in_verify_mode_forces_no_secret_fetch(self):
+        self.rollback_ready()
+        self.paths.mode.write_text('verify\n')
+        self.assertEqual(self.app.run(), 0)
+        self.assertEqual(self.vault_fetches(), [])
 
     def test_rollback_to_image_naming_missing_secret_keeps_authorization_unconsumed(self):
         previous = self.with_units(13)

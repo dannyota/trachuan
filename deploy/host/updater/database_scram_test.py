@@ -31,7 +31,7 @@ class AdminScramTest(LawFixture, unittest.TestCase):
             self.assertIn(SCRAM, container_env(args))
 
     def test_admin_psql(self):
-        self.host.psql('auth', 'SELECT 1;')
+        self.host.psql('postgres', 'SELECT 1;')
         self.assert_scram(lambda args: 'psql' in args)
 
     def test_postgres_restart_wait_prewarm_and_backup_check(self):

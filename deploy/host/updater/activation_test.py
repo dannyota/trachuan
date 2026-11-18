@@ -20,6 +20,12 @@ class Crash(BaseException):
     pass
 
 
+def sql_text(args, input=None):
+    if input:
+        return input
+    return args[-1].encode() if args[-2:-1] == ['-c'] else b''
+
+
 class ActivationFixture:
     def setUp(self):
         self.work = tempfile.TemporaryDirectory()
@@ -73,11 +79,12 @@ class ActivationFixture:
         if args[:3] == ['python3', '-I', '-c']:
             return command(args, input=input)
         if 'psql' in args:
-            if input and b'max(version_id)' in input:
+            text = sql_text(args, input)
+            if b'max(version_id)' in text:
                 return (str(self.schema) + '\n').encode()
-            if input and b'active_db' in input:
+            if b'active_db' in text:
                 return b'corpus_vn_20990101_1\n'
-            if input and b'datdba' in input:
+            if b'datdba' in text:
                 return b'activator\n'
         if args[:1] == ['curl']:
             return b'200'
@@ -107,14 +114,14 @@ class ActivationTest(ActivationFixture, unittest.TestCase):
                 wanted = b'Image=' + self.old.manifest['images']['postgres'].encode() + b'\n'
                 self.assertEqual(self.paths.postgres_unit.read_bytes(), wanted)
                 restored.append(True)
-            if input and b'max(version_id)' in input and not restored:
+            if b'max(version_id)' in sql_text(args, input) and not restored:
                 raise CommandError('new postgres never became ready')
             return self.runner(args, input=input, **kwargs)
         self.host.runner = runner
         self.calls.clear()
         self.assertEqual(self.engine.recover(), 'rolled_back')
         self.assertTrue(restored)
-        query = next(i for i, (args, data) in enumerate(self.calls) if data and b'max(version_id)' in data)
+        query = next(i for i, (args, data) in enumerate(self.calls) if b'max(version_id)' in sql_text(args, data))
         wait = next(i for i, (args, data) in enumerate(self.calls) if '/usr/local/bin/wait-postgres.sh' in args)
         self.assertLess(wait, query)
 
@@ -124,7 +131,7 @@ class ActivationTest(ActivationFixture, unittest.TestCase):
         with self.assertRaises(Crash):
             self.engine.activate(self.new)
         def runner(args, input=None, **kwargs):
-            if input and b'max(version_id)' in input:
+            if b'max(version_id)' in sql_text(args, input):
                 raise CommandError('schema still unavailable')
             return self.runner(args, input=input, **kwargs)
         self.host.runner = runner
@@ -200,7 +207,7 @@ class ActivationTest(ActivationFixture, unittest.TestCase):
         self.engine.recover()
         commands = [args for args, _ in self.calls]
         stop = next(i for i, args in enumerate(commands) if 'stop' in args and 'trachuan-migrate.service' in args)
-        schema = next(i for i, (args, data) in enumerate(self.calls) if data and b'max(version_id)' in data)
+        schema = next(i for i, (args, data) in enumerate(self.calls) if b'max(version_id)' in sql_text(args, data))
         self.assertLess(stop, schema)
 
     def test_rollback_rechecks_authorized_schema_before_journaling(self):

@@ -64,7 +64,7 @@ func provisionRoleCleanup(t *testing.T, admin *pgx.Conn, role string) {
 	})
 }
 
-func provisionScript(t *testing.T, psql, adminUser, database, role, secret string) string {
+func provisionScript(t *testing.T, psql, adminUser, host, database, owner, role, secret, ownerSecret string) string {
 	t.Helper()
 	root, err := filepath.Abs("../../../..")
 	if err != nil {
@@ -77,8 +77,12 @@ func provisionScript(t *testing.T, psql, adminUser, database, role, secret strin
 	text := string(raw)
 	for _, change := range [][2]string{
 		{"/run/secrets/activator_db_password", secret},
+		{"/run/secrets/auth_db_password", ownerSecret},
 		{"/usr/local/bin/postgres-admin.sh psql", psql},
+		{"60s psql", "60s " + psql},
 		{"--username postgres", "--username " + adminUser},
+		{"--username auth_owner", "--username " + owner},
+		{"--host 127.0.0.1", "--host " + host},
 		{"--dbname auth", "--dbname " + database},
 		{"ON DATABASE auth", "ON DATABASE " + database},
 	} {
@@ -157,6 +161,11 @@ func TestProvisionActivator_PinnedSearchPathIgnoresPlantedFunctions(t *testing.T
 	if _, err = auth.Exec(ctx, "ALTER DATABASE "+database+" OWNER TO "+owner); err != nil {
 		t.Fatal(err)
 	}
+	for _, table := range []string{"corpus_release", "release_journal", "retired_release", "frameworks_release"} {
+		if _, err = auth.Exec(ctx, "ALTER TABLE public."+table+" OWNER TO "+owner); err != nil {
+			t.Fatal(err)
+		}
+	}
 	ownerConfig := config.Copy()
 	ownerConfig.User, ownerConfig.Password = owner, ownerPassword
 	ownerConn, err := pgx.ConnectConfig(ctx, ownerConfig)
@@ -187,7 +196,11 @@ func TestProvisionActivator_PinnedSearchPathIgnoresPlantedFunctions(t *testing.T
 	if err = os.WriteFile(secret, []byte(password), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	text := provisionScript(t, psql, config.User, database, role, secret)
+	ownerSecret := filepath.Join(work, "owner-password")
+	if err = os.WriteFile(ownerSecret, []byte(ownerPassword), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	text := provisionScript(t, psql, config.User, config.Host, database, owner, role, secret, ownerSecret)
 	path := filepath.Join(work, "provision-activator.sh")
 	if err = os.WriteFile(path, []byte(text), 0o600); err != nil {
 		t.Fatal(err)

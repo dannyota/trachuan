@@ -67,6 +67,15 @@ activates it ([corpus release](corpus-release.md)).
 | `pipeline`       | MacBook           | read and write the local workshop database                                                                                           | connect to the host                 |
 | `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                                     | read auth/workshop; connect to host |
 
+`auth` belongs to `auth_owner`, the role the internet-facing server connects as,
+so a compromised server can plant views, triggers and functions there and set
+defaults for every session that enters the database. After bootstrap no
+superuser session connects to `auth`: role and password statements run from
+database `postgres`, and the host reads, writes and grants in `auth` by
+connecting as `auth_owner`, with statement and lock timeouts, so planted code
+runs with the rights the server already has. A value read from `auth` is
+untrusted input and is validated before use, above all a database name.
+
 The server never writes corpus data. The pipeline never connects to the host.
 The proposed local builder needs owner approval for CREATEDB; its actual scope
 and name guards are in [index construction](index.md#database-lifecycle).

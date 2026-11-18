@@ -138,7 +138,7 @@ install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/systemd
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh provision-activator.sh wait-healthy.sh render-units.sh \
  pgbackrest-entrypoint.sh backup-job.sh restore-check.sh restore-auth.sh \
- postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh client-address-log.sh; do
+ postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh client-address-log.sh auth-psql.sh; do
  install -o trachuan -g trachuan -m 0755 "$bundle/$script" "/srv/trachuan/host/$script"
 done
 for script in backup.py backup_process.py backup_result.py backup_status.py; do

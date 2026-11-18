@@ -98,6 +98,8 @@ def activation_values(row, check=database, country=COUNTRY):
 
 CATALOG_PATH = '-c search_path=pg_catalog'
 SCHEMA_PATH = '-c search_path=pg_catalog,public'
+AUTH_SCHEMA_VERSION = 'SELECT coalesce(pg_catalog.max(version_id),0) FROM public.goose_db_version;'
+AUTH_ACTIVE_DATABASE = "SELECT active_db FROM public.corpus_release WHERE country = 'vn';"
 SUPERUSER_REFUSED = 'a role other than postgres is a superuser or a member of one'
 SUPERUSER_ROLES = ('SELECT EXISTS(SELECT FROM pg_catalog.pg_roles r WHERE r.rolname <> {owner} AND (r.rolsuper OR '
                    'EXISTS(SELECT FROM pg_catalog.pg_roles s WHERE s.rolsuper AND '

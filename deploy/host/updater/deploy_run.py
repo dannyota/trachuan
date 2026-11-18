@@ -121,6 +121,9 @@ class Updater:
             self.noop(result, state)
             return
         self.step, self.hash, self.manifest = 'rollback', hash_value, auth
+        if mode != 'verify' and not self.secrets(state, None, mode, result, force=True):
+            return
+        self.step = 'rollback'
         schema = self.host.schema()
         state.check_rollback(hash_value, auth, schema)
         candidate = self.store.load(auth['target'])

@@ -97,12 +97,10 @@ class IOTest(unittest.TestCase):
     def test_detail_names_innermost_program_through_wrappers(self):
         args = ['runuser', '-u', 'trachuan', '--', 'podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
                 'exec "$@"', 'sh', 'env', 'PGOPTIONS=-c statement_timeout=0', 'pg_restore', '--no-password']
-        self.assertEqual(describe(args, b'pg_restore: error: could not execute query\n', 1),
-                         'pg_restore: exit 1: pg_restore: error: could not execute query')
+        self.assertEqual(describe(args, b'pg_restore: error: could not execute query\n', 1), 'pg_restore: exit 1')
         self.assertEqual(describe(args[:-2] + ['psql', '-XqAt'], b'ERROR: password authentication failed', 2),
                          'psql: exit 2')
-        self.assertEqual(describe(args, b'pg_restore: error: password=x', 1),
-                         'pg_restore: exit 1: error output withheld')
+        self.assertEqual(describe(args, b'pg_restore: error: password=x', 1), 'pg_restore: exit 1')
 
     def test_ghcr_anonymous_denied_on_rollback_tags_is_classified(self):
         stderr = b'Error response from registry: denied: requested access to the resource is denied\n'

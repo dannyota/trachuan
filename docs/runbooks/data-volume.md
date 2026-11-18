@@ -52,8 +52,7 @@ sizes, then stop PostgreSQL. Save the output outside Git for comparison.
 sudo -iu trachuan
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 systemctl --user stop trachuan-caddy trachuan-web trachuan-server trachuan-queryembed trachuan-migrate
-podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
-  -U postgres -d auth -c "SELECT active_db FROM corpus_release WHERE country = 'vn'"
+bash /srv/trachuan/host/auth-psql.sh active-db
 podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
   -U postgres -d postgres -c 'SELECT datname, pg_database_size(oid) FROM pg_database ORDER BY datname'
 systemctl --user stop trachuan-postgres
@@ -97,8 +96,7 @@ podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wa
 systemctl --user start trachuan-queryembed trachuan-migrate
 systemctl --user start trachuan-server trachuan-web
 curl --fail http://127.0.0.1:8080/readyz
-DB=$(podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
-  -U postgres -d auth -c "SELECT active_db FROM corpus_release WHERE country = 'vn'")
+DB=$(bash /srv/trachuan/host/auth-psql.sh active-db)
 printf '%s\n' "$DB"
 podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
   -U postgres -d postgres -c 'SELECT datname, pg_database_size(oid) FROM pg_database ORDER BY datname'

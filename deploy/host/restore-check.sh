@@ -30,7 +30,7 @@ podman run --detach --name "$name" --network=pasta:--ipv4-only,--dns-forward,1.1
  --mount type=tmpfs,destination=/run/pgbackrest,tmpfs-mode=0700,U=true,noexec,nosuid,nodev \
  --mount type=tmpfs,destination=/run/restore-check,tmpfs-mode=0700,U=true,noexec,nosuid,nodev \
  --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \
- --volume "$data:/var/lib/postgresql:Z,U" \
+ --volume "$data:/var/lib/postgresql:Z,U,noexec,nosuid,nodev" \
  --volume /etc/pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro,z \
  --volume "$here/pgbackrest-entrypoint.sh:/usr/local/bin/pgbackrest-entrypoint.sh:ro,z" \
  --volume "$here/restore-auth.sh:/usr/local/bin/restore-auth.sh:ro,z" \
