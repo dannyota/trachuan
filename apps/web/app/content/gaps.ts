@@ -2,7 +2,7 @@ import type { components } from '@trachuan/schema/gen/openapi'
 import type { Language } from '../../i18n'
 import { formatNumber } from './format'
 
-type CategoryKey = 'content' | 'search' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'other'
+type CategoryKey = 'content' | 'search' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'knowledge' | 'other'
 export type GapCategory = { key: CategoryKey, name: string, sentence: string }
 export type GapSummary = GapCategory & { cases: number, casesLabel: string, casesSentence: string }
 
@@ -20,6 +20,7 @@ const categories: Record<CategoryKey, Record<Language, { name: string, sentence:
   historical: { vi: { name: 'Giới hạn ngày lịch sử', sentence: 'Bộ lọc lịch sử dùng ngày của văn bản, không dùng lịch sử từng quy định hoặc trạng thái tạm ngưng trong quá khứ.' }, en: { name: 'Historical date limits', sentence: 'Historical filtering uses document dates, not provision history or past suspension status.' } },
   evaluation: { vi: { name: 'Ngưỡng đánh giá chưa đạt', sentence: 'Một ngưỡng đánh giá chưa đạt hoặc chưa có kết quả.' }, en: { name: 'Evaluation threshold unmet', sentence: 'An evaluation threshold failed or was unavailable.' } },
   rejection: { vi: { name: 'Kiểm tra từ chối chưa đạt', sentence: 'Một kiểm tra từ chối trong đánh giá chưa đạt.' }, en: { name: 'Rejection check failed', sentence: 'An evaluation rejection check failed.' } },
+  knowledge: { vi: { name: 'Kết quả kiểm tra quan hệ chưa được đưa vào', sentence: 'Một số kết quả kiểm tra quan hệ giữa các văn bản chưa được đưa vào bản phát hành này.' }, en: { name: 'Relation check results not included', sentence: 'Some check results on relations between documents are not included in this release.' } },
   other: { vi: { name: 'Khác', sentence: 'Có những trường hợp khác cần xem xét.' }, en: { name: 'Other', sentence: 'Other cases need review.' } },
 }
 
@@ -36,6 +37,7 @@ const kinds: Record<Exclude<CategoryKey, 'other'>, readonly string[]> = {
   historical: ['historical_document_dates'],
   evaluation: ['eval_floor_failed'],
   rejection: ['eval_rejection_failed'],
+  knowledge: ['knowledge_stale'],
   provenance: ['source_provenance_missing', 'detail_id_mismatch', 'invalid_source_data', 'listing_unstable', 'source_identity_ambiguous'],
 }
 
@@ -50,7 +52,7 @@ export function gapSummary(coverage: Pick<components['schemas']['CorpusStatus'],
     if (count <= 0) continue
     const category = gapCategory(kind, lang)
     const cases = (grouped.get(category.key)?.cases || 0) + count
-    const casesLabel = `${formatNumber(cases, lang)} ${lang === 'vi' ? 'trường hợp' : 'cases'}`
+    const casesLabel = `${formatNumber(cases, lang)} ${lang === 'vi' ? 'trường hợp' : cases === 1 ? 'case' : 'cases'}`
     grouped.set(category.key, { ...category, cases, casesLabel, casesSentence: `${category.sentence.replace(/\.$/, '')} (${casesLabel}).` })
   }
   return [...grouped.values()].sort((a, b) => b.cases - a.cases || a.key.localeCompare(b.key))

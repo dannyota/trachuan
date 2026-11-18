@@ -22,7 +22,7 @@ the production host with no SSH session. Corpus releases follow
   repositories on GitHub Free
   ([environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)).
 - Environment `corpus-release`, deployment branch `main`, holding the release
-  bucket read key ([corpus release](corpus-release.md#signing-workflow)).
+  bucket read key ([corpus release](corpus-signing.md#signing-workflow)).
 
 Workflow files change only through pull requests, which the `main` ruleset
 already requires. `deploy/github/settings.json` holds these settings and
