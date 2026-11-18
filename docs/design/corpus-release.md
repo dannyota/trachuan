@@ -5,7 +5,8 @@ Decision: [ADR 0006](../adr/0006-single-host-oci-podman.md) (History
 A host timer activates it. Code follows [pull deployment](pull-deployment.md).
 
 The **production release** is the one the verified `<cc>-production` manifest
-names. A rollback meant to last is signed again, so the tag follows it.
+names. A lasting rollback is requested by signing the older `rel` within its
+retention window, not by a manual swap, so the tag follows it.
 
 ## Upload
 
@@ -31,8 +32,9 @@ column names, excluding `singleton`, and adds `extensions`, `run` and
 unaccepted gap count, matching build artifact hash, the two report hashes of the
 [selected report](release-evidence.md#selected-report) and `complete`. Complete
 requires an evaluated or released run, every item done or a gap with a gap row,
-every gap accepted, and a done build whose input and recipe hashes match the
-release row. The workshop reads share one repeatable-read snapshot.
+every gap accepted, a done build whose input and recipe hashes match the release
+row, and, for a run with a [decision](release-evidence.md#selected-report), a
+done `evidence` item. The workshop reads share one repeatable-read snapshot.
 
 Report recipes are hashes. `recipe_hash_inputs` holds the exact JSON strings
 hashed for `query`, `document`, `chunk`, `lexical` and `retrieval`: the
@@ -286,7 +288,9 @@ branch), a dump hash or size mismatch, a report for another dump, a report
 without `quality_pass`, an older sequence, a recipe mismatch (waiting), a
 restored `release` row that differs, and a crash after each journal step with
 resume and abort, a retained database with a different dump digest, an extension
-outside the allowlist, and an abort or prune that targets the active or a
-retained database. Integration test with a 2099 test release on the local
-PostgreSQL: new activation as `activator`, retained reactivation, prune, and a
-recipe-change pair with its pointer rollback.
+outside the allowlist, an abort or prune that targets the active or a retained
+database, and each
+[selected report check](release-evidence.md#upload-and-signing). Integration
+test with a 2099 test release on the local PostgreSQL: new activation as
+`activator`, retained reactivation, prune, and a recipe-change pair with its
+pointer rollback.

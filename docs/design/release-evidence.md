@@ -41,20 +41,20 @@ new run requires exactly one of:
 Neither or both refuses the start, so a forgotten flag cannot look like a
 baseline. Both are unrelated to `--previous-manifest`, the ingest baseline. The
 snapshot freezes the **decision**: the file's SHA-256 and store path, or `none`.
-Two decisions are the same when their SHA-256 are equal. Until the run's `eval`
-item is first planned a start may replace the decision, and the run message
-records it; after that a different decision is refused.
+Two decisions are the same when their SHA-256 are equal. While the run has no
+`eval` item a start may replace the decision, and the run message records it;
+after that a different decision is refused.
 
 The `eval` stage reads the stored file, fails when its SHA-256 differs, and puts
 the frozen SHA-256 in its input hash, so another previous report cannot reuse an
 evaluation. Its item is done only when the report matches the decision:
 `previous_diff.previous.report_sha256` equals the frozen SHA-256, or, for
 `none`, `previous_diff` names no previous release. An incompatible comparison
-fails the item. The `report.json` of that item is the **selected report**:
-`evidence` reads it and it is the file a release uploads. `corpus eval` stays a
-diagnostic and its report cannot publish. This change alters no recipe from
-`discover` to `eval`; the server checks only the schema, query, lexical and
-retrieval recipes.
+fails the item, also when an existing artifact is reused. The `report.json` of
+that item is the **selected report**: `evidence` reads it and it is the file a
+release uploads. `corpus eval` stays a diagnostic and its report cannot publish.
+This change alters no recipe from `discover` to `eval`; the server checks only
+the schema, query, lexical and retrieval recipes.
 
 The `evidence` stage ships with this rule. For a run with a decision it is the
 last stage: only its completion makes the run `evaluated`, `--until eval` pauses
@@ -69,26 +69,32 @@ require the report to hash to `eval_report_sha256` and
 
 Upload also requires a settled production: the report's previous `rel` and
 SHA-256 equal `rel` and `report.sha256` of the verified `<cc>-production`
-manifest, and `release` of `GET /api/v1/public/status` is that same `rel`. A
-release still activating, waiting on recipes, failed or rolled back by hand
-therefore blocks the upload, and the run needs a new run and `rel` if production
-has moved on. The first signing of a `rel`, when no `<cc>-<rel>` tag exists,
-repeats the manifest comparison just before the tag moves, inside the workflow's
-concurrency group, so two uploads that froze one previous cannot both publish. A
-later signing of that `rel` is exempt, which keeps retry and rollback working.
+manifest, and `release` of `GET https://trachuan.vn/api/v1/public/status`, asked
+with `Cache-Control: no-cache`, is that same `rel`. Any other answer refuses,
+and so does a country other than `vn` until the endpoint takes one. A release
+still activating, waiting on recipes, failed or rolled back by hand therefore
+blocks the upload, and if production has moved on the release needs a new run
+and `rel`.
+
+Signing repeats the manifest comparison first, before it signs or pushes
+anything, inside the workflow's concurrency group, so a refusal leaves no tag
+and two uploads that froze one previous cannot both publish. It is exempt only
+when a `<cc>-<rel>` manifest already exists with a sequence at or below
+production's, which keeps retry and rollback working.
 
 ### Runs before this rule
 
 A snapshot without a decision is valid only at or below the cutoff
-`vn/20261118_1`, one constant. Such a run has no `evidence` stage and becomes
-`evaluated` after `eval`; a restart never appends `evidence` to it and a
-decision flag on it is refused. It uploads a report from
-`corpus eval --previous` under the older checks, and release-row writes neither
-field. Above the cutoff, planning, release-row, upload and signing refuse a
-missing decision. Upload accepts the older shape only for exactly the cutoff;
+`vn/20261118_1`, one value in the Go and Python code, bound by a test. Such a
+run has no `evidence` stage and becomes `evaluated` after `eval`; a restart
+never appends `evidence` to it and a decision flag on it is refused. It uploads
+a report from `corpus eval --previous`, and release-row writes neither field, so
+it skips only the two hash checks: settled production and the signing comparison
+still apply. Above the cutoff, planning, release-row, upload and signing refuse
+a missing decision. Upload accepts the older shape only for exactly the cutoff;
 signing accepts it at or below the cutoff, so older releases can be signed
-again. The sidecar gate below applies the same cutoff. The first run with a
-decision starts after the cutoff release is published and active.
+again. The first run with a decision starts after the cutoff release is
+published and active.
 
 ## `findings.json`
 
@@ -196,6 +202,10 @@ SHA-256 of all three.
 | an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                       |
 | `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                             |
 | first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
+
+The sidecar rows apply from a cutoff of their own, set when they ship to the
+last `rel` published without sidecars, so those releases can still be signed
+again. Such a release counts as having no summary for `changes.jsonl`.
 
 ## Downstream use
 

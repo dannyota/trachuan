@@ -85,8 +85,9 @@ of the evidence item's frozen inputs:
   [decision](release-evidence.md#selected-report) predates evidence: its
   identity is recorded and its findings are the empty set. A snapshot with one
   must be `evaluated` or `released`, with a done, verified evidence artifact
-  whose bound report SHA-256 equals the frozen previous report. Anything else
-  fails the stage, including a named release with no run row.
+  whose bound report SHA-256, without its `sha256:` prefix, equals the frozen
+  previous report. Anything else fails the stage, including a named release with
+  no run row.
 - **Occurrence.** Each finding carries `first_rel`. It is inherited only from a
   finding that fired or was carried in the predecessor with the same fingerprint
   and semantics number; otherwise it is this release. So a finding that changes
@@ -114,7 +115,8 @@ never reads the current Git tree or other runs.
 
 Entries of the new kinds live in `sources/<cc>-knowledge.yaml`. Build freezes
 the file's bytes in its input and copies them into the build artifact, so
-`evidence` reads them there and never from the Git tree.
+`evidence` reads them there and never from the Git tree. With no entries the
+build's input hash and artifact stay as they are today.
 
 A reviewed entry of a new kind carries `id` (unique in its file), `kind`,
 `target`, `claim`, `evidence`, `depends` and `reviewed` (date, reviewer, and
