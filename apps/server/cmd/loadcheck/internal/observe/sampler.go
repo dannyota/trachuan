@@ -23,13 +23,14 @@ type sample struct {
 	Connections *int                     `json:"connections"`
 	HostCPU     *float64                 `json:"host_cpu_percent"`
 	Processes   map[string]processSample `json:"processes"`
+	Services    map[string]serviceSample `json:"services,omitempty"`
 }
 type processSample struct {
-	Count     int       `json:"count"`
-	RSS       uint64    `json:"rss_bytes"`
-	CPU       float64   `json:"cpu_percent"`
-	Restart   bool      `json:"restart"`
-	Processes []process `json:"processes"`
+	Count       int       `json:"count"`
+	RSS         uint64    `json:"rss_bytes"`
+	LifetimeCPU float64   `json:"lifetime_cpu_percent"`
+	Restart     bool      `json:"restart"`
+	Processes   []process `json:"processes"`
 }
 type procFlags []string
 
@@ -38,13 +39,25 @@ func (p *procFlags) Set(v string) error { *p = append(*p, v); return nil }
 func Sample(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("sample", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var pg, out string
+	var pg, out, cgroupRoot, services string
 	var specs procFlags
 	fs.StringVar(&pg, "pg", "", "postgres URL")
 	fs.StringVar(&out, "out", "", "output JSONL")
 	fs.Var(&specs, "proc", "name=regex")
-	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || out == "" || len(specs) == 0 {
+	fs.StringVar(&cgroupRoot, "cgroup-root", "", "app.slice directory holding trachuan-<name>.service cgroups")
+	fs.StringVar(&services, "service", "", "comma-separated service names")
+	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || out == "" || (len(specs) == 0 && services == "") || (services == "") != (cgroupRoot == "") {
 		return errors.New("invalid sample options")
+	}
+	var cgroups *cgroupReader
+	if services != "" {
+		names := strings.Split(services, ",")
+		for _, name := range names {
+			if name == "" || strings.ContainsAny(name, "/ ") {
+				return errors.New("invalid service name")
+			}
+		}
+		cgroups = newCgroupReader(cgroupRoot, names)
 	}
 	expressions := map[string]*regexp.Regexp{}
 	for _, spec := range specs {
@@ -89,6 +102,11 @@ func Sample(ctx context.Context, args []string) error {
 				return errors.New("sample database failed")
 			}
 			s.Connections = &connections
+		}
+		if cgroups != nil {
+			if s.Services, err = cgroups.read(s.Time); err != nil {
+				return err
+			}
 		}
 		ps, total, err := readProcesses(ctx, expressions)
 		if err != nil {
@@ -157,7 +175,7 @@ func summarizeProcesses(history *tracker, name string, items []process) processS
 	v := processSample{Count: len(items), Processes: items, Restart: history.observe(name, items)}
 	for _, p := range items {
 		v.RSS += p.RSS
-		v.CPU += p.CPU
+		v.LifetimeCPU += p.LifetimeCPU
 	}
 	return v
 }

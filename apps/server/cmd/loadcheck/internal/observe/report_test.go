@@ -14,7 +14,7 @@ func TestReport_MissingBaselineIsUnavailable(t *testing.T) {
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	requests := []loadrun.Record{{Phase: "C", Stream: "search", Status: 200, Start: at, DurationMS: 10}, {Phase: "C", Stream: "reader", Status: 200, Start: at, DurationMS: 10}}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:00Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(requests, loadrun.Report{}, nil, strings.NewReader(""), strings.NewReader(server))
+	gates, err := buildReport(requests, loadrun.Report{}, nil, strings.NewReader(""), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestReport_CacheHitsUsePhaseWindow(t *testing.T) {
 		}
 	}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:02Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(records, loadrun.Report{}, nil, strings.NewReader(web.String()), strings.NewReader(server))
+	gates, err := buildReport(records, loadrun.Report{}, nil, strings.NewReader(web.String()), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,14 +71,14 @@ func TestReport_GapDuringDLeavesPeaksUnavailable(t *testing.T) {
 	}
 	var samples []sample
 	for _, seconds := range []int{0, 4, 8, 10, 20, 24, 36, 40} {
-		samples = append(samples, sample{Time: start.Add(time.Duration(seconds) * time.Second), HostCPU: &cpu, Processes: processes})
+		samples = append(samples, sample{Time: start.Add(time.Duration(seconds) * time.Second), HostCPU: &cpu, Processes: processes, Services: map[string]serviceSample{"web": {}, "server": {}}})
 	}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:30Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(records, loadrun.Report{}, samples, strings.NewReader(""), strings.NewReader(server))
+	gates, err := buildReport(records, loadrun.Report{}, samples, strings.NewReader(""), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"PostgreSQL connections", "Host CPU", "web RSS", "server RSS", "Restarts"} {
+	for _, name := range []string{"PostgreSQL connections", "D Host CPU", "web memory peak", "server memory peak", "Restarts"} {
 		found := false
 		for _, g := range gates {
 			if g.Name == name {
@@ -125,11 +125,11 @@ func TestReport_SeparateSamplerAndGeneratorCPU(t *testing.T) {
 	for _, name := range []string{"web", "server", "postgres", "loadcheck", "generator"} {
 		processes[name] = processSample{Processes: []process{{PID: 1}}}
 	}
-	processes["loadcheck"] = processSample{CPU: 11, Processes: []process{{PID: 1}}}
-	processes["generator"] = processSample{CPU: 33, Processes: []process{{PID: 2}}}
+	processes["loadcheck"] = processSample{LifetimeCPU: 11, Processes: []process{{PID: 1}}}
+	processes["generator"] = processSample{LifetimeCPU: 33, Processes: []process{{PID: 2}}}
 	samples := []sample{{Time: at.Add(time.Millisecond), HostCPU: &cpu, Processes: processes}}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:00Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(records, loadrun.Report{}, samples, strings.NewReader(""), strings.NewReader(server))
+	gates, err := buildReport(records, loadrun.Report{}, samples, strings.NewReader(""), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestReport_SeparateSamplerAndGeneratorCPU(t *testing.T) {
 	for _, g := range gates {
 		found[g.Name] = g.Value
 	}
-	if found["sampler CPU peak"] != "11.00%" || found["generator CPU peak"] != "33.00%" {
+	if found["sampler CPU lifetime average"] != "11.00%" || found["generator CPU lifetime average"] != "33.00%" {
 		t.Fatalf("CPU rows %v", found)
 	}
 }
@@ -146,11 +146,11 @@ func TestReport_MissingGeneratorCPUIsUnavailable(t *testing.T) {
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	records := []loadrun.Record{{Phase: "A", Stream: "search", Status: 200, Start: at, DurationMS: 1000}}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:00Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(records, loadrun.Report{}, nil, strings.NewReader(""), strings.NewReader(server))
+	gates, err := buildReport(records, loadrun.Report{}, nil, strings.NewReader(""), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"sampler CPU peak", "generator CPU peak"} {
+	for _, name := range []string{"sampler CPU lifetime average", "generator CPU lifetime average"} {
 		found := false
 		for _, g := range gates {
 			if g.Name == name {
@@ -176,12 +176,12 @@ func TestReport_MissingCPUIntervalsUnavailable(t *testing.T) {
 	}
 	samples := []sample{{Time: start.Add(time.Second), HostCPU: &cpu, Processes: processes}, {Time: start.Add(5 * time.Second), Processes: processes}, {Time: start.Add(9 * time.Second), Processes: processes}}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:00Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(records, loadrun.Report{}, samples, strings.NewReader(""), strings.NewReader(server))
+	gates, err := buildReport(records, loadrun.Report{}, samples, strings.NewReader(""), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, g := range gates {
-		if g.Name == "Host CPU" {
+		if g.Name == "A Host CPU" {
 			if g.Result != "unavailable" {
 				t.Fatalf("CPU gate %s", g.Result)
 			}
@@ -195,12 +195,12 @@ func TestReport_ConnectionsUnavailableWithoutValues(t *testing.T) {
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	records := []loadrun.Record{{Phase: "A", Stream: "search", Status: 200, Start: at, DurationMS: 1000}, {Phase: "A", Stream: "reader", Status: 200, Start: at, DurationMS: 1000}}
 	var s sample
-	data := `{"time":"2026-01-01T00:00:00.1Z","host_cpu_percent":10,"processes":{"web":{"processes":[{"pid":1}]},"server":{"processes":[{"pid":2}]},"postgres":{"processes":[{"pid":3}]},"loadcheck":{"processes":[{"pid":4}]},"generator":{"processes":[{"pid":5}]}}}`
+	data := `{"time":"2026-01-01T00:00:00.1Z","host_cpu_percent":10,"processes":{"web":{"processes":[{"pid":1}]},"server":{"processes":[{"pid":2}]},"postgres":{"processes":[{"pid":3}]},"loadcheck":{"processes":[{"pid":4}]},"generator":{"processes":[{"pid":5}]}},"services":{"web":{"cpu_percent":5,"memory_peak_bytes":1},"server":{"cpu_percent":5,"memory_peak_bytes":1}}}`
 	if err := json.Unmarshal([]byte(data), &s); err != nil {
 		t.Fatal(err)
 	}
 	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:00Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
-	gates, err := buildReport(records, loadrun.Report{}, []sample{s}, strings.NewReader(""), strings.NewReader(server))
+	gates, err := buildReport(records, loadrun.Report{}, []sample{s}, strings.NewReader(""), strings.NewReader(server), extras{})
 	if err != nil {
 		t.Fatal(err)
 	}

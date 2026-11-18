@@ -67,7 +67,7 @@ func TestProcesses_AggregateAndTrackOldest(t *testing.T) {
 	}
 	tr := newTracker()
 	sample := summarizeProcesses(tr, "postgres", groups["postgres"])
-	if sample.Count != 3 || sample.RSS != 600*1024 || sample.CPU != 7.5 || sample.Restart {
+	if sample.Count != 3 || sample.RSS != 600*1024 || sample.LifetimeCPU != 7.5 || sample.Restart {
 		t.Fatalf("sample %+v", sample)
 	}
 	data, err := json.Marshal(sample)
@@ -140,7 +140,7 @@ func TestSample_WithoutPostgres(t *testing.T) {
 	if err := json.Unmarshal(got["processes"], &processes); err != nil {
 		t.Fatal(err)
 	}
-	if p := processes["self"]; p.Count != 1 || p.RSS != 102400 || p.CPU != 1.5 || len(p.Processes) != 1 || p.Restart {
+	if p := processes["self"]; p.Count != 1 || p.RSS != 102400 || p.LifetimeCPU != 1.5 || len(p.Processes) != 1 || p.Restart {
 		t.Fatalf("process sample = %+v", p)
 	}
 }

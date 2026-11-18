@@ -15,10 +15,10 @@ import (
 )
 
 type process struct {
-	PID   int     `json:"pid"`
-	Start string  `json:"start"`
-	RSS   uint64  `json:"rss_bytes"`
-	CPU   float64 `json:"cpu_percent"`
+	PID         int     `json:"pid"`
+	Start       string  `json:"start"`
+	RSS         uint64  `json:"rss_bytes"`
+	LifetimeCPU float64 `json:"lifetime_cpu_percent"`
 }
 type tracker struct{ previous map[string]process }
 
@@ -81,7 +81,7 @@ func parseProcesses(reader io.Reader, expressions map[string]*regexp.Regexp, sel
 				return nil, 0, errors.New("invalid process start time")
 			}
 		}
-		item := process{PID: pid, Start: start, RSS: rss * 1024, CPU: cpu}
+		item := process{PID: pid, Start: start, RSS: rss * 1024, LifetimeCPU: cpu}
 		if pid == selfPID {
 			result["loadcheck"] = append(result["loadcheck"], item)
 		}
