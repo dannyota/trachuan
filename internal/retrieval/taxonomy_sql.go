@@ -30,7 +30,12 @@ func loadTaxonomy(ctx context.Context, tx pgx.Tx) ([]taxonomyRow, error) {
 	return result, nil
 }
 
-func taxonomyDocuments(ctx context.Context, tx pgx.Tx, id int64) ([]NodeDocument, error) {
+func nodeDocumentStatus(d *NodeDocument, source Document, date Date) {
+	validity, _ := DocumentValidity(source, date)
+	d.StatusClass, d.IsCurrent = validity.StatusClass, validity.Current
+}
+
+func taxonomyDocuments(ctx context.Context, tx pgx.Tx, id int64, date Date) ([]NodeDocument, error) {
 	rows, err := tx.Query(ctx, `WITH RECURSIVE subtree AS (
  SELECT id,level FROM taxonomy_node WHERE id=$1 AND status='active' AND provision_count>0
  UNION ALL SELECT n.id,n.level FROM taxonomy_node n JOIN subtree s ON n.parent_id=s.id WHERE n.status='active' AND n.provision_count>0
@@ -44,7 +49,7 @@ func taxonomyDocuments(ctx context.Context, tx pgx.Tx, id int64) ([]NodeDocument
  SELECT provision_id,family_id,min(distance) AS distance FROM expanded GROUP BY provision_id,family_id
  ), effective AS (
  SELECT DISTINCT e.provision_id FROM expanded e JOIN nearest n USING (provision_id,family_id,distance) JOIN subtree s ON s.id=e.node_id WHERE NOT e.exclude
- ) SELECT d.key,d.number,d.title,d.doc_type,d.status_class,d.is_current,count(DISTINCT p.id) AS provisions FROM effective e JOIN provision p ON p.id=e.provision_id JOIN document d ON d.id=p.document_id GROUP BY d.id ORDER BY provisions DESC,d.key ASC LIMIT 20`, id)
+ ) SELECT d.key,d.number,d.title,d.doc_type,d.status_class,d.is_current,d.validity_conflict,d.eff_from,d.eff_to,count(DISTINCT p.id) AS provisions FROM effective e JOIN provision p ON p.id=e.provision_id JOIN document d ON d.id=p.document_id GROUP BY d.id ORDER BY provisions DESC,d.key ASC LIMIT 20`, id)
 	if err != nil {
 		return nil, databaseFailure("query taxonomy documents", err)
 	}
@@ -52,9 +57,11 @@ func taxonomyDocuments(ctx context.Context, tx pgx.Tx, id int64) ([]NodeDocument
 	result := []NodeDocument{}
 	for rows.Next() {
 		var d NodeDocument
-		if err = rows.Scan(&d.Key, &d.Number, &d.Title, &d.Type, &d.StatusClass, &d.IsCurrent, &d.Provisions); err != nil {
+		var source Document
+		if err = rows.Scan(&d.Key, &d.Number, &d.Title, &d.Type, &source.StatusClass, &source.IsCurrent, &source.ValidityConflict, &source.EffectiveFrom, &source.EffectiveTo, &d.Provisions); err != nil {
 			return nil, databaseFailure("scan taxonomy document", err)
 		}
+		nodeDocumentStatus(&d, source, date)
 		result = append(result, d)
 	}
 	if err = rows.Err(); err != nil {
