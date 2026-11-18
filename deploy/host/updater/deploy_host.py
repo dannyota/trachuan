@@ -1,6 +1,6 @@
 import re
 
-from .deploy_corpus_sql import CATALOG_PATH, PREWARM, PREWARM_SKIPPED, SCHEMA_PATH, database_owner
+from .deploy_corpus_sql import CATALOG_PATH, PREWARM, PREWARM_SKIPPED, SCHEMA_PATH, database as corpus_database, database_owner
 from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
@@ -108,8 +108,7 @@ class Host:
         self.restart_postgres()
         self.user('podman', 'exec', 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
         database = self.psql('auth', "SELECT active_db FROM public.corpus_release WHERE country = 'vn';").decode().strip()
-        if not re.fullmatch(r'corpus_vn_[0-9]{8}_[0-9]+', database):
-            raise ValueError('invalid active corpus database')
+        corpus_database(database)
         self.prewarm_active(database)
 
     def prewarm_active(self, database):
@@ -127,8 +126,12 @@ class Host:
             pass
 
     def provision_activator(self):
+        try:
+            script = (self.paths.host / 'provision-activator.sh').read_bytes()
+        except FileNotFoundError:
+            return False
         available = True
-        for path in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
+        for path in ('/usr/local/bin/postgres-admin.sh', '/run/secrets/activator_db_password'):
             try:
                 self.user('podman', 'exec', 'trachuan-postgres', 'test', '-r', path)
             except CommandError as error:
@@ -137,8 +140,8 @@ class Host:
                 available = False
         if not available:
             return False
-        self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
-                  'bash', '/usr/local/bin/provision-activator.sh')
+        self.user('podman', 'exec', '-i', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh', 'bash', '-s',
+                  input=script)
         return True
 
     def migrate(self):

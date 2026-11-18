@@ -27,9 +27,10 @@ def database(name):
 CATALOG_PATH = '-c search_path=pg_catalog'
 SCHEMA_PATH = '-c search_path=pg_catalog,public'
 SUPERUSER_REFUSED = 'a role other than postgres is a superuser or a member of one'
-SUPERUSER_CHECK = ('SELECT EXISTS(SELECT FROM pg_catalog.pg_roles r WHERE r.rolname <> current_user AND (r.rolsuper OR '
-                   "EXISTS(SELECT FROM pg_catalog.pg_roles s WHERE s.rolsuper AND "
-                   "pg_catalog.pg_has_role(r.oid,s.oid,'MEMBER')))) AS release_superuser \\gset\n")
+SUPERUSER_ROLES = ('SELECT EXISTS(SELECT FROM pg_catalog.pg_roles r WHERE r.rolname <> {owner} AND (r.rolsuper OR '
+                   'EXISTS(SELECT FROM pg_catalog.pg_roles s WHERE s.rolsuper AND '
+                   "pg_catalog.pg_has_role(r.oid,s.oid,'MEMBER'))))")
+SUPERUSER_CHECK = SUPERUSER_ROLES.format(owner='current_user') + ' AS release_superuser \\gset\n'
 RESTORED = "SELECT pg_catalog.to_regclass('public.release') IS NOT NULL;"
 RELEASE_ROW = ("SELECT pg_catalog.json_build_object('country',country,'rel',rel,'schema_version',schema_version,"
                "'recipes',pg_catalog.json_build_object('dense',dense_recipe,'chunk',chunk_recipe,"
@@ -52,6 +53,10 @@ PREWARM = ('SET statement_timeout=0;\nSET lock_timeout=0;\nSET idle_in_transacti
            '\\else\n'
            "SELECT '" + PREWARM_SKIPPED + "';\n"
            '\\endif\n')
+
+
+def other_superuser(owner='postgres'):
+    return SUPERUSER_ROLES.format(owner=literal(owner)) + ';'
 
 
 def database_owner(name):

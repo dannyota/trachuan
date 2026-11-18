@@ -41,7 +41,7 @@ class PostgresPrewarmTest(fixture.ActivationFixture, unittest.TestCase):
     def test_prewarm_runs_as_activator_after_provisioning(self):
         self.host.postgres()
         check = self.index(lambda args, _: 'pgbackrest' in args)
-        provision = self.index(lambda args, _: args[-1] == '/usr/local/bin/provision-activator.sh')
+        provision = self.index(lambda args, _: args[-2:] == ['bash', '-s'])
         prewarm = self.index(lambda _, data: bool(data and b'public.pg_prewarm' in data))
         self.assertLess(check, provision)
         self.assertLess(provision, prewarm)
@@ -99,9 +99,19 @@ class PostgresPrewarmTest(fixture.ActivationFixture, unittest.TestCase):
                 return b'auth\n'
             return self.prewarm_runner(args, input=input, **kwargs)
         self.host.runner = runner
-        with self.assertRaisesRegex(ValueError, 'invalid active corpus database'):
+        with self.assertRaisesRegex(ValueError, 'invalid corpus database name'):
             self.host.postgres()
         self.assertEqual(self.prewarms(), [])
+
+    def test_active_database_without_a_release_suffix_is_prewarmed(self):
+        def runner(args, input=None, **kwargs):
+            if input and b'active_db' in input:
+                return b'corpus_vn_20990101\n'
+            return self.prewarm_runner(args, input=input, **kwargs)
+        self.host.runner = runner
+        self.host.postgres()
+        args = self.prewarms()[0]
+        self.assertEqual(args[args.index('-d') + 1], 'corpus_vn_20990101')
 
 
 if __name__ == '__main__':

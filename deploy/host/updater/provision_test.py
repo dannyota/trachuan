@@ -7,6 +7,10 @@ from updater import activation_test as fixture
 from updater.deploy_io import CommandError
 
 
+PROBES = ('/usr/local/bin/postgres-admin.sh', '/run/secrets/activator_db_password')
+FEED = ['/usr/local/bin/postgres-admin.sh', 'bash', '-s']
+
+
 class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
     def test_frameworks_pointer_grant_is_guarded_and_excludes_delete(self):
         script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
@@ -22,7 +26,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             script = script.replace('/run/secrets/activator_db_password', secret.name)
             script = script.replace('/usr/local/bin/postgres-admin.sh', 'postgres_admin')
             fake = 'postgres_admin() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n'
-            result = subprocess.run(['bash', '-c', fake + script], capture_output=True, text=True)
+            result = subprocess.run(['bash', '-s'], input=fake + script, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
 
@@ -37,17 +41,23 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
     def test_provisioner_session_pins_search_path(self):
         self.assertIn('-c search_path=pg_catalog,public', self.provision_input().splitlines()[0])
 
-    def test_provision_checks_both_running_container_mounts(self):
+    def test_provision_feeds_the_installed_script_over_stdin(self):
         self.calls.clear()
+        self.paths.host.joinpath('provision-activator.sh').write_bytes(b'activated bundle script\n')
         self.assertTrue(self.host.provision_activator())
         args = [call for call, _ in self.calls]
-        probes = [['podman', 'exec', 'trachuan-postgres', 'test', '-r', path] for path in
-                  ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password')]
-        self.assertEqual(args[:2], probes)
-        self.assertEqual(args[2][-2:], ['bash', '/usr/local/bin/provision-activator.sh'])
+        self.assertEqual(args[:2], [['podman', 'exec', 'trachuan-postgres', 'test', '-r', path] for path in PROBES])
+        self.assertEqual(args[2], ['podman', 'exec', '-i', 'trachuan-postgres', *FEED])
+        self.assertEqual(self.calls[2][1], b'activated bundle script\n')
 
-    def test_images_skip_provisioning_when_either_mount_is_unreadable(self):
-        for missing in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
+    def test_missing_installed_script_is_not_provisioned_and_opens_no_container_session(self):
+        self.paths.host.joinpath('provision-activator.sh').unlink()
+        self.calls.clear()
+        self.assertFalse(self.host.provision_activator())
+        self.assertEqual(self.calls, [])
+
+    def test_images_skip_provisioning_when_either_container_path_is_unreadable(self):
+        for missing in PROBES:
             self.calls.clear()
             def runner(args, **kwargs):
                 self.runner(args, **kwargs)
@@ -58,7 +68,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             with self.subTest(missing=missing):
                 self.host.migrate()
                 args = [call for call, _ in self.calls]
-                self.assertFalse(any('bash' in call and call[-1] == '/usr/local/bin/provision-activator.sh' for call in args))
+                self.assertFalse(any(call[-3:] == FEED for call in args))
                 self.assertTrue(any('start' in call and 'trachuan-migrate.service' in call for call in args))
                 self.assertEqual(sum(call[-3:-1] == ['test', '-r'] for call in args), 2)
 
@@ -81,7 +91,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             if args[-3:-1] == ['test', '-r']:
                 self.calls.append((args, kwargs.get('input')))
                 raise CommandError('old unit has no provisioning mount', returncode=1)
-            if 'bash' in args and args[-1] == '/usr/local/bin/provision-activator.sh':
+            if args[-3:] == FEED:
                 raise CommandError('provision script absent', returncode=127)
             return self.runner(args, **kwargs)
         self.host.runner = runner
@@ -96,7 +106,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
     def test_images_provision_after_postgres_and_before_migrate(self):
         self.engine.activate(self.new)
         args = [call for call, _ in self.calls]
-        provision = next(i for i, a in enumerate(args) if '/usr/local/bin/provision-activator.sh' in a)
+        provision = next(i for i, a in enumerate(args) if a[-3:] == FEED)
         migration = next(i for i, a in enumerate(args) if 'trachuan-migrate.service' in a and 'start' in a)
         self.assertLess(provision, migration)
 

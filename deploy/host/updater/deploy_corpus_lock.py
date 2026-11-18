@@ -1,4 +1,5 @@
 import os
+import re
 import selectors
 import signal
 import subprocess
@@ -17,25 +18,27 @@ class AdvisoryLock:
         self.process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, start_new_session=True)
         try:
-            self.process.stdin.write(b"SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended('activation',0));\n")
+            self.process.stdin.write(b"SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended('activation',0)),"
+                                     b"pg_catalog.pg_backend_pid();\n")
             self.process.stdin.flush()
             with selectors.DefaultSelector() as selector:
                 selector.register(self.process.stdout, selectors.EVENT_READ)
                 if not selector.select(10):
                     raise CommandError('activation advisory lock timed out')
                 answer = os.read(self.process.stdout.fileno(), 16).strip()
-            if answer == b'f':
+            held, _, backend = answer.partition(b'|')
+            if held == b'f':
                 raise Busy('activation advisory lock busy')
-            if answer != b't':
+            if held != b't' or not re.fullmatch(rb'[1-9][0-9]*', backend):
                 raise CommandError('activation advisory lock failed')
-            self.db.holder = self.process
+            self.db.holder, self.db.backend = self.process, int(backend)
             return self
         except BaseException:
             self.__exit__()
             raise
 
     def __exit__(self, *args):
-        self.db.holder = None
+        self.db.holder, self.db.backend = None, None
         self.process.stdin.close()
         try:
             self.process.wait(timeout=5)

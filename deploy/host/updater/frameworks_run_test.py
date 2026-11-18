@@ -68,6 +68,14 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
             return self.staging / 'frameworks.dump'
         self.phase.download = mock.Mock(side_effect=download)
 
+    def test_another_superuser_waits_without_spending_the_manifest(self):
+        self.db.superuser = True
+        self.assertTrue(self.run_phase())
+        result = json.loads(self.phase.result.path.read_bytes())
+        self.assertEqual((result['status'], result['step']), ('waiting', 'superuser'))
+        self.assertFalse(self.db.rows)
+        self.phase.download.assert_not_called()
+
     def write_manifest(self):
         self.directory.joinpath('manifest.json').write_bytes(canonical(self.m))
         self.directory.joinpath('manifest.sigstore.json').write_bytes(b'{}')

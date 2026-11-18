@@ -71,7 +71,7 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
 
     def test_missing_mount_waits_without_any_activator_connection(self):
         for mode in ('activate', 'verify'):
-            for missing in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
+            for missing in ('/usr/local/bin/postgres-admin.sh', '/run/secrets/activator_db_password'):
                 with self.subTest(mode=mode, missing=missing):
                     def runner(args, **kwargs):
                         if args[-3:] == ['test', '-r', missing]:
@@ -94,7 +94,7 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
                 role['migration_skipped_grants'] = not role['exists']
                 role['grants'] = role['exists']
                 self.schema = 8
-            if 'bash' in args and args[-1] == '/usr/local/bin/provision-activator.sh':
+            if args[-2:] == ['bash', '-s']:
                 role.update(exists=True, grants=True)
             return self.runner(args, **kwargs)
         self.host.runner = runner
@@ -131,6 +131,19 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.result()['waiting_since'], first['waiting_since'])
         self.phase.download.assert_not_called()
         self.assertFalse(self.db.rows)
+
+    def test_another_superuser_waits_without_spending_the_manifest(self):
+        self.db.superuser = True
+        self.assertTrue(self.run_phase())
+        result = self.result()
+        self.assertEqual((result['status'], result['step']), ('waiting', 'superuser'))
+        self.assertEqual(result['message'], 'a role other than postgres is a superuser or a member of one')
+        self.assertFalse(self.db.rows)
+        self.phase.download.assert_not_called()
+        self.assertEqual(self.state.decision('corpus', result['manifest_hash'], self.m['sequence']), 'pending')
+        self.db.superuser = False
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.result()['status'], 'ok')
 
     def test_aborted_target_activator_does_not_own_does_not_repeat_the_daily_prune(self):
         name = self.m['database']

@@ -17,22 +17,24 @@ class AdvisoryLockTest(unittest.TestCase):
         selector.__enter__.return_value.select.return_value = [(None,None)]
         with mock.patch('updater.deploy_corpus_lock.subprocess.Popen', return_value=process) as start, \
              mock.patch('updater.deploy_corpus_lock.selectors.DefaultSelector', return_value=selector), \
-             mock.patch('updater.deploy_corpus_lock.os.read', return_value=b't\n'):
+             mock.patch('updater.deploy_corpus_lock.os.read', return_value=b't|4242\n'):
             with self.assertRaises(ValueError):
                 with AdvisoryLock(db):
                     self.assertIs(db.holder, process)
+                    self.assertEqual(db.backend, 4242)
                     raise ValueError('synthetic interruption')
         args = start.call_args.args[0]
         self.assertEqual(args[args.index('-U')+1], 'activator')
         self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public', args)
         statement = process.stdin.write.call_args.args[0]
         self.assertIn(b'pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended(', statement)
+        self.assertIn(b'pg_catalog.pg_backend_pid()', statement)
         process.stdin.close.assert_called_once()
         process.wait.assert_called_once_with(timeout=5)
         self.assertIsNone(db.holder)
 
     def test_busy_or_lost_lock_closes_session_without_mutation(self):
-        for response, error in ((b'f\n', Busy), (b'', CommandError)):
+        for response, error in ((b'f|4242\n', Busy), (b'', CommandError), (b't\n', CommandError), (b't|x\n', CommandError)):
             db = Database(Host(Paths(), user_prefix=[]), {})
             process = mock.Mock()
             selector = mock.MagicMock()

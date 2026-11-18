@@ -122,6 +122,15 @@ func TestLawRestore_HonestDumpMatchesSourceAndHostileObjectsAreRefused(t *testin
 			t.Fatalf("another superuser not refused: %q", got)
 		}
 	}
+	otherSuperuser := lawSQL(t, "sql", "other_superuser", admin.Config().User)
+	if got := frameworksPsql(t, psqlPath, adminTarget, catalogPath, otherSuperuser); got != "f" {
+		t.Fatalf("check before an operation found another superuser: %q", got)
+	}
+	for _, create := range []string{"CREATE ROLE " + extra + " NOLOGIN SUPERUSER;\n", "CREATE ROLE " + extra + " NOLOGIN;\nGRANT " + adminRole + " TO " + extra + ";\n"} {
+		if got := frameworksPsql(t, psqlPath, adminTarget, catalogPath, "BEGIN;\n"+create+otherSuperuser+"\nROLLBACK;\n"); got != "t" {
+			t.Fatalf("check before an operation missed another superuser: %q", got)
+		}
+	}
 	if got := frameworksPsql(t, psqlPath, adminTarget, catalogPath, prepare); got != "configured" {
 		t.Fatalf("pre-restore step: %q", got)
 	}
@@ -134,6 +143,11 @@ func TestLawRestore_HonestDumpMatchesSourceAndHostileObjectsAreRefused(t *testin
 			t.Fatalf("catalog check: got %q, want %q", got, want)
 		}
 	}
+	runCheck("ok")
+	readerRole := pgx.Identifier{reader.Role}.Sanitize()
+	frameworksPsql(t, psqlPath, activatorTarget, "", "GRANT SELECT ON public.release TO "+readerRole+";\n")
+	runCheck("access")
+	frameworksPsql(t, psqlPath, activatorTarget, "", "REVOKE SELECT ON public.release FROM "+readerRole+";\n")
 	runCheck("ok")
 
 	readerConfig, err := pgx.ParseConfig(reader.URL)
@@ -151,6 +165,18 @@ func TestLawRestore_HonestDumpMatchesSourceAndHostileObjectsAreRefused(t *testin
 		t.Fatalf("reader refused for another reason: %v", err)
 	}
 	frameworksPsql(t, psqlPath, activatorTarget, schemaPath, "SET standard_conforming_strings=on;\n"+lawSQL(t, "sql", "grants", name, reader.Role))
+	runCheck("access")
+	check = lawSQL(t, "catalog", "law", versions, reader.Role, true)
+	runCheck("ok")
+	moved := map[string]string{}
+	for extension := range versions {
+		moved[extension] = "0.0.1"
+	}
+	check = lawSQL(t, "catalog", "law", moved, reader.Role, true)
+	runCheck("extension")
+	check = lawSQL(t, "catalog", "law", moved, reader.Role, true, true)
+	runCheck("ok")
+	check = lawSQL(t, "catalog", "law", versions, reader.Role, true)
 
 	restored, err := pgx.ConnectConfig(ctx, activatorTarget)
 	if err != nil {
@@ -230,6 +256,10 @@ func TestLawRestore_HonestDumpMatchesSourceAndHostileObjectsAreRefused(t *testin
 		{"CREATE TYPE invented_type AS ENUM ('invented')", "DROP TYPE invented_type", "type"},
 		{"CREATE DOMAIN invented_domain AS integer", "DROP DOMAIN invented_domain", "domain"},
 		{"CREATE TRIGGER invented_trigger BEFORE UPDATE ON public.release FOR EACH ROW EXECUTE FUNCTION suppress_redundant_updates_trigger()", "DROP TRIGGER invented_trigger ON public.release", "trigger"},
+		{"GRANT INSERT ON public.release TO " + readerRole, "REVOKE INSERT ON public.release FROM " + readerRole, "access"},
+		{"GRANT UPDATE (rel) ON public.release TO " + readerRole, "REVOKE UPDATE (rel) ON public.release FROM " + readerRole, "access"},
+		{"GRANT CREATE ON SCHEMA public TO " + readerRole, "REVOKE CREATE ON SCHEMA public FROM " + readerRole, "access"},
+		{"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO " + readerRole, "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM " + readerRole, "access"},
 		{"CREATE TABLE public.pg_proc (oid oid, proname name, prokind \"char\", pronamespace oid); CREATE FUNCTION invented_shadowed() RETURNS integer LANGUAGE sql AS 'SELECT 1'", "DROP FUNCTION invented_shadowed(); DROP TABLE public.pg_proc", "function"},
 	} {
 		frameworksPsql(t, psqlPath, activatorTarget, "", tc.plant+";\n")

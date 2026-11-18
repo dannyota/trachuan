@@ -38,11 +38,11 @@ class Steps:
         schema = self.schema(image, row['manifest']['schema_version'])
         return toc(text(self.db.listing(dump), 'dump TOC'), self.db.rules['extensions'], schema)
 
-    def session(self, statements, name, path=sql.CATALOG_PATH):
-        return self.db.query(statements, name, path)
+    def session(self, statements, row, path=sql.CATALOG_PATH):
+        return self.db.on_target(row, statements, path)
 
-    def settings(self, name):
-        if self.session(sql.effective(), name) != sql.EFFECTIVE:
+    def settings(self, row):
+        if self.session(sql.effective(), row) != sql.EFFECTIVE:
             raise ValueError('frameworks log settings refused')
 
     def inspect(self, row, dump, image):
@@ -54,37 +54,39 @@ class Steps:
         sql.database(name)
         self.db.check_extensions(manifest)
         self.db.make(row)
-        outcome = self.db.admin(name, sql.configure(name, manifest['extensions']), sql.ADMIN_OPTIONS)
+        outcome = self.db.target_admin(row, sql.configure(name, manifest['extensions']), sql.ADMIN_OPTIONS)
         if outcome == 'superuser':
             raise ValueError(law.SUPERUSER_REFUSED)
         if outcome == 'granted':
             raise ValueError('frameworks log parameter SET granted to a role other than a superuser')
         if outcome != 'configured':
             raise ValueError('frameworks log settings not configured')
-        self.settings(name)
+        self.settings(row)
 
     def restore(self, row, dump, image):
         name = row['database_name']
         sql.database(name)
-        self.settings(name)
-        if self.session(sql.restored(), name) != 't':
-            self.db.load(name, dump, self.db.save_list(row, self.select(row, dump, image)))
-        self.session(sql.apply(self.schema(image, row['manifest']['schema_version'])), name, sql.SCHEMA_PATH)
-        self.check_catalog(row, image)
-        self.session(sql.grants(name), name, sql.SCHEMA_PATH)
+        self.settings(row)
+        fresh = self.session(sql.restored(), row) != 't'
+        if fresh:
+            self.db.load(row, dump, self.db.save_list(row, self.select(row, dump, image)))
+        self.session(sql.apply(self.schema(image, row['manifest']['schema_version'])), row, sql.SCHEMA_PATH)
+        self.check_catalog(row, image, not fresh)
+        self.session(sql.grants(name), row, sql.SCHEMA_PATH)
 
-    def check_catalog(self, row, image):
+    def check_catalog(self, row, image, granted):
         schema = self.schema(image, row['manifest']['schema_version'])
-        outcome = self.session(check.executable(schema, row['manifest']['extensions']), row['database_name'])
+        statements = check.executable(schema, row['manifest']['extensions'], granted=granted,
+                                      retained=row['mode'] == 'retained')
+        outcome = self.session(statements, row)
         if outcome != 'ok':
             kind = outcome if outcome in check.KINDS else 'object'
             raise ValueError('frameworks database ' + kind + ' differs from image schema version')
 
     def validate(self, row):
-        name = row['database_name']
-        sql.database(name)
-        self.settings(name)
-        raw = self.session(sql.release_row(), name)
+        sql.database(row['database_name'])
+        self.settings(row)
+        raw = self.session(sql.release_row(), row)
         expected = dict({key: row['manifest'][key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
                         kind='frameworks')
         if not raw or decode(raw, 'frameworks release row') != expected:
@@ -94,8 +96,9 @@ class Steps:
         name = row['database_name']
         sql.database(name)
         self.db.check_lock()
-        if row['mode'] == 'retained':
-            self.check_catalog(row, image)
+        self.check_catalog(row, image, True)
+        self.db.verify_target(row)
         report = self.db.describe(image, name, safe=SAFE)
+        self.db.verify_target(row)
         if not isinstance(report, dict) or report.get('status') != 'ok':
             raise ValueError('frameworks release-check did not report ok')

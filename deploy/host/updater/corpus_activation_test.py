@@ -24,6 +24,8 @@ class Database:
         self.lists_removed = []
         self.lists_discarded = 0
         self.foreign = set()
+        self.superuser = False
+        self.kept_targets = None
 
     def lock(self):
         return nullcontext()
@@ -70,6 +72,12 @@ class Database:
 
     def drop_owned(self, name):
         self.drop(name)
+
+    def other_superuser(self):
+        return self.superuser
+
+    def forget_targets(self, operations):
+        self.kept_targets = set(operations)
 
     def drop(self, name):
         if self.protected(name):
@@ -187,6 +195,22 @@ class CorpusActivationTest(unittest.TestCase):
         self.assertEqual(self.db.operations()[0]['operation_id'], other['operation_id'])
         with self.assertRaisesRegex(ValueError, 'target already exists'):
             self.engine.choose(self.m)
+
+    def test_existing_target_with_connections_is_refused_before_any_journal(self):
+        self.db.databases.add(self.m['database'])
+        self.db.connections = lambda name: True
+        with self.assertRaisesRegex(ValueError, '^new corpus target has connections$'):
+            self.activate()
+        self.assertFalse(self.db.rows)
+        self.assertFalse(self.db.dropped)
+
+    def test_prune_keeps_only_the_target_records_of_open_operations(self):
+        row = self.engine.begin(self.hash, self.m, 'new', self.db.active)
+        self.engine.prune()
+        self.assertEqual(self.db.kept_targets, {row['operation_id']})
+        self.db.append(row, 'aborted')
+        self.engine.prune()
+        self.assertEqual(self.db.kept_targets, set())
 
     def test_target_activator_does_not_own_is_refused_before_any_journal(self):
         self.db.databases.add(self.m['database'])

@@ -2,7 +2,7 @@ from .deploy_corpus_sql import literal, plain
 
 
 KINDS = ('view', 'materialized view', 'trigger', 'function', 'procedure', 'aggregate', 'rule', 'policy',
-         'event trigger', 'operator', 'cast', 'schema', 'extension', 'type', 'domain', 'setting')
+         'event trigger', 'operator', 'cast', 'schema', 'extension', 'type', 'domain', 'setting', 'access')
 USER = "n.nspname <> 'information_schema' AND pg_catalog.left(n.nspname,3) <> 'pg_'"
 
 
@@ -11,6 +11,8 @@ def member(catalog, alias):
             "'::pg_catalog.regclass AND d.objid=" + alias + ".oid AND d.deptype='e')")
 
 
+ENTRY = ("CASE WHEN x.grantee=0::oid THEN 'public' ELSE pg_catalog.pg_get_userbyid(x.grantee)::text END"
+         "||' '||x.privilege_type||CASE WHEN x.is_grantable THEN ' grantable' ELSE '' END")
 SNAPSHOT = f"""SELECT kind, identity, definition FROM (
  SELECT CASE WHEN c.relkind='v' THEN 'view' ELSE 'materialized view' END AS kind,
   n.nspname::text||'.'||c.relname::text AS identity, pg_catalog.pg_get_viewdef(c.oid) AS definition
@@ -54,6 +56,23 @@ SNAPSHOT = f"""SELECT kind, identity, definition FROM (
    ORDER BY u.c COLLATE pg_catalog."C"),',')
   FROM pg_catalog.pg_db_role_setting s JOIN pg_catalog.pg_database d ON d.oid=s.setdatabase
   WHERE d.datname=pg_catalog.current_database()
+ UNION ALL SELECT 'access', 'relation '||n.nspname::text||'.'||c.relname::text, 'relation '||{ENTRY}
+  FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) x WHERE x.grantee<>c.relowner AND {USER}
+ UNION ALL SELECT 'access', 'column '||n.nspname::text||'.'||c.relname::text||'.'||a.attname::text, 'column '||{ENTRY}
+  FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid=a.attrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  CROSS JOIN LATERAL pg_catalog.aclexplode(a.attacl) x WHERE x.grantee<>c.relowner AND {USER}
+ UNION ALL SELECT 'access', 'schema '||n.nspname::text, 'schema '||{ENTRY}
+  FROM pg_catalog.pg_namespace n CROSS JOIN LATERAL pg_catalog.aclexplode(n.nspacl) x
+  WHERE {USER} AND x.grantee<>n.nspowner
+  AND NOT (x.grantee=0::oid AND x.privilege_type='USAGE' AND NOT x.is_grantable)
+ UNION ALL SELECT 'access', 'default '||d.oid::text,
+  'default '||CASE WHEN r.rolsuper THEN 'superuser' ELSE 'role' END||' '||coalesce(n.nspname::text,'')||' '||
+  d.defaclobjtype::text||' '||pg_catalog.array_to_string(ARRAY(SELECT {ENTRY}
+   FROM pg_catalog.aclexplode(d.defaclacl) x ORDER BY 1),',')
+  FROM pg_catalog.pg_default_acl d JOIN pg_catalog.pg_roles r ON r.oid=d.defaclrole
+  LEFT JOIN pg_catalog.pg_namespace n ON n.oid=d.defaclnamespace
 ) objects"""
 
 
@@ -62,16 +81,29 @@ def rows(items):
                     for row in sorted(items, key=lambda row: row[:2]))
 
 
-def extensions(versions):
-    return [('extension', plain(name), version + ' public superuser') for name, version in versions.items()]
+def extensions(versions, retained=False):
+    return [('extension', plain(name), None if retained else version + ' public superuser')
+            for name, version in versions.items()]
 
 
-def law(versions):
+def access_allowed(alias, reader, granted):
+    role = plain(reader)
+    if not granted:
+        return 'FALSE'
+    allowed = ('relation ' + role + ' SELECT', 'schema ' + role + ' USAGE',
+               'default superuser public r ' + role + ' SELECT', 'default superuser public S ' + role + ' SELECT')
+    return ('(' + alias + ".kind='access' AND " + alias + '.definition IN (' +
+            ','.join(literal(value) for value in allowed) + '))')
+
+
+def law(versions, reader='corpus_reader', granted=False, retained=False):
     return ('WITH found AS (' + SNAPSHOT + '),\nexpected(kind, identity, definition) AS (VALUES ' +
-            rows(extensions(versions)) + '), differences AS (\n'
+            rows(extensions(versions, retained)) + '), differences AS (\n'
             ' SELECT f.kind FROM found f WHERE NOT EXISTS (SELECT FROM expected e WHERE e.kind=f.kind '
-            'AND e.identity=f.identity AND e.definition=f.definition)\n'
+            'AND e.identity=f.identity AND (e.definition IS NULL OR e.definition=f.definition))\n'
             " AND NOT (f.kind='extension' AND f.identity='pg_prewarm' AND f.definition LIKE '% public superuser')\n"
+            ' AND NOT ' + access_allowed('f', reader, granted) + '\n'
+            " UNION ALL SELECT f.kind FROM found f WHERE f.kind='extension' AND f.definition NOT LIKE '% public superuser'\n"
             ' UNION ALL SELECT e.kind FROM expected e WHERE NOT EXISTS (SELECT FROM found f WHERE f.kind=e.kind '
-            'AND f.identity=e.identity AND f.definition=e.definition))\n'
+            'AND f.identity=e.identity AND (e.definition IS NULL OR f.definition=e.definition)))\n'
             "SELECT coalesce((SELECT kind FROM differences ORDER BY kind LIMIT 1),'ok');\n")

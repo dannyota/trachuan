@@ -30,6 +30,30 @@ class LawCatalogTest(unittest.TestCase):
         self.assertTrue(self.sql.endswith("SELECT coalesce((SELECT kind FROM differences ORDER BY kind LIMIT 1),'ok');\n"))
         self.assertNotIn('identity FROM differences', self.sql)
 
+    def test_access_entries_are_in_the_snapshot_and_refused_before_the_owner_grants(self):
+        self.assertIn('access', catalog.KINDS)
+        for word in ('pg_catalog.aclexplode(c.relacl)', 'pg_catalog.aclexplode(a.attacl)',
+                     'pg_catalog.aclexplode(n.nspacl)', 'pg_catalog.pg_default_acl d', 'x.grantee<>c.relowner',
+                     "x.privilege_type='USAGE'"):
+            self.assertIn(word, catalog.SNAPSHOT)
+        self.assertNotIn("'relation corpus_reader SELECT'", self.sql)
+
+    def test_after_the_owner_grants_only_the_reader_grants_are_allowed(self):
+        sql = catalog.law(manifest()['extensions'], 'corpus_reader', True)
+        for allowed in ("'relation corpus_reader SELECT'", "'schema corpus_reader USAGE'",
+                        "'default superuser public r corpus_reader SELECT'",
+                        "'default superuser public S corpus_reader SELECT'"):
+            self.assertIn(allowed, sql)
+        self.assertNotIn('INSERT', sql)
+        with self.assertRaises(ValueError):
+            catalog.law(manifest()['extensions'], 'reader"; DROP', True)
+
+    def test_retained_database_compares_extensions_without_their_versions(self):
+        sql = catalog.law(manifest()['extensions'], 'corpus_reader', True, True)
+        self.assertIn("('extension','vector',NULL)", sql)
+        self.assertNotIn('0.8.1', sql)
+        self.assertIn("f.kind='extension' AND f.definition NOT LIKE '% public superuser'", sql)
+
     def test_extension_names_must_be_plain(self):
         with self.assertRaises(ValueError):
             catalog.law({'vector; DROP': '1'})

@@ -85,6 +85,7 @@ class HeadingTest(unittest.TestCase):
                 self.fail('unexpected capability query')
             db = Database(None, None)
             db.query = query
+            db.target_oid = lambda row: None
             with self.subTest(present=present, supported=supported):
                 self.assertEqual(db.activate(row)['step'], 'activated')
                 value = 'summary_projection=1,headings_approved=true' if present and supported else 'summary_projection=0,headings_approved=false'

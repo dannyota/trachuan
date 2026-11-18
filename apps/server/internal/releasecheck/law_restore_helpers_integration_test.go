@@ -41,8 +41,8 @@ func lawUpdater(t *testing.T, module, name string, args ...any) (string, string)
 	}
 	script := `import json,sys
 sys.path.insert(0,sys.argv[1])
-from updater import deploy_corpus_sql, deploy_corpus_verify, deploy_release_catalog
-module={'sql':deploy_corpus_sql,'verify':deploy_corpus_verify,'catalog':deploy_release_catalog}[sys.argv[2]]
+from updater import deploy_corpus_sql, deploy_corpus_verify, deploy_release_catalog, deploy_release_target
+module={'sql':deploy_corpus_sql,'verify':deploy_corpus_verify,'catalog':deploy_release_catalog,'target':deploy_release_target}[sys.argv[2]]
 value=getattr(module,sys.argv[3])
 try:
     print(json.dumps({'value':value(*json.load(sys.stdin)) if callable(value) else value}))

@@ -61,6 +61,14 @@ class FrameworksActivationTest(unittest.TestCase):
         self.assertEqual(self.db.dropped, [])
         self.assertTrue(self.db.exists(name))
 
+    def test_existing_target_with_connections_is_refused_before_any_journal(self):
+        self.m['previous'] = None
+        self.db.databases.add(self.m['database'])
+        self.db.connections = lambda name: True
+        with self.assertRaisesRegex(ValueError, '^new frameworks target has connections$'):
+            self.engine.choose(self.m)
+        self.assertFalse(self.db.rows)
+
     def test_owned_unprotected_target_reaches_the_create_step(self):
         self.m['previous'] = None
         self.db.databases.add(self.m['database'])

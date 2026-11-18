@@ -20,6 +20,7 @@ import (
 )
 
 const lawActivationBridge = `import json,os,sys
+from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 from updater.deploy_corpus_activate import Activation
 from updater.deploy_corpus_database import Database
@@ -51,10 +52,12 @@ class Held:
     def poll(self):
         return None
 kind=FRAMEWORKS if c['kind']=='frameworks' else LAW
-db=Database(Host(Paths(),runner,user_prefix=[]),{'extensions':['vector','ltree']},kind)
+db=Database(Host(Paths(Path(c['root'])),runner,user_prefix=[]),{'extensions':['vector','ltree']},kind)
 db.holder=Held()
+db.backend=c.get('backend',0)
 engine=Activation(db,kind)
-actions={'choose':lambda:engine.choose(c['manifest'])[0],'make':lambda:db.make(c['row']) or 'ok','abort':lambda:engine.abort(c['row']) or 'ok'}
+actions={'choose':lambda:engine.choose(c['manifest'])[0],'make':lambda:db.make(c['row']) or 'ok','abort':lambda:engine.abort(c['row']) or 'ok',
+ 'verify':lambda:db.verify_target(c['row']) or 'ok','oid':lambda:db.target_oid(c['row'])}
 results=[]
 for name in c['actions']:
     try:
@@ -96,6 +99,186 @@ func lawActivationSteps(t *testing.T, config *pgx.ConnConfig, psql string, reque
 	return results
 }
 
+func lawTargetAuth(t *testing.T, activator string) *pgx.Conn {
+	t.Helper()
+	ctx := t.Context()
+	authURL := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, authURL); err != nil {
+		t.Fatal(err)
+	}
+	auth, err := pgx.Connect(ctx, authURL)
+	if err != nil {
+		t.Fatal("connect fixture auth")
+	}
+	t.Cleanup(func() { _ = auth.Close(context.Background()) })
+	role := pgx.Identifier{activator}.Sanitize()
+	if _, err = auth.Exec(ctx, "GRANT USAGE ON SCHEMA public TO "+role+"; GRANT SELECT,INSERT,UPDATE,DELETE ON corpus_release,release_journal,retired_release TO "+role+"; GRANT USAGE,SELECT ON SEQUENCE release_journal_id_seq TO "+role+"; GRANT SELECT,INSERT,UPDATE ON frameworks_release TO "+role); err != nil {
+		t.Fatal(err)
+	}
+	return auth
+}
+
+func withLawReleases(t *testing.T, count int, found []string, body func(*testing.T, []string)) {
+	t.Helper()
+	found = append(found, testpg.Release(t))
+	if len(found) == count {
+		body(t, found)
+		return
+	}
+	t.Run("next", func(t *testing.T) { withLawReleases(t, count, found, body) })
+}
+
+func TestLawRestore_CreateEndsBackendsDropsStraysAndPinsTheTarget(t *testing.T) {
+	_, _, psqlPath := frameworksClients(t)
+	withLawReleases(t, 7, nil, func(t *testing.T, rels []string) {
+		ctx := t.Context()
+		admin, _, err := testpg.OpenAdministrator(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = admin.Close(context.Background()) })
+		activator := testpg.NewBuilder(t)
+		role := pgx.Identifier{activator.Role}.Sanitize()
+		target, runKey := "corpus_vn_"+rels[0], "vn/"+rels[0]
+		lawActive, lawRetired, lawExpired := "corpus_vn_"+rels[1], "corpus_vn_"+rels[2], "corpus_vn_"+rels[3]
+		frameworksActive, frameworksRetired, frameworksOpen := "frameworks_"+rels[4], "frameworks_"+rels[5], "frameworks_"+rels[6]
+		spare := "spare_" + strings.ReplaceAll(rels[0], "_", "")
+		moved, replacement := "moved_"+strings.ReplaceAll(rels[0], "_", ""), "replacement_"+strings.ReplaceAll(rels[0], "_", "")
+		mark := func(name, key string) {
+			t.Helper()
+			if _, markErr := admin.Exec(ctx, "COMMENT ON DATABASE "+pgx.Identifier{name}.Sanitize()+` IS '{"run_key":"`+key+`"}'`); markErr != nil {
+				t.Fatal(markErr)
+			}
+		}
+		for _, item := range []struct{ name, key string }{
+			{lawActive, "vn/" + rels[1]}, {lawRetired, "vn/" + rels[2]}, {lawExpired, "vn/" + rels[3]},
+			{frameworksActive, "vn/" + rels[4]}, {frameworksRetired, "vn/" + rels[5]}, {frameworksOpen, "vn/" + rels[6]}, {spare, runKey},
+		} {
+			if _, err = admin.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{item.name}.Sanitize()+" OWNER "+role+" TEMPLATE template0"); err != nil {
+				t.Fatal(err)
+			}
+			mark(item.name, item.key)
+			t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, item.name, item.key) })
+		}
+		t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, target, runKey) })
+		t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, moved, runKey) })
+
+		auth := lawTargetAuth(t, activator.Role)
+		digest := strings.Repeat("d", 64)
+		for _, statement := range []struct {
+			sql  string
+			args []any
+		}{
+			{`INSERT INTO corpus_release VALUES ('vn',$1,now(),'fixture')`, []any{lawActive}},
+			{`INSERT INTO frameworks_release VALUES ('vn',$1,now(),'fixture')`, []any{frameworksActive}},
+			{`INSERT INTO retired_release (country,db_name,retired_at,retain_until,dump_sha256) VALUES ('vn',$1,now(),now()+interval '7 days',$2)`, []any{lawRetired, digest}},
+			{`INSERT INTO retired_release (country,db_name,retired_at,retain_until,dump_sha256) VALUES ('vn',$1,now()-interval '8 days',now()-interval '1 day',$2)`, []any{lawExpired, digest}},
+			{`INSERT INTO retired_release (country,db_name,retired_at,retain_until,dump_sha256,corpus_kind) VALUES ('vn',$1,now(),now()+interval '7 days',$2,'frameworks')`, []any{frameworksRetired, digest}},
+		} {
+			if _, err = auth.Exec(ctx, statement.sql, statement.args...); err != nil {
+				t.Fatal(err)
+			}
+		}
+		journal := func(operation, rel, name string, expected any) map[string]any {
+			return map[string]any{"operation_id": operation, "country": "vn", "rel": rel, "mode": "new", "database_name": name, "manifest_hash": strings.Repeat("c", 64), "dump_sha256": digest, "expected_active_db": expected, "manifest": map[string]any{"fixture": true}, "step": "creating"}
+		}
+		open, refused := frameworksUpdater(t, "sql", "journal", journal(strings.Repeat("f", 32), rels[6], frameworksOpen, frameworksActive), "creating")
+		if refused != "" {
+			t.Fatal(refused)
+		}
+		row := journal(strings.Repeat("a", 32), rels[0], target, lawActive)
+		for _, statement := range []string{open, pythonSQL(t, "journal", []any{row, "creating"})} {
+			if _, err = auth.Exec(ctx, statement); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		activatorConfig, err := pgx.ParseConfig(activator.URL)
+		if err != nil {
+			t.Fatal("parse synthetic activator configuration")
+		}
+		lingerConfig := activatorConfig.Copy()
+		lingerConfig.Database = spare
+		linger, err := pgx.ConnectConfig(ctx, lingerConfig)
+		if err != nil {
+			t.Fatal("connect lingering backend")
+		}
+		t.Cleanup(func() { _ = linger.Close(context.Background()) })
+		lockConfig := activatorConfig.Copy()
+		lockConfig.Database = auth.Config().Database
+		lock, err := pgx.ConnectConfig(ctx, lockConfig)
+		if err != nil {
+			t.Fatal("connect lock session")
+		}
+		t.Cleanup(func() { _ = lock.Close(context.Background()) })
+		var backend int
+		if err = lock.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&backend); err != nil {
+			t.Fatal(err)
+		}
+		request := map[string]any{"kind": "law", "auth": auth.Config().Database, "row": row, "root": t.TempDir(), "backend": backend}
+		if got := lawActivationSteps(t, activatorConfig, psqlPath, request, "make"); !reflect.DeepEqual(got, []string{"ok"}) {
+			t.Fatalf("create step: %q", got)
+		}
+		mark(target, runKey)
+		if linger.Ping(ctx) == nil {
+			t.Fatal("lingering activator backend survived")
+		}
+		if err = lock.Ping(ctx); err != nil {
+			t.Fatalf("lock session was ended: %v", err)
+		}
+		exists := func(name string) bool {
+			t.Helper()
+			var found bool
+			if queryErr := admin.QueryRow(ctx, `SELECT EXISTS(SELECT FROM pg_database WHERE datname=$1)`, name).Scan(&found); queryErr != nil {
+				t.Fatal(queryErr)
+			}
+			return found
+		}
+		for _, name := range []string{spare, lawExpired} {
+			if exists(name) {
+				t.Fatalf("unprotected database %s survived", name)
+			}
+		}
+		for _, name := range []string{target, lawActive, lawRetired, frameworksActive, frameworksRetired, frameworksOpen} {
+			if !exists(name) {
+				t.Fatalf("protected database %s was dropped", name)
+			}
+		}
+
+		var current string
+		if err = admin.QueryRow(ctx, `SELECT oid::text FROM pg_database WHERE datname=$1`, target).Scan(&current); err != nil {
+			t.Fatal(err)
+		}
+		if got := lawActivationSteps(t, activatorConfig, psqlPath, request, "oid", "verify"); !reflect.DeepEqual(got, []string{current, "ok"}) {
+			t.Fatalf("recorded target identity: %q, database %q", got, current)
+		}
+		for _, statement := range []string{
+			"ALTER DATABASE " + pgx.Identifier{target}.Sanitize() + " RENAME TO " + pgx.Identifier{moved}.Sanitize(),
+			"CREATE DATABASE " + pgx.Identifier{replacement}.Sanitize() + " TEMPLATE template0",
+			"ALTER DATABASE " + pgx.Identifier{replacement}.Sanitize() + " RENAME TO " + pgx.Identifier{target}.Sanitize(),
+		} {
+			if _, err = lock.Exec(ctx, statement); err != nil {
+				t.Fatal(err)
+			}
+		}
+		mark(target, runKey)
+		want := []string{"refused: " + lawSQL(t, "target", "REFUSED")}
+		if got := lawActivationSteps(t, activatorConfig, psqlPath, request, "verify"); !reflect.DeepEqual(got, want) {
+			t.Fatalf("renamed-in target: got %q, want %q", got, want)
+		}
+		guarded := lawSQL(t, "target", "guard", current, "SELECT 'ran';")
+		adminTarget := admin.Config().Copy()
+		adminTarget.Database = target
+		if got := frameworksPsql(t, psqlPath, adminTarget, lawSQL(t, "sql", "CATALOG_PATH"), guarded); got != lawSQL(t, "target", "MISMATCH") {
+			t.Fatalf("postgres step on a renamed-in target: %q", got)
+		}
+		adminTarget.Database = moved
+		if got := frameworksPsql(t, psqlPath, adminTarget, lawSQL(t, "sql", "CATALOG_PATH"), guarded); got != "ran" {
+			t.Fatalf("guard on the recorded database: %q", got)
+		}
+	})
+}
+
 func TestLawRestore_TargetOwnedByAnotherRoleIsRefusedAndKept(t *testing.T) {
 	_, _, psqlPath := frameworksClients(t)
 	for _, tc := range []struct{ kind, label, prefix, previous, active string }{
@@ -128,19 +311,8 @@ func TestLawRestore_TargetOwnedByAnotherRoleIsRefusedAndKept(t *testing.T) {
 			adminTarget.Database = name
 			frameworksPsql(t, psqlPath, adminTarget, "", "CREATE TABLE hand_restored (id integer);\n")
 
-			authURL := testpg.NewDatabase(t)
-			if err = migrate.Up(ctx, authURL); err != nil {
-				t.Fatal(err)
-			}
-			auth, err := pgx.Connect(ctx, authURL)
-			if err != nil {
-				t.Fatal("connect fixture auth")
-			}
-			t.Cleanup(func() { _ = auth.Close(context.Background()) })
+			auth := lawTargetAuth(t, activator.Role)
 			role := pgx.Identifier{activator.Role}.Sanitize()
-			if _, err = auth.Exec(ctx, "GRANT USAGE ON SCHEMA public TO "+role+"; GRANT SELECT,INSERT,UPDATE,DELETE ON corpus_release,release_journal,retired_release TO "+role+"; GRANT USAGE,SELECT ON SEQUENCE release_journal_id_seq TO "+role+"; GRANT SELECT,INSERT,UPDATE ON frameworks_release TO "+role); err != nil {
-				t.Fatal(err)
-			}
 			manifest := map[string]any{"database": name, "country": "vn", "rel": rel, "previous": nil, "dump": map[string]any{"sha256": strings.Repeat("d", 64)}}
 			var expected any
 			if tc.active != "" {
@@ -154,7 +326,7 @@ func TestLawRestore_TargetOwnedByAnotherRoleIsRefusedAndKept(t *testing.T) {
 			if err != nil {
 				t.Fatal("parse synthetic activator configuration")
 			}
-			request := map[string]any{"kind": tc.kind, "auth": auth.Config().Database, "manifest": manifest, "row": row}
+			request := map[string]any{"kind": tc.kind, "auth": auth.Config().Database, "manifest": manifest, "row": row, "root": t.TempDir()}
 
 			got := lawActivationSteps(t, activatorConfig, psqlPath, request, "choose", "make", "abort")
 			want := []string{"refused: new " + tc.label + " target already exists", "refused: activation target not owned by activator", "ok"}

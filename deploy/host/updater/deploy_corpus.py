@@ -10,6 +10,7 @@ from .deploy_corpus_activate import Activation, COMPLETE
 from .deploy_corpus_database import Database
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_result import ReleaseResult
+from .deploy_corpus_sql import SUPERUSER_REFUSED
 from .deploy_io import atomic, canonical, CommandError, Busy
 
 
@@ -115,6 +116,10 @@ class Corpus:
         return True
 
     def check(self, image):
+        self.step = 'superuser'
+        if self.db.other_superuser():
+            self.result.write('waiting', self.step, SUPERUSER_REFUSED, self.hash, self.manifest, self.mode)
+            return False
         self.step = 'compatibility'
         if not self.kind.compatible(self.manifest, self.db.describe(image)):
             self.result.write('waiting', self.step, self.kind.waiting, self.hash, self.manifest, self.mode)

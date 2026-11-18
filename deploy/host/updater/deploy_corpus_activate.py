@@ -25,8 +25,11 @@ class Activation:
             return 'retained', active
         if active != self.kind.previous(manifest):
             raise ValueError('new ' + self.kind.label + ' previous does not equal active release')
-        if self.db.exists(name) and (self.db.protected(name) or not self.db.owned(name)):
-            raise ValueError('new ' + self.kind.label + ' target already exists')
+        if self.db.exists(name):
+            if self.db.protected(name) or not self.db.owned(name):
+                raise ValueError('new ' + self.kind.label + ' target already exists')
+            if self.db.connections(name):
+                raise ValueError('new ' + self.kind.label + ' target has connections')
         return 'new', active
 
     def begin(self, hash_value, manifest, mode, expected):
@@ -139,3 +142,4 @@ class Activation:
                        database_name=name, manifest_hash=None, dump_sha256=None,
                        expected_active_db=None, manifest=None)
             self.prune_one(self.db.append(row, 'pruning'))
+        self.db.forget_targets({r['operation_id'] for r in self.db.operations() if r['step'] not in COMPLETE})
