@@ -145,6 +145,9 @@ func (h *harness) env(fault string) []string {
 
 func (h *harness) command(args ...string) {
 	h.t.Helper()
+	if len(args) > 0 && args[0] == "start" {
+		args = append(args, "--no-previous-report")
+	}
 	cmd := exec.CommandContext(h.ctx, os.Getenv("CORPUS_PROOF_BINARY"), args...)
 	cmd.Dir, cmd.Env = h.root, h.env("")
 	out, err := cmd.CombinedOutput()

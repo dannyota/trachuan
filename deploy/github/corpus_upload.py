@@ -7,6 +7,7 @@ import tempfile
 
 from corpus_manifest import identity, release_files, validate_inputs
 from corpus_previous import verified_previous
+from corpus_production import require_settled
 from manifest import positive
 
 
@@ -64,6 +65,7 @@ def upload(country, rel, directory, report):
 
     row, candidate = validate_inputs(country, rel, directory, report)
     with tempfile.TemporaryDirectory() as temporary:
+        require_settled(candidate, Path(temporary))
         verified_previous(candidate, Path(temporary), client, release_row=row)
 
     receipts = {}

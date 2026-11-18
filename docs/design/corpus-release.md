@@ -25,11 +25,12 @@ on the MacBook after the run is `evaluated` and uploads to bucket
 - `build.json`: the build record, listed in `MANIFEST.sha256`; schema 8 and
   later only, the source of the manifest's `heading_evidence`.
 
-`corpus release-row <cc> <rel> --out <file>` reads the release database and
-workshop read-only, without Temporal. `release.json` keeps the release row's
-column names, excluding `singleton`, and adds `extensions`, `run` and
-`recipe_hash_inputs`. `run` records its id, expected and incomplete item counts,
-unaccepted gap count, matching build artifact hash, the two report hashes of the
+`corpus release-row <cc> <rel> --out <file>` reads the release database,
+workshop and the run's `eval` artifact read-only, without Temporal.
+`release.json` keeps the release row's column names, excluding `singleton`, and
+adds `extensions`, `run` and `recipe_hash_inputs`. `run` records its id,
+expected and incomplete item counts, unaccepted gap count, matching build
+artifact hash, the two report hashes of the
 [selected report](release-evidence.md#selected-report) and `complete`. Complete
 requires an evaluated or released run, every item done or a gap with a gap row,
 every gap accepted, a done build whose input and recipe hashes match the release

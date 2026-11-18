@@ -87,7 +87,7 @@ func newAcquisitionFixture(t *testing.T) *acquisitionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.run = stage.Run{Country: "vn", Rel: "20990111_1", Generation: 1, Snapshot: stage.Snapshot{SourceList: list, Stages: []string{"discover", "expand", "fetch"}}}
+	f.run = stage.Run{Country: "vn", Rel: "20990111_1", Generation: 1, Snapshot: stage.Snapshot{SourceList: list, Stages: []string{"discover", "expand", "fetch"}, PreviousReport: &stage.PreviousReport{SHA256: stage.NoPreviousReport}}}
 	f.run.Snapshot.Recipes = map[string]string{"discover": strings.Repeat("d", 64), "expand": f.expand.Recipe(f.run.Snapshot), "fetch": f.fetch.Recipe(f.run.Snapshot)}
 	raw, err := json.Marshal(f.run.Snapshot)
 	if err != nil {

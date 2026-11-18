@@ -148,6 +148,7 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	if cancelling {
 		return cancel()
 	}
+	closeVersion := temporalworkflow.GetVersion(ctx, "close-evaluated", temporalworkflow.DefaultVersion, 1)
 	var closed stage.CloseResult
 	if err := execute("CloseStage", input, &closed); err != nil {
 		return finish(err)
@@ -169,7 +170,11 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	}
 	if in.Until == in.Stage || closed.NextStage == "" {
 		state := "paused"
-		if in.Stage == "eval" && temporalworkflow.GetVersion(ctx, "eval-complete", temporalworkflow.DefaultVersion, 1) != temporalworkflow.DefaultVersion {
+		if closeVersion != temporalworkflow.DefaultVersion {
+			if closed.Evaluated {
+				state = "evaluated"
+			}
+		} else if in.Stage == "eval" && temporalworkflow.GetVersion(ctx, "eval-complete", temporalworkflow.DefaultVersion, 1) != temporalworkflow.DefaultVersion {
 			state = "evaluated"
 		}
 		_, err := transition("running", state, "")

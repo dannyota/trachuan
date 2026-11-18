@@ -56,9 +56,16 @@ export CORPUS_PHAPDIEN_PACKAGE=work/phapdien/BoPhapDienDienTu.zip
 export CORPUS_OCR_STORE="$PWD/work/ocr"
 export CORPUS_FILE_CACHE="$PWD/work/cache/banhmi-vn"
 go run ./apps/corpus/cmd/corpus migrate
-go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate
+go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate --no-previous-report
 go run ./apps/corpus/cmd/corpus status vn 20261109
 ```
+
+Creating a run takes exactly one of `--previous-report <report.json>` and
+`--no-previous-report`. A run started with `--no-previous-report` is compared
+with nothing and cannot publish. A run meant for release follows
+[release a corpus](release-restore.md#release-a-corpus). Restart the worker on
+code that has these flags before the first such start. Later starts of the same
+run do not repeat the flag.
 
 The worker refuses to start unless `CORPUS_OCR_STORE` and `CORPUS_FILE_CACHE`
 name existing directories; without them a run silently loses checked OCR text
@@ -92,6 +99,8 @@ go run ./apps/corpus/cmd/corpus eval vn 20261109 --out work/eval
 
 Add `--previous <report.json>` to compare a previous report or
 `--require-floors` to return exit status 2 when a floor fails or is unavailable.
+`corpus eval` is a diagnostic: its report cannot publish, except on the older
+path for `vn/20261118_1`.
 
 `corpus cancel`, `corpus gaps`, `corpus accept-gaps --kind <kind> --note <text>`
 and `corpus export-history` take the same country and release. Run every command

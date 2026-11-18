@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-from corpus_test_support import add_heading_build, save_fixture, write_fixture
+from corpus_test_support import FakeCurl, add_heading_build, save_fixture, write_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = '''#!/usr/bin/env python3
@@ -37,16 +37,22 @@ with open(os.environ['FAKE_LOG'], 'a') as stream:
                                 config=Path(os.environ['AWS_CONFIG_FILE']).read_text() if 'AWS_CONFIG_FILE' in os.environ else '')) + '\\n')
 if name == 'oras':
     manifest = (build / 'previous-manifest.json').read_bytes()
+    moved = build / 'production-manifest.json'
+    production = moved.read_bytes() if moved.exists() else manifest
     signature = b'synthetic bundle'
-    if 'resolve' in args:
-        print('sha256:' + 'c' * 64)
+    if 'tags' in args:
+        print(json.dumps(dict(tags=['vn-production', 'vn-20990101_1'])))
+    elif 'resolve' in args:
+        print('sha256:' + ('d' if args[-1].endswith(':vn-production') else 'c') * 64)
     elif 'manifest' in args:
+        selected = production if args[-1].endswith('d' * 64) else manifest
         print(json.dumps(dict(artifactType='application/vnd.trachuan.corpus-release.v1',
                               layers=[dict(digest='sha256:' + hashlib.sha256(data).hexdigest(), size=len(data),
                                            annotations={'org.opencontainers.image.title': title})
-                                      for title, data in [('manifest.json', manifest), ('manifest.sigstore.json', signature)]])))
+                                      for title, data in [('manifest.json', selected), ('manifest.sigstore.json', signature)]])))
     elif 'blob' in args:
-        sys.stdout.buffer.write(manifest if args[-1].endswith(hashlib.sha256(manifest).hexdigest()) else signature)
+        blobs = {hashlib.sha256(data).hexdigest(): data for data in (manifest, production)}
+        sys.stdout.buffer.write(blobs.get(args[-1].rsplit(':', 1)[1], signature))
 elif name == 'cosign':
     if os.getenv('FAKE_BAD_SIGNATURE'):
         sys.exit(1)
@@ -134,6 +140,7 @@ class CorpusUploadTest(unittest.TestCase):
             executable.write_text(FAKE)
             executable.chmod(0o755)
         self.log = self.path / 'calls.jsonl'
+        self.curl = FakeCurl(self.bin, self.log)
         self.remote = self.path / 'remote'
         self.remote.mkdir()
         self.script = self.checkout_script('repo')
@@ -198,6 +205,57 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('s3://trachuan-releases/vn/20990102_1/corpus.dump', result.stdout)
         self.assertIn('corpus-release.yml --ref main', result.stdout)
+        self.assertIn('vn-production', result.stdout)
+        self.assertIn('https://trachuan.vn/api/v1/public/status', result.stdout)
+        self.assertEqual(self.calls(), [])
+
+    def test_upload_checks_served_release_before_any_object(self):
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.calls()
+        status = [index for index, call in enumerate(calls) if call['name'] == 'curl']
+        self.assertEqual(len(status), 1)
+        self.assertLess(status[0], min(index for index, call in enumerate(calls) if 'put-object' in call['args']))
+        self.assertEqual(calls[status[0]]['args'][-1], 'https://trachuan.vn/api/v1/public/status')
+
+    def test_status_request_gets_none_of_the_callers_environment(self):
+        self.env.update(HTTPS_PROXY='http://127.0.0.1:9', https_proxy='http://127.0.0.1:9',
+                        ALL_PROXY='http://127.0.0.1:9', CURL_CA_BUNDLE=str(self.path / 'ca.pem'))
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        environment = next(call['environment'] for call in self.calls() if call['name'] == 'curl')
+        self.assertIn('PATH', environment)
+        for name in ('HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'CURL_CA_BUNDLE', 'HOME', 'OCI_S3_ENDPOINT'):
+            self.assertNotIn(name, environment)
+
+    def test_unsettled_production_never_uploads(self):
+        for answer in (dict(release='20990101_2'), dict(code='503'), dict(body=b'not json')):
+            with self.subTest(answer=answer):
+                self.log.unlink(missing_ok=True)
+                self.curl.answer(**answer)
+                result = self.run_upload()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(any('put-object' in call['args'] or call['name'] == 'gh' for call in self.calls()))
+
+    def test_production_other_than_the_compared_release_never_uploads(self):
+        from manifest import canonical
+        manifest = json.loads((self.build / 'previous-manifest.json').read_bytes())
+        for change in (dict(rel='20990101_2', database='corpus_vn_20990101_2',
+                            dump=manifest['dump'] | dict(object='vn/20990101_2/corpus.dump')),
+                       dict(report=manifest['report'] | dict(sha256='0' * 64))):
+            with self.subTest(change=sorted(change)):
+                self.log.unlink(missing_ok=True)
+                (self.build / 'production-manifest.json').write_bytes(canonical(manifest | change))
+                result = self.run_upload()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('not compared with the production release', result.stderr)
+                self.assertFalse(any('put-object' in call['args'] or call['name'] in {'gh', 'curl'} for call in self.calls()))
+
+    def test_selected_report_mismatch_never_calls_clients(self):
+        self.row['run']['eval_report_sha256'] = '0' * 64
+        (self.build / 'release.json').write_text(json.dumps(self.row))
+        result = self.run_upload()
+        self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.calls(), [])
 
     def test_schema_eight_uploads_build_record_and_verifies_receipt(self):
