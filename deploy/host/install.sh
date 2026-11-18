@@ -54,7 +54,7 @@ for controller in cpu cpuset io memory pids; do
  [[ " $controllers " == *" $controller "* ]] || fail "cgroup controller $controller is not delegated; restart user@$uid.service"
 done
 
-printf '%s\n' 'net.ipv4.ip_unprivileged_port_start=80' >/etc/sysctl.d/90-trachuan.conf
+printf '%s\n' 'net.ipv4.ip_unprivileged_port_start=80' 'kernel.core_pattern=|/bin/false' >/etc/sysctl.d/90-trachuan.conf
 sysctl -p /etc/sysctl.d/90-trachuan.conf >/dev/null
 systemctl enable --now firewalld
 for service in http https; do
