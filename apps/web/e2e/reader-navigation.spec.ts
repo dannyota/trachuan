@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { clientAddress } from './client-address'
+import { scrollTo } from './reader-scroll'
 
 test('navigates a long reader on desktop and mobile', async ({ page }, info) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': clientAddress(info) })
@@ -12,7 +13,8 @@ test('navigates a long reader on desktop and mobile', async ({ page }, info) => 
   await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/documents/vn:vbpl:1'))
   await page.setViewportSize({ width: 1280, height: 720 })
   await expect(page.locator('.reader-toc-desktop')).toHaveCSS('position', 'sticky')
-  await page.locator('[data-anchor="dieu-5"]').evaluate(element => element.scrollIntoView())
+  const edge = await page.evaluate(() => document.querySelector('.site-header')!.getBoundingClientRect().bottom)
+  await scrollTo(page.locator('[data-anchor="dieu-5"]'), edge)
   await expect(page.locator('.reader-toc-desktop [aria-current="location"]').last()).toContainText('Điều 5')
   await expect(page.getByRole('button', { name: /lên đầu trang/i })).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
@@ -41,7 +43,9 @@ test('tracks long articles when scrolling down and back up', async ({ page }, in
   await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
   await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/documents/vn:vbpl:1#dieu-2'))
   await expect(page.locator('.reader-toc-desktop [aria-current="location"]')).toHaveText('Điều 2')
-  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  const article = page.locator('[data-anchor="dieu-2"]')
+  const anchored = await article.evaluate(element => parseFloat(getComputedStyle(element).scrollMarginTop))
+  await scrollTo(article, anchored)
   const scroll = (distance: number) => page.evaluate(async distance => {
     for (let i = 0; i < 30; i++) {
       window.scrollBy(0, distance)
@@ -116,7 +120,7 @@ test('tracks direct jumps between the interiors of long articles', async ({ page
   for (const i of [1, 2, 1, 3, 2]) {
     const article = page.locator(`[data-anchor="dieu-${i}"]`)
     expect((await article.boundingBox())!.height).toBeGreaterThan(3000)
-    await article.evaluate(element => window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top + 1400))
+    await scrollTo(article, -1400)
     const geometry = await page.evaluate(() => {
       const edge = document.querySelector('.site-header')!.getBoundingClientRect().bottom + 1
       const headings = Array.from(document.querySelectorAll<HTMLElement>('.reader-content [data-spy]'))
