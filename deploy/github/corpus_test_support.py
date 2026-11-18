@@ -2,13 +2,42 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 from corpus_manifest import create, non_regression_contract
 from manifest import canonical
 
 
+FAKE_CURL = '''#!{python}
+import json
+import os
+import sys
+with open({state!r}) as stream:
+    state = json.load(stream)
+with open({log!r}, 'a') as stream:
+    stream.write(json.dumps(dict(name='curl', args=sys.argv[1:], run='', checksum=None, config='',
+                                 environment=sorted(os.environ))) + '\\n')
+sys.stdout.buffer.write(bytes.fromhex(state['body']) + state['code'].encode())
+sys.stdout.buffer.flush()
+sys.exit(state['exit'])
+'''
+
+
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+class FakeCurl:
+    def __init__(self, directory, log):
+        self.state = directory / 'curl-state.json'
+        script = directory / 'curl'
+        script.write_text(FAKE_CURL.format(python=sys.executable, state=str(self.state), log=str(log)))
+        script.chmod(0o755)
+        self.answer()
+
+    def answer(self, code='200', body=None, release='20990101_1', exit_code=0):
+        data = json.dumps(dict(release=release)).encode() if body is None else body
+        self.state.write_text(json.dumps(dict(code=code, body=data.hex(), exit=exit_code)))
 
 
 def retrieval_recipe():
@@ -98,8 +127,20 @@ def write_fixture(path):
 
 
 def save_fixture(path, row, report):
+    data = json.dumps(report).encode()
+    if isinstance(row.get('run'), dict):
+        previous = (report.get('previous_diff') or {}).get('previous') or {}
+        row['run'].update(eval_report_sha256=digest(data),
+                          previous_report_sha256=previous.get('report_sha256', 'none'))
     (path / 'release.json').write_text(json.dumps(row))
-    (path / 'report.json').write_text(json.dumps(report))
+    (path / 'report.json').write_bytes(data)
+
+
+def save_older_shape(path, row):
+    older = copy.deepcopy(row)
+    for field in ('eval_report_sha256', 'previous_report_sha256'):
+        older['run'].pop(field, None)
+    (path / 'release.json').write_text(json.dumps(older))
 
 
 def add_heading_build(path, row, report):

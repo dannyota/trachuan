@@ -7,12 +7,15 @@ from registry import command, fetch_blob
 from signing import verify
 
 
+def repository_tags():
+    repository = 'ghcr.io/dannyota/trachuan-corpus-release'
+    return json.loads(command(['oras', 'repo', 'tags', '--format', 'json', repository]))['tags']
+
+
 def production(country, directory):
     require_match(r'[a-z]{2}', country, 'country')
-    repository = 'ghcr.io/dannyota/trachuan-corpus-release'
     tag = country + '-production'
-    tags = json.loads(command(['oras', 'repo', 'tags', '--format', 'json', repository]))['tags']
-    if tag not in tags:
+    if tag not in repository_tags():
         return None
     return signed_manifest(country, tag, directory)
 
@@ -24,6 +27,13 @@ def release(country, rel, directory):
     if obj['rel'] != rel:
         raise ValueError('previous manifest release differs from report')
     return obj
+
+
+def existing_release(country, rel, directory):
+    require_match(r'[a-z]{2}', country, 'country')
+    if f'{country}-{rel}' not in repository_tags():
+        return None
+    return release(country, rel, directory)
 
 
 def signed_manifest(country, tag, directory):

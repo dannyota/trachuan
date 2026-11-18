@@ -42,8 +42,8 @@ Neither or both refuses the start, so a forgotten flag cannot look like a
 baseline. Both are unrelated to `--previous-manifest`, the ingest baseline. The
 snapshot freezes the **decision**: the file's SHA-256 and store path, or `none`.
 Two decisions are the same when their SHA-256 are equal. While the run has no
-`eval` item a start may replace the decision, and the run message records it;
-after that a different decision is refused.
+`eval` item a start may replace the decision and prints both SHA-256; after that
+a different decision is refused.
 
 The `eval` stage reads the stored file, fails when its SHA-256 differs, and puts
 the frozen SHA-256 in its input hash, so another previous report cannot reuse an
@@ -78,9 +78,12 @@ and `rel`.
 
 Signing repeats the manifest comparison first, before it signs or pushes
 anything, inside the workflow's concurrency group, so a refusal leaves no tag
-and two uploads that froze one previous cannot both publish. It is exempt only
-when a `<cc>-<rel>` manifest already exists with a sequence at or below
-production's, which keeps retry and rollback working.
+and the second of two uploads that froze one previous is refused. It is exempt
+only when a `<cc>-<rel>` manifest already exists with a sequence at or below
+production's, which keeps retry and rollback working. That exemption cannot tell
+a rollback from a release that was pushed but never became production: signing
+such a release moves the tag, the host refuses it because its `previous` is not
+the active release, and signing the active release again recovers.
 
 ### Runs before this rule
 
@@ -90,11 +93,12 @@ run has no `evidence` stage and becomes `evaluated` after `eval`; a restart
 never appends `evidence` to it and a decision flag on it is refused. It uploads
 a report from `corpus eval --previous`, and release-row writes neither field, so
 it skips only the two hash checks: settled production and the signing comparison
-still apply. Above the cutoff, planning, release-row, upload and signing refuse
-a missing decision. Upload accepts the older shape only for exactly the cutoff;
-signing accepts it at or below the cutoff, so older releases can be signed
-again. The first run with a decision starts after the cutoff release is
-published and active.
+still apply. Above the cutoff, `corpus start` refuses a run without a decision
+unless a flag adds one while the run has no `eval` item, and planning,
+release-row, upload and signing refuse a missing decision. Upload accepts the
+older shape only for exactly the cutoff; signing accepts it at or below the
+cutoff, so older releases can be signed again. The first run with a decision
+starts after the cutoff release is published and active.
 
 ## `findings.json`
 

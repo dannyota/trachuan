@@ -16,21 +16,9 @@ func readPreviousReport(path, metadata string) (Report, string, error) {
 	if err != nil {
 		return Report{}, "", fmt.Errorf("read previous report: %w", err)
 	}
-	previous, err := decodePreviousReport(data)
+	previous, err := parsePreviousReport(data)
 	if err != nil {
 		return Report{}, "", err
-	}
-	if previous.Version == 2 && len(previous.RetrievalRecipe) == 0 {
-		return Report{}, "", fmt.Errorf("previous version 2 retrieval recipe missing")
-	}
-	if len(previous.RetrievalRecipe) > 0 {
-		var recipe retrieval.Recipe
-		if err = json.Unmarshal(previous.RetrievalRecipe, &recipe); err != nil {
-			return Report{}, "", fmt.Errorf("decode previous retrieval recipe: %w", err)
-		}
-		if recipe.Hash() != previous.Recipes["retrieval"] {
-			return Report{}, "", fmt.Errorf("previous retrieval recipe hash differs from report")
-		}
 	}
 	if metadata != "" {
 		if err = readPreviousRecipe(&previous, metadata); err != nil {
@@ -39,6 +27,60 @@ func readPreviousReport(path, metadata string) (Report, string, error) {
 	}
 	sum := sha256.Sum256(data)
 	return previous, hex.EncodeToString(sum[:]), nil
+}
+
+func parsePreviousReport(data []byte) (Report, error) {
+	previous, err := decodePreviousReport(data)
+	if err != nil {
+		return Report{}, err
+	}
+	if previous.Version == 2 && len(previous.RetrievalRecipe) == 0 {
+		return Report{}, fmt.Errorf("previous version 2 retrieval recipe missing")
+	}
+	if len(previous.RetrievalRecipe) > 0 {
+		var recipe retrieval.Recipe
+		if err = json.Unmarshal(previous.RetrievalRecipe, &recipe); err != nil {
+			return Report{}, fmt.Errorf("decode previous retrieval recipe: %w", err)
+		}
+		if recipe.Hash() != previous.Recipes["retrieval"] {
+			return Report{}, fmt.Errorf("previous retrieval recipe hash differs from report")
+		}
+	}
+	return previous, nil
+}
+
+func ParseDecisionReport(data []byte) (Report, error) {
+	report, err := parsePreviousReport(data)
+	if err != nil {
+		return Report{}, err
+	}
+	if report.Version != 2 {
+		return Report{}, fmt.Errorf("previous report is version %d, want version 2", report.Version)
+	}
+	if report.Status != "complete" {
+		return Report{}, fmt.Errorf("previous report status %q is not complete", report.Status)
+	}
+	return report, nil
+}
+
+type ComparedRelease struct {
+	Country      string `json:"country"`
+	Rel          string `json:"rel"`
+	ReportSHA256 string `json:"report_sha256"`
+}
+
+func (r Report) ComparedRelease() (*ComparedRelease, error) {
+	data, err := json.Marshal(r.PreviousDiff)
+	if err != nil {
+		return nil, fmt.Errorf("encode previous_diff: %v", err)
+	}
+	var diff struct {
+		Previous *ComparedRelease `json:"previous"`
+	}
+	if err = json.Unmarshal(data, &diff); err != nil {
+		return nil, fmt.Errorf("decode previous_diff: %v", err)
+	}
+	return diff.Previous, nil
 }
 
 func readPreviousRecipe(previous *Report, path string) error {

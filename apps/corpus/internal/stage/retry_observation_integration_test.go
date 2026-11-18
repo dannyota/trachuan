@@ -32,7 +32,7 @@ func TestRetry_DetachesObservations(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	snapshot, err := json.Marshal(stage.Snapshot{SourceList: json.RawMessage(`{}`), Stages: []string{"fetch"}, Recipes: map[string]string{"fetch": "recipe"}})
+	snapshot, err := json.Marshal(stage.Snapshot{SourceList: json.RawMessage(`{}`), Stages: []string{"fetch"}, Recipes: map[string]string{"fetch": "recipe"}, PreviousReport: &stage.PreviousReport{SHA256: stage.NoPreviousReport}})
 	if err != nil {
 		t.Fatal(err)
 	}

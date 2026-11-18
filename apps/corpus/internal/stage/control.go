@@ -26,6 +26,7 @@ type CloseResult struct {
 	Failed     bool
 	Cancelling bool
 	Reason     string
+	Evaluated  bool
 }
 
 type MarkInput struct {
@@ -219,6 +220,10 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 		result.Failed, result.Reason = true, reason
 		return result, nil
 	}
+	result.Evaluated, err = closedEvaluated(row.Snapshot, row.Country, row.Rel, in.Stage)
+	if err != nil {
+		return result, err
+	}
 	if alreadyClosed {
 		result.NextStage = following
 		return result, nil
@@ -227,7 +232,7 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 		return result, fmt.Errorf("stage %s has %d pending items", in.Stage, result.Counts.Pending)
 	}
 	if result.Counts.Failed > 0 {
-		result.Failed = true
+		result.Failed, result.Evaluated = true, false
 		return result, nil
 	}
 	if hasFinalizer {
@@ -247,7 +252,7 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 			if err = tx.Commit(ctx); err != nil {
 				return result, fmt.Errorf("commit stage failure: %w", err)
 			}
-			result.Failed, result.Reason = true, final.Reason
+			result.Failed, result.Reason, result.Evaluated = true, final.Reason, false
 			return result, nil
 		}
 		gaps, err = q.ListUnacceptedGapCounts(ctx, in.RunID)
@@ -270,6 +275,14 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 	}
 	result.NextStage = following
 	return result, nil
+}
+
+func closedEvaluated(raw json.RawMessage, country, rel, name string) (bool, error) {
+	var snapshot Snapshot
+	if err := json.Unmarshal(raw, &snapshot); err != nil {
+		return false, fmt.Errorf("decode run snapshot: %w", err)
+	}
+	return EvaluatedAfter(country, rel, snapshot, name), nil
 }
 
 func MarkRun(ctx context.Context, env Env, in MarkInput) (bool, error) {

@@ -104,6 +104,8 @@ func lifecycle(ctx context.Context, name string, args []string, stdout, stderr i
 	case "start":
 		allowed["--until"] = true
 		allowed["--previous-manifest"] = true
+		allowed["--previous-report"] = true
+		allowed["--no-previous-report"] = false
 	case "recover":
 		allowed["--terminate"] = false
 	case "accept-gaps":
@@ -119,6 +121,14 @@ func lifecycle(ctx context.Context, name string, args []string, stdout, stderr i
 		_, _ = fmt.Fprintln(stderr, "--kind is required")
 		return 2
 	}
+	var choice run.ReportChoice
+	if name == "start" {
+		choice, err = reportChoice(opts)
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, err)
+			return 2
+		}
+	}
 	d, closeDeps, err := dependencies(ctx, name == "start", cc)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, err)
@@ -128,6 +138,7 @@ func lifecycle(ctx context.Context, name string, args []string, stdout, stderr i
 	var result any
 	switch name {
 	case "start":
+		applyStartFlags(&d, choice, stdout)
 		err = run.Start(ctx, d, cc, rel, opts["--until"], opts["--previous-manifest"])
 	case "status":
 		report, statusErr := run.Status(ctx, d, cc, rel)
@@ -163,6 +174,23 @@ func lifecycle(ctx context.Context, name string, args []string, stdout, stderr i
 		}
 	}
 	return 0
+}
+
+func applyStartFlags(d *run.Deps, choice run.ReportChoice, stdout io.Writer) {
+	d.PreviousReport = choice
+	d.Notice = func(message string) { _, _ = fmt.Fprintln(stdout, message) }
+}
+
+func reportChoice(opts map[string]string) (run.ReportChoice, error) {
+	path, hasPath := opts["--previous-report"]
+	_, none := opts["--no-previous-report"]
+	if hasPath && none {
+		return run.ReportChoice{}, fmt.Errorf("use only one of --previous-report and --no-previous-report")
+	}
+	if hasPath && path == "" {
+		return run.ReportChoice{}, fmt.Errorf("--previous-report needs a file")
+	}
+	return run.ReportChoice{Path: path, None: none}, nil
 }
 
 func pausedSources(sources []store.RunSource) []store.RunSource {

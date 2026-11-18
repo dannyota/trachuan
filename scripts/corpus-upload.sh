@@ -35,6 +35,8 @@ files=$(python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$r
 prefix="$country/$rel/"
 
 if [[ $dry_run == true ]]; then
+  printf 'Require report previous rel and SHA-256 to equal the verified %s-production manifest\n' "$country"
+  printf 'Require release of https://trachuan.vn/api/v1/public/status to equal that rel\n'
   printf 'Verify previous signed manifest and report SHA-256; recompute comparisons before upload\n'
   printf 'Check empty prefix s3://trachuan-releases/%s with profile trachuan-release-upload\n' "$prefix"
   while IFS= read -r file; do

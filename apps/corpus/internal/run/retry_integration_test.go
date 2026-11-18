@@ -71,7 +71,7 @@ func TestStart_RetriesDoneDiscoverItemWithSourceGap(t *testing.T) {
 	d.RecipesFor = func(stage.Snapshot) map[string]string {
 		return map[string]string{"discover": "one", "expand": "two", "fetch": "three"}
 	}
-	snap := stage.Snapshot{SourceList: []byte(`{}`), Stages: d.Stages, Recipes: d.RecipesFor(stage.Snapshot{})}
+	snap := stage.Snapshot{SourceList: []byte(`{}`), Stages: d.Stages, Recipes: d.RecipesFor(stage.Snapshot{}), PreviousReport: &stage.PreviousReport{SHA256: stage.NoPreviousReport}}
 	next := "fetch"
 	insertLifecycleRun(t, d, "paused", time.Now(), snap, &next)
 	ctx := context.Background()
@@ -138,7 +138,7 @@ func TestStart_RetryRebuildsDependents(t *testing.T) {
 	d.RecipesFor = func(stage.Snapshot) map[string]string {
 		return map[string]string{"discover": "one", "expand": "two", "fetch": "three", "build": "four"}
 	}
-	snap := stage.Snapshot{SourceList: []byte(`{}`), Stages: d.Stages, Recipes: d.RecipesFor(stage.Snapshot{})}
+	snap := stage.Snapshot{SourceList: []byte(`{}`), Stages: d.Stages, Recipes: d.RecipesFor(stage.Snapshot{}), PreviousReport: &stage.PreviousReport{SHA256: stage.NoPreviousReport}}
 	next := "build"
 	insertLifecycleRun(t, d, "paused", time.Now(), snap, &next)
 	ctx := context.Background()

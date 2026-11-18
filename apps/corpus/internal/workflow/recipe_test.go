@@ -25,3 +25,11 @@ func TestActivityError_UnregisteredGapIsNonRetryable(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 }
+
+func TestActivityError_MissingDecisionIsNonRetryable(t *testing.T) {
+	err := activityError(fmt.Errorf("plan: %w", stage.RequireDecision("vn", "20990101", stage.Snapshot{})))
+	var application *temporal.ApplicationError
+	if !errors.As(err, &application) || !application.NonRetryable() || application.Type() != "no_previous_report_decision" || !errors.Is(err, stage.ErrNoDecision) {
+		t.Fatalf("err=%v", err)
+	}
+}
