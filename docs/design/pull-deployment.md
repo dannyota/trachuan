@@ -146,10 +146,10 @@ retries. A run has three phases, each skipped when nothing changed: secrets
    and `commit` to the certificate with `--certificate-github-workflow-ref` and
    `--certificate-github-workflow-sha`.
 3. Apply the [acceptance rule](#acceptance).
-4. Verify images: pull each by digest, then verify its build attestation from
-   the registry with the build identity from policy and require the SLSA v1
-   subject digest, source repository, commit and ref to equal the manifest. The
-   verifier is `cosign verify-attestation --new-bundle-format`
+4. Verify images: pull each by digest, retried once on a timeout; verify its
+   build attestation from the registry with the policy's build identity; require
+   the SLSA v1 subject digest, source repository, commit and ref to equal the
+   manifest. The verifier is `cosign verify-attestation --new-bundle-format`
    ([bundle support](https://blog.sigstore.dev/cosign-verify-bundles/)); the
    first implementation step proves it reads GitHub's referrer bundles
    anonymously, and otherwise uses a pinned
