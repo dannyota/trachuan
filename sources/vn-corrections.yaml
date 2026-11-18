@@ -236,13 +236,13 @@
   reviewed: "2026-11-15"
 - key: vn:vbpl:14392
   number: "45/2007/NĐ-CP"
-  set: {"status_class": "expired"}
-  reason: "73/2016/NĐ-CP ends the whole decree; the source partial status is wrong."
+  set: {status_class: "expired", eff_to: "2016-07-01"}
+  reason: "73/2016/NĐ-CP ends the whole decree; the source partial status is wrong. Ends when 73/2016/NĐ-CP takes effect, which Điều 115 khoản 1 states as 2016-07-01."
   evidence:
     key: vn:vbpl:112025
     anchor: "dieu-115/khoan-2"
     quote: "Nghị định số 45/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chi tiết thi hành một số điều của Luật kinh doanh bảo hiểm; Nghị định số 123/2011/NĐ-CP ngày 28 tháng 12 năm 2011 của Chính phủ quy định chi tiết thi hành một số điều của Luật sửa đổi, bổ sung một số điều của Luật kinh doanh bảo hiểm và sửa đổi, bổ sung một số điều của Nghị định số 45/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chi tiết thi hành một số điều của Luật kinh doanh bảo hiểm; Nghị định số 68/2014/NĐ-CP ngày 09 tháng 7 năm 2014 của Chính phủ sửa đổi, bổ sung một số điều của Nghị định số 45/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chi tiết thi hành một số điều của Luật kinh doanh bảo hiểm và Nghị định số 46/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chế độ tài chính đối với doanh nghiệp bảo hiểm, doanh nghiệp môi giới bảo hiểm hết hiệu lực thi hành kể từ ngày Nghị định này có hiệu lực."
-  reviewed: "2026-11-15"
+  reviewed: "2026-11-18"
 - key: vn:vbpl:14832
   number: "78/2006/QH11"
   set: {"eff_to": "2020-07-01"}
@@ -318,13 +318,13 @@
   reviewed: "2026-11-15"
 - key: vn:vbpl:95908
   number: "86/2015/QH13"
-  set: {"status_class": "expired"}
-  reason: "116/2025/QH15 ends the whole law; Điều 45 preserves existing system classifications, licences and products."
+  set: {status_class: "expired", eff_to: "2026-07-01"}
+  reason: "116/2025/QH15 ends the whole law; Điều 45 preserves existing system classifications, licences and products. Ends when 116/2025/QH15 takes effect, which Điều 44 khoản 1 states as 2026-07-01."
   evidence:
     key: vn:vbpl:187039
     anchor: "dieu-44/khoan-2"
     quote: "Luật An toàn thông tin mạng số 86/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14; Luật An ninh mạng số 24/2018/QH14 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành."
-  reviewed: "2026-11-15"
+  reviewed: "2026-11-18"
 - key: vn:vbpl:175587
   number: "55/2025/NĐ-CP"
   set: {"eff_to": "2026-07-01"}
@@ -497,4 +497,1903 @@
     key: vn:vbpl:186792
     anchor: "dieu-74"
     quote: "b) Thông tư số 40/2018/TT-NHNN ngày 28 tháng 12 năm 2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:152699
+  number: "13/2022/NĐ-CP"
+  set: {eff_to: "2026-07-01"}
+  reason: "37/2026/NĐ-CP Điều 97 khoản 2 điểm d ends the whole of 13/2022/NĐ-CP from the stated date 2026-07-01, the first day it is no longer in force; khoản 4 only ends some of its clauses earlier."
+  evidence:
+    key: vn:vbpl:0a41bfe0-80f5-11f1-9da2-4f5ad591bf79
+    anchor: "dieu-97/khoan-2/diem-d"
+    quote: "d) Nghị định số 13/2022/NĐ-CP ngày 21 tháng 01 năm 2022 của Chính phủ sửa đổi, bổ sung một số điều Nghị định số 132/2008/NĐ-CP ngày 31 tháng 12 năm 2008"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:12630
+  number: "132/2008/NĐ-CP"
+  set: {eff_to: "2026-07-01"}
+  reason: "37/2026/NĐ-CP Điều 97 khoản 2 điểm a ends the whole of 132/2008/NĐ-CP from the stated date 2026-07-01, which is the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:0a41bfe0-80f5-11f1-9da2-4f5ad591bf79
+    anchor: "dieu-97/khoan-2/diem-a"
+    quote: "a) Nghị định số 132/2008/NĐ-CP ngày 31 tháng 12 năm 2008 của Chính phủ quy định chi tiết thi hành một số điều của Luật Chất lượng sản phẩm, hàng hóa;"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:128994
+  number: "74/2018/NĐ-CP"
+  set: {eff_to: "2026-07-01"}
+  reason: "37/2026/NĐ-CP Điều 97 khoản 2 điểm b ends the whole of 74/2018/NĐ-CP from the stated date 2026-07-01, which is the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:0a41bfe0-80f5-11f1-9da2-4f5ad591bf79
+    anchor: "dieu-97/khoan-2/diem-b"
+    quote: "b) Nghị định số 74/2018/NĐ-CP ngày 15 tháng 5 năm 2018 của Chính phủ sửa đổi, bổ sung một số điều của Nghị định số 132/2008/NĐ-CP"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:2083
+  number: "29-LCT/HĐNN8"
+  set: {eff_to: "2017-01-01"}
+  reason: "Ends when Luật Báo chí 103/2016/QH13 takes effect, which Điều 60 khoản 1 states as 2017-01-01."
+  evidence:
+    key: vn:vbpl:101872
+    anchor: "dieu-60/khoan-2"
+    quote: "Luật báo chí ngày 28 tháng 12 năm 1989 đã được sửa đổi, bổ sung một số Điều theo Luật số 12/1999/QH10 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:108847
+  number: "29 - TC / CÐTC"
+  set: {eff_to: "1991-01-01"}
+  reason: "Replaced as a whole by 15-BTC/TT, which states it takes effect and replaces the target from 1991-01-01."
+  evidence:
+    key: vn:vbpl:11297
+    anchor: "phan-4"
+    quote: "Thông tư này có hiệu lực thi hành từ ngày 01 tháng 01 năm 1991 và thay thế cho Thông tư số 29-TC/CĐTC  ngày 10-8-1989 của Bộ Tài chính"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:22443
+  number: "57/2002/NĐ-CP"
+  set: {eff_to: "2017-01-01"}
+  reason: "Ends as a whole when 120/2016/NĐ-CP takes effect, stated as 2017-01-01."
+  evidence:
+    key: vn:vbpl:113064
+    anchor: "dieu-8/khoan-2/diem-a"
+    quote: "a) Nghị định số 57/2002/NĐ-CP ngày 03 tháng 6 năm 2002 của Chính phủ quy định chi tiết thi hành Pháp lệnh phí và lệ phí"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:20632
+  number: "40/2004/NĐ-CP"
+  set: {eff_to: "2016-07-01"}
+  reason: "Ends as a whole when 94/2016/NĐ-CP takes effect, stated in Điều 14 as 2016-07-01."
+  evidence:
+    key: vn:vbpl:113087
+    anchor: "dieu-14/khoan-2/diem-a"
+    quote: "a) Nghị định số 40/2004/ND-CP ngày 13 tháng 02 năm 2004 của Chính phủ quy định chi tiết và hướng dẫn thi hành một số điều của Luật thống kê"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:39378
+  number: "30/2008/QĐ-NHNN"
+  set: {eff_to: "2017-09-30"}
+  reason: "Ends as a whole when 02/2017/TT-NHNN takes effect, stated as 2017-09-30."
+  evidence:
+    key: vn:vbpl:121581
+    anchor: "dieu-23/khoan-2/diem-b"
+    quote: "b) Quyết định số 30/2008/QĐ-NHNN ngày 16 tháng 10 năm 2008 của Thống đốc Ngân hàng Nhà nước Việt Nam sửa đổi, bổ sung một số điều của quy chế hoạt động bao thanh toán"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:39748
+  number: "01/2008/TTLT-BCT-BTC-BGTVT-BNN&PTNT-BYT-NHNN"
+  set: {eff_to: "2017-08-12"}
+  reason: "Repealed as a whole by 04/2017/TT-NHNN, whose effective date is 2017-08-12."
+  evidence:
+    key: vn:vbpl:122671
+    anchor: "dieu-1/khoan-14"
+    quote: "14. Thông tư liên tịch số 01/2008/TTLT-BCT-BTC-BGTVT-BNN&PTNT-BYT-NHNN ngày 31/01/2008 hướng dẫn thực hiện Quyết định 254/2006/QĐ-TTg"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:104953
+  number: "51/2006/QĐ-NHNN"
+  set: {eff_to: "2018-01-01"}
+  reason: "Ends as a whole when 14/2017/TT-NHNN takes effect, stated as 2018-01-01."
+  evidence:
+    key: vn:vbpl:125249
+    anchor: "dieu-9/khoan-2/diem-b"
+    quote: "b) Quyết định số 51/2006/QĐ-NHNN ngày 06 tháng 10 năm 2006 của Thống đốc Ngân hàng Nhà nước về việc huỷ bỏ Điều 4 của quy định phương pháp tính và hạch toán thu, trả lãi"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:105542
+  number: "35/2008/QĐ-NHNN"
+  set: {eff_to: "2018-06-01"}
+  reason: "Listed whole under the 05/2018/TT-NHNN expiry clause, so it ends on that circular's effective date, 2018-06-01."
+  evidence:
+    key: vn:vbpl:128193
+    anchor: "dieu-18/khoan-2/diem-b"
+    quote: "Quyết định số 35/2008/QĐ-NHNN ngày 16/12/2008 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:32492
+  number: "05/2013/TT-BTC"
+  set: {eff_to: "2018-03-26"}
+  reason: "Replaced whole by 16/2018/TT-BTC, so it ends on that circular's effective date, 2018-03-26."
+  evidence:
+    key: vn:vbpl:128210
+    anchor: "dieu-12/khoan-2"
+    quote: "Thông tư này thay thế Thông tư số 05/2013/TT-BTC ngày 09 tháng 01 năm 2013 của Bộ Tài chính"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:46780
+  number: "93/2013/TT-BTC"
+  set: {eff_to: "2018-03-29"}
+  reason: "Replaced whole by 19/2018/TT-BTC, so it ends on that circular's effective date, 2018-03-29."
+  evidence:
+    key: vn:vbpl:128214
+    anchor: "dieu-14/khoan-2"
+    quote: "Thông tư này thay thế Thông tư số 93/2013/TT-BTC ngày 08 tháng 7 năm 2013 của Bộ Tài chính"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:24403
+  number: "02/2008/TT-NHNN"
+  set: {eff_to: "2018-06-01"}
+  reason: "Listed whole under the 10/2018/TT-NHNN expiry clause, so it ends on that circular's effective date, 2018-06-01."
+  evidence:
+    key: vn:vbpl:128516
+    anchor: "dieu-18/khoan-2/diem-a"
+    quote: "Thông tư số 02/2008/TT-NHNN ngày 02/4/2008 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:24848
+  number: "05/2010/NĐ-CP"
+  set: {eff_to: "2018-07-01"}
+  reason: "Repealed whole by 42/2018/NĐ-CP Điều 1, so it ends on that decree's effective date, 2018-07-01."
+  evidence:
+    key: vn:vbpl:128525
+    anchor: "dieu-1/khoan-6"
+    quote: "Nghị định số 05/2010/NĐ-CP ngày 18 tháng 01 năm 2010 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10762
+  number: "14-CP"
+  set: {eff_to: "2018-07-01"}
+  reason: "Repealed whole by 42/2018/NĐ-CP Điều 1, so it ends on that decree's effective date, 2018-07-01."
+  evidence:
+    key: vn:vbpl:128525
+    anchor: "dieu-1/khoan-1"
+    quote: "Nghị định số 14/CP ngày 02 tháng 3 năm 1993 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16526
+  number: "22/2006/NĐ-CP"
+  set: {eff_to: "2018-07-01"}
+  reason: "Repealed whole by 42/2018/NĐ-CP Điều 1, so it ends on that decree's effective date, 2018-07-01."
+  evidence:
+    key: vn:vbpl:128525
+    anchor: "dieu-1/khoan-4"
+    quote: "Nghị định số 22/2006/NĐ-CP ngày 28 tháng 02 năm 2006 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:23222
+  number: "48/2001/NĐ-CP"
+  set: {eff_to: "2018-07-01"}
+  reason: "Repealed whole by 42/2018/NĐ-CP Điều 1, so it ends on that decree's effective date, 2018-07-01."
+  evidence:
+    key: vn:vbpl:128525
+    anchor: "dieu-1/khoan-2"
+    quote: "Nghị định số 48/2001/NĐ-CP ngày 13 tháng 8 năm 2001 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:11739
+  number: "59/2009/NĐ-CP"
+  set: {eff_to: "2018-07-01"}
+  reason: "Repealed whole by 42/2018/NĐ-CP Điều 1, so it ends on that decree's effective date, 2018-07-01."
+  evidence:
+    key: vn:vbpl:128525
+    anchor: "dieu-1/khoan-5"
+    quote: "Nghị định số 59/2009/NĐ-CP ngày 16 tháng 7 năm 2009 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:18298
+  number: "69/2005/NĐ-CP"
+  set: {eff_to: "2018-07-01"}
+  reason: "Repealed whole by 42/2018/NĐ-CP Điều 1, so it ends on that decree's effective date, 2018-07-01."
+  evidence:
+    key: vn:vbpl:128525
+    anchor: "dieu-1/khoan-3"
+    quote: "Nghị định số 69/2005/NĐ-CP ngày 26 tháng 5 năm 2005 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:48823
+  number: "02/2015/TT-NHNN"
+  set: {eff_to: "2018-05-15"}
+  reason: "Replaced whole by 08/2018/TT-NHNN, so it ends on that circular's effective date, 2018-05-15."
+  evidence:
+    key: vn:vbpl:128720
+    anchor: "doan-191"
+    quote: "thay thế Thông tư số 02/2015/TT-NHNN ngày 7 tháng 01 năm 2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:19746
+  number: "582/2003/QĐ-NHNN"
+  set: {eff_to: "2018-07-13"}
+  reason: "Listed whole under the 14/2018/TT-NHNN expiry clause, so it ends on that circular's effective date, 2018-07-13."
+  evidence:
+    key: vn:vbpl:129092
+    anchor: "dieu-7/khoan-2/diem-c"
+    quote: "Quyết định số 582/2003/QĐ-NHNN ngày 09 tháng 6 năm 2003 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:26391
+  number: "29/2008/QĐ-NHNN"
+  set: {eff_to: "2019-01-01"}
+  reason: "Replaced as a whole by 18/2018/TT-NHNN, which takes effect on 2019-01-01; its exception only delays point b of Article 12 clause 2 of the acting circular."
+  evidence:
+    key: vn:vbpl:130588
+    anchor: "doan-284"
+    quote: "Quyết định 29/2008/QĐ-NHNN ngày 13 tháng 10 năm 2008 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:97932
+  number: "31/2015/TT-NHNN"
+  set: {eff_to: "2019-01-01"}
+  reason: "Replaced as a whole by 18/2018/TT-NHNN, which takes effect on 2019-01-01; its exception only delays point b of Article 12 clause 2 of the acting circular."
+  evidence:
+    key: vn:vbpl:130588
+    anchor: "doan-284"
+    quote: "thay thế Thông tư 31/2015/TT-NHNN ngày 28 tháng 12 năm 2015 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:19615
+  number: "689/2004/QĐ-NHNN"
+  set: {eff_to: "2018-10-12"}
+  reason: "Ends when 19/2018/TT-NHNN takes effect, stated as 2018-10-12 in Article 22 clause 1."
+  evidence:
+    key: vn:vbpl:130750
+    anchor: "dieu-22/khoan-2"
+    quote: "Kể từ ngày Thông tư này có hiệu lực thi hành, Quyết định số 689/2004/QĐ-NHNN ngày 07/6/2004 của Thống đốc Ngân hàng Nhà nước Việt Nam"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:26226
+  number: "06/2011/TT-NHNN"
+  set: {eff_to: "2018-12-31"}
+  reason: "Replaced as a whole by 26/2018/TT-NHNN from its stated effective date, 2018-12-31."
+  evidence:
+    key: vn:vbpl:132146
+    anchor: "dieu-19"
+    quote: "thay thế Thông tư số 06/2011/TT-NHNN ngày 22 tháng 3 năm 2011 của Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:42750
+  number: "36/2013/TT-NHNN"
+  set: {eff_to: "2019-02-01"}
+  reason: "Replaced as a whole by 31/2018/TT-NHNN from its stated effective date, 2019-02-01."
+  evidence:
+    key: vn:vbpl:132558
+    anchor: "dieu-24/khoan-1"
+    quote: "thay thế Thông tư số 36/2013/TT-NHNN ngày 31 tháng 12 năm 2013 của Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:22043
+  number: "218/2002/QĐ-NHNN"
+  set: {eff_to: "2019-02-01"}
+  reason: "Replaced as a whole by 32/2018/TT-NHNN, effective 2019-02-01 under Article 12 clause 1."
+  evidence:
+    key: vn:vbpl:132559
+    anchor: "dieu-12/khoan-2"
+    quote: "Thông tư này thay thế Quyết định số 218/2002/QĐ-NHNN ngày 22 tháng 3 năm 2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:14375
+  number: "10/2006/TT-NHNN"
+  set: {eff_to: "2019-02-15"}
+  reason: "Replaced as a whole by 36/2018/TT-NHNN from its stated effective date, 2019-02-15."
+  evidence:
+    key: vn:vbpl:132772
+    anchor: "dieu-13/khoan-1"
+    quote: "thay thế Thông tư số 10/2006/TT-NHNN ngày 21/12/2006 của Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:66995
+  number: "05/2015/TT-NHNN"
+  set: {eff_to: "2019-02-12"}
+  reason: "45/2018/TT-NHNN Điều 9 khoản 1 replaces the whole of 05/2015/TT-NHNN from its own effective date 2019-02-12, the first day the target is no longer in force."
+  evidence:
+    key: vn:vbpl:133005
+    anchor: "dieu-9/khoan-1"
+    quote: "thay thế Thông tư số 05/2015/TT-NHNN ngày 04 tháng 5 năm 2015 của Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:105783
+  number: "06/2008/QĐ-NHNN"
+  set: {eff_to: "2019-04-01"}
+  reason: "52/2018/TT-NHNN Điều 27 khoản 2 repeals the whole of 06/2008/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-04-01."
+  evidence:
+    key: vn:vbpl:133848
+    anchor: "dieu-27/khoan-2"
+    quote: "Bãi bỏ Quyết định số 06/2008/QĐ-NHNN ngày 12 tháng 03 năm 2008 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:101917
+  number: "01/2008/QĐ-NHNN"
+  set: {eff_to: "2019-03-01"}
+  reason: "53/2018/TT-NHNN Điều 25 khoản 2 repeals the whole of 01/2008/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-03-01."
+  evidence:
+    key: vn:vbpl:134069
+    anchor: "dieu-25/khoan-2"
+    quote: "Bãi bỏ Quyết định số 01/2008/QĐ-NHNN ngày 09/01/2008 của Thống đốc Ngân hàng Nhà nước Việt Nam"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:22004
+  number: "02/2002/TTLT-NHNN-BTP"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 23 repeals the whole of 02/2002/TTLT-NHNN-BTP and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-23"
+    quote: "Thông tư liên tịch số 02/2002/TTLT-NHNN-BTP ngày 05/02/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:115921
+  number: "03/1997/TT-NH2"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 1 repeals the whole of 03/1997/TT-NH2 and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-1"
+    quote: "Thông tư số 03/1997/TT-NH2 ngày 14/07/1997"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:101859
+  number: "04/2004/CT-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 28 repeals the whole of 04/2004/CT-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-28"
+    quote: "Chỉ thị số 04/2004/CT-NHNN ngày 01/4/2004"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:22172
+  number: "05/2002/TT-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 25 repeals the whole of 05/2002/TT-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-25"
+    quote: "Thông tư số 05/2002/TT-NHNN ngày 27/9/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16970
+  number: "07/2005/CT-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 30 repeals the whole of 07/2005/CT-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-30"
+    quote: "Chỉ thị số 07/2005/CT-NHNN ngày 08/12/2005"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:101924
+  number: "08/2003/CT-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 27 repeals the whole of 08/2003/CT-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-27"
+    quote: "Chỉ thị số 08/2003/CT-NHNN ngày 24/12/2003"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:23147
+  number: "1033/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 16 repeals the whole of 1033/2001/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-16"
+    quote: "Quyết định số 1033/2001/QĐ-NHNN ngày 15/8/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:23140
+  number: "1078/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 17 repeals the whole of 1078/2001/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-17"
+    quote: "Quyết định số 1078/2001/QĐ-NHNN ngày 27/8/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:23028
+  number: "1289/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 19 repeals the whole of 1289/2001/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-19"
+    quote: "Quyết định số 1289/2001/QĐ-NHNN ngày 11/10/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:103527
+  number: "1379/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 20 repeals the whole of 1379/2001/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-20"
+    quote: "Quyết định số 1379/2001/QĐ-NHNN ngày 02/11/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:103523
+  number: "1448/2002/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 26 repeals the whole of 1448/2002/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-26"
+    quote: "Quyết định số 1448/2002/QĐ-NHNN ngày 31/12/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:103530
+  number: "1474/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 21 repeals the whole of 1474/2001/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-21"
+    quote: "Quyết định số 1474/2001/QĐ-NHNN ngày 23/11/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:102614
+  number: "1510/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 22 repeals the whole of 1510/2001/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-22"
+    quote: "Quyết định số 1510/2001/QĐ-NHNN ngày 30/11/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16922
+  number: "1839/2005/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 31 repeals the whole of 1839/2005/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-31"
+    quote: "Quyết định số 1839/2005/QĐ-NHNN ngày 19/12/2005"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16005
+  number: "22/2006/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 32 repeals the whole of 22/2006/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-32"
+    quote: "Quyết định số 22/2006/QĐ-NHNN ngày 18/05/2006"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:103577
+  number: "236/2002/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 24 repeals the whole of 236/2002/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-24"
+    quote: "Quyết định số 236/2002/QĐ-NHNN ngày 27/03/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:102730
+  number: "237/1999/QĐ-NHNN8"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 2 repeals the whole of 237/1999/QĐ-NHNN8 and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-2"
+    quote: "Quyết định số 237/1999/QĐ-NHNN8 ngày 08/07/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:44196
+  number: "26/2014/TT-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "Listed under the whole-document repeal in Điều 1 of 05/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-36"
+    quote: "Thông tư số 26/2014/TT-NHNN ngày 16/9/2014 quy định về việc Ngân hàng Nhà nước Việt Nam tái cấp vốn"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:5715
+  number: "296/2000/QĐ-NHNN1"
+  set: {eff_to: "2019-08-09"}
+  reason: "Listed under the whole-document repeal in Điều 1 of 05/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-3"
+    quote: "Quyết định số 296/2000/QĐ-NHNN1 ngày 06/9/2000 công bố lãi suất cơ bản"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15582
+  number: "31/2006/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 33 repeals the whole of 31/2006/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-33"
+    quote: "Quyết định số 31/2006/QĐ-NHNN ngày 18/7/2006"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:26789
+  number: "31/2011/TT-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "Listed under the whole-document repeal in Điều 1 of 05/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-35"
+    quote: "Thông tư số 31/2011/TT-NHNN ngày 30/9/2011 quy định về kiểm tra và xử lý văn bản quy phạm pháp luật"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:14453
+  number: "365/2004/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 29 repeals the whole of 365/2004/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-29"
+    quote: "Quyết định số 365/2004/QĐ-NHNN ngày 13/04/2004"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15159
+  number: "45/2006/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "05/2019/TT-NHNN Điều 1 khoản 34 repeals the whole of 45/2006/QĐ-NHNN and gives no separate date, so it ends on the acting circular's effective date 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-34"
+    quote: "Quyết định số 45/2006/QĐ-NHNN ngày 11/9/2006"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:4801
+  number: "495/2000/QĐ-NHNN1"
+  set: {eff_to: "2019-08-09"}
+  reason: "Listed under the whole-document repeal in Điều 1 of 05/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-6"
+    quote: "Quyết định số 495/2000/QĐ-NHNN1 ngày 30/11/2000 về số ngày tính lãi 1 năm"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:5664
+  number: "500/2000/QĐ-NHNN1"
+  set: {eff_to: "2019-08-09"}
+  reason: "Listed under the whole-document repeal in Điều 1 of 05/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-7"
+    quote: "Quyết định số 500/2000/QĐ-NHNN1 ngày 05/12/2000 công bố lãi suất cơ bản"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:23263
+  number: "893/2001/QĐ-NHNN"
+  set: {eff_to: "2019-08-09"}
+  reason: "Listed under the whole-document repeal in Điều 1 of 05/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2019-08-09."
+  evidence:
+    key: vn:vbpl:135834
+    anchor: "dieu-1/khoan-14"
+    quote: "Quyết định số 893/2001/QĐ-NHNN ngày 17/7/2001 về việc thực hiện nghiệp vụ hoán đổi ngoại tệ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:30404
+  number: "07/2013/TT-NHNN"
+  set: {eff_to: "2019-10-01"}
+  reason: "Replaced as a whole by 11/2019/TT-NHNN, whose Điều 24 sets the replacement with its effective date, 2019-10-01."
+  evidence:
+    key: vn:vbpl:137257
+    anchor: "dieu-24"
+    quote: "thay thế Thông tư số 07/2013/TT-NHNN ngày 14 tháng 3 năm 2013"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:128720
+  number: "08/2018/TT-NHNN"
+  set: {eff_to: "2019-12-16"}
+  reason: "Replaced as a whole by 17/2019/TT-NHNN, whose Điều 50 sets the replacement with its effective date, 2019-12-16."
+  evidence:
+    key: vn:vbpl:138713
+    anchor: "doan-166"
+    quote: "thay thế Thông tư số 08/2018/TT-NHNN ngày 30 tháng 3 năm 2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:12136
+  number: "08/2009/TT-NHNN"
+  set: {eff_to: "2020-01-01"}
+  reason: "Ends when 19/2019/TT-NHNN takes effect, which Điều 32 khoản 1 sets at 2020-01-01."
+  evidence:
+    key: vn:vbpl:138724
+    anchor: "dieu-32/khoan-3"
+    quote: "Thông tư số 08/2009/TT-NHNN ngày 28 tháng 4 năm 2009 của Thống đốc Ngân hàng Nhà nước hướng dẫn về mạng lưới hoạt động của tổ chức tài chính quy mô nhỏ hết hiệu lực"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:101793
+  number: "15/2012/TT-NHNN"
+  set: {eff_to: "2020-01-18"}
+  reason: "Repealed as a whole by Điều 23 khoản 2 of 24/2019/TT-NHNN with no date of its own, so it ends on that circular's effective date, 2020-01-18."
+  evidence:
+    key: vn:vbpl:139125
+    anchor: "dieu-23/khoan-2"
+    quote: "Bãi bỏ Thông tư số 15/2012/TT-NHNN ngày 04 tháng 5 năm 2012 của Thống đốc Ngân hàng Nhà nước Việt Nam"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:94547
+  number: "23/2015/TT-NHNN"
+  set: {eff_to: "2020-03-01"}
+  reason: "Listed whole under the clause ending the listed documents from the date 30/2019/TT-NHNN takes effect, which Điều 17 khoản 1 sets at 2020-03-01."
+  evidence:
+    key: vn:vbpl:139766
+    anchor: "dieu-17/khoan-2/diem-c"
+    quote: "c) Thông tư số 23/2015/TT-NHNN ngày 04 tháng 12 năm 2015 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:94549
+  number: "27/2011/TT-NHNN"
+  set: {eff_to: "2020-03-01"}
+  reason: "Listed whole under the clause ending the listed documents from the date 30/2019/TT-NHNN takes effect, which Điều 17 khoản 1 sets at 2020-03-01."
+  evidence:
+    key: vn:vbpl:139766
+    anchor: "dieu-17/khoan-2/diem-b"
+    quote: "b) Thông tư số 27/2011/TT-NHNN ngày 31 tháng 8 năm 2011 của Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:26350
+  number: "62/2010/QH12"
+  set: {eff_to: "2021-01-01"}
+  reason: "Điều 134 khoản 2 ends the amending law on the date Luật 54/2019/QH14 takes effect, which khoản 1 sets at 2021-01-01."
+  evidence:
+    key: vn:vbpl:139885
+    anchor: "dieu-134/khoan-2"
+    quote: "Luật số 62/2010/QH12 sửa đổi, bổ sung một số điều của Luật Chứng khoán hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15052
+  number: "70/2006/QH11"
+  set: {eff_to: "2021-01-01"}
+  reason: "Điều 134 khoản 2 ends the law on the date Luật 54/2019/QH14 takes effect, which khoản 1 sets at 2021-01-01."
+  evidence:
+    key: vn:vbpl:139885
+    anchor: "dieu-134/khoan-2"
+    quote: "2. Luật Chứng khoán số 70/2006/QH11 và Luật số 62/2010/QH12 sửa đổi, bổ sung một số điều của Luật Chứng khoán hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:111664
+  number: "16/2016/TT-NHNN"
+  set: {eff_to: "2020-02-19"}
+  reason: "Điều 2 khoản 2 điểm b repeals the whole circular with no date of its own, so it ends when 33/2019/TT-NHNN takes effect on 2020-02-19."
+  evidence:
+    key: vn:vbpl:139893
+    anchor: "dieu-2/khoan-2/diem-b"
+    quote: "b) Thông tư số 16/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:105381
+  number: "32/2008/QĐ-NHNN"
+  set: {eff_to: "2020-03-01"}
+  reason: "Điều 29 khoản 2 ends the decision on the date 35/2019/TT-NHNN takes effect, which khoản 1 sets at 2020-03-01."
+  evidence:
+    key: vn:vbpl:139916
+    anchor: "dieu-29/khoan-2"
+    quote: "Quyết định số 32/2008/QĐ-NHNN ngày 03/12/2008 của Thống đốc NHNN ban hành Chế độ hạch toán kế toán tài sản cố định, công cụ, dụng cụ và vật liệu của NHNN hết hiệu lực từ ngày Thông tư này"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:104204
+  number: "06/2016/TT-NHNN"
+  set: {eff_to: "2021-02-14"}
+  reason: "Listed whole under Điều 22 khoản 2 with no date of its own, so it ends when 23/2020/TT-NHNN takes effect on 2021-02-14."
+  evidence:
+    key: vn:vbpl:145859
+    anchor: "dieu-22/khoan-2"
+    quote: "- Thông tư số 06/2016/TT-NHNN ngày 27/5/2016 của Thống đốc Ngân hàng Nhà nước Việt Nam sửa đổi, bổ sung một số điều của Thông tư số 36/2014/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:130018
+  number: "16/2018/TT-NHNN"
+  set: {eff_to: "2021-02-14"}
+  reason: "Listed whole under Điều 22 khoản 2 with no date of its own, so it ends when 23/2020/TT-NHNN takes effect on 2021-02-14."
+  evidence:
+    key: vn:vbpl:145859
+    anchor: "dieu-22/khoan-2"
+    quote: "- Thông tư số 16/2018/TT-NHNN ngày 31/7/2018 của Thống đốc Ngân hàng Nhà nước Việt Nam sửa đổi, bổ sung một số điều của Thông tư số 36/2014/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:38214
+  number: "36/2014/TT-NHNN"
+  set: {eff_to: "2021-02-14"}
+  reason: "Listed whole under Điều 22 khoản 2 with no date of its own, so it ends when 23/2020/TT-NHNN takes effect on 2021-02-14."
+  evidence:
+    key: vn:vbpl:145859
+    anchor: "dieu-22/khoan-2"
+    quote: "- Thông tư số 36/2014/TT-NHNN ngày 20/11/2014 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định các giới hạn, tỷ lệ bảo đảm an toàn"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:138828
+  number: "40/2019/TT-BCA"
+  set: {eff_to: "2021-07-01"}
+  reason: "59/2021/TT-BCA Điều 20 replaces the whole of 40/2019/TT-BCA and takes effect on 2021-07-01, the first day the target is no longer in force."
+  evidence:
+    key: vn:vbpl:148322
+    anchor: "dieu-20"
+    quote: "Thông tư số 40/2019/TT-BCA ngày 01 tháng 10 năm 2019 sửa đổi, bổ sung một số điều của Thông tư số 07/2016/TT-BCA ngày 01 tháng 02 năm 2016"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:110902
+  number: "166/2015/TT-BTC"
+  set: {eff_to: "2022-01-01"}
+  reason: "95/2021/TT-BTC Điều 7 khoản 2 ends the whole of 166/2015/TT-BTC on the acting circular's effective date, 2022-01-01 under khoản 1."
+  evidence:
+    key: vn:vbpl:151151
+    anchor: "dieu-7/khoan-2"
+    quote: "Thông tư số 166/2015/TT-BTC ngày 05 tháng 11 năm 2015 của Bộ Tài chính quy định việc quản lý và sử dụng kinh phí"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:117495
+  number: "17/2007/TTLT-BLĐTBXH-NHNNVN"
+  set: {eff_to: "2022-01-01"}
+  reason: "112/2021/NĐ-CP Điều 45 khoản 2 ends the whole of 17/2007/TTLT-BLĐTBXH-NHNNVN from the decree's effective date 2022-01-01, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:152929
+    anchor: "dieu-45/khoan-2"
+    quote: "Thông tư liên tịch số 17/2007/TTLT-BLĐTBXH-NHNNVN ngày 04 tháng 9 năm 2007 của Bộ Lao động - Thương binh và Xã hội - Ngân hàng Nhà nước Việt Nam"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16252
+  number: "02/2006/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 3 repeals the whole of 02/2006/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-3"
+    quote: "3. Thông tư số 02/2006/TT-NHNN ngày 12 tháng 4 năm 2006 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:26462
+  number: "13/2011/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 6 repeals the whole of 13/2011/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-6"
+    quote: "6. Thông tư số 13/2011/TT-NHNN ngày 31 tháng 5 năm 2011 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:104601
+  number: "1531/2004/QĐ-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 2 repeals the whole of 1531/2004/QĐ-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-2"
+    quote: "2. Quyết định số 1531/2004/QĐ-NHNN ngày 02 tháng 12 năm 2004 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:22886
+  number: "1557/2001/QĐ-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 1 repeals the whole of 1557/2001/QĐ-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-1"
+    quote: "1. Quyết định số 1557/2001/QĐ-NHNN ngày 14 tháng 12 năm 2001 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:25472
+  number: "16/2010/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 5 repeals the whole of 16/2010/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-5"
+    quote: "5. Thông tư số 16/2010/TT-NHNN ngày 25 tháng 6 năm 2010 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:13707
+  number: "17/2007/QĐ-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 4 repeals the whole of 17/2007/QĐ-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-4"
+    quote: "4. Quyết định số 17/2007/QĐ-NHNN ngày 20 tháng 4 năm 2007 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:111670
+  number: "23/2016/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 10 repeals the whole of 23/2016/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-10"
+    quote: "10. Thông tư số 23/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:44202
+  number: "27/2014/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 7 repeals the whole of 27/2014/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-7"
+    quote: "7. Thông tư số 27/2014/TT-NHNN ngày 18 tháng 9 năm 2014 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:37908
+  number: "34/2014/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 8 repeals the whole of 34/2014/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-8"
+    quote: "8. Thông tư số 34/2014/TT-NHNN ngày 20 tháng 11 năm 2014 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:43992
+  number: "40/2014/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 9 repeals the whole of 40/2014/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-9"
+    quote: "9. Thông tư số 40/2014/TT-NHNN ngày 11 tháng 12 năm 2014 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:132964
+  number: "43/2018/TT-NHNN"
+  set: {eff_to: "2022-08-15"}
+  reason: "05/2022/TT-NHNN Điều 1 khoản 11 repeals the whole of 43/2018/TT-NHNN with no separate date, so it ends on the repealing circular's effective date 2022-08-15, the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:154460
+    anchor: "dieu-1/khoan-11"
+    quote: "11. Thông tư số 43/2018/TT-NHNN ngày 28 tháng 12 năm 2018 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:105518
+  number: "03/2014/TT-NHNN"
+  set: {eff_to: "2024-07-01"}
+  reason: "27/2024/TT-NHNN Điều 33 khoản 2 điểm c repeals the whole circular, and the acting circular takes effect on 2024-07-01, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:168220
+    anchor: "dieu-33/khoan-2/diem-c"
+    quote: "Thông tư số 03/2014/TT-NHNN ngày 23 tháng 01 năm 2014"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:95647
+  number: "30/2015/TT-NHNN"
+  set: {eff_to: "2024-07-01"}
+  reason: "35/2024/TT-NHNN Điều 20 khoản 2 điểm a repeals the whole circular, and the acting circular takes effect on 2024-07-01, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:168893
+    anchor: "dieu-20/khoan-2/diem-a"
+    quote: "Thông tư số 30/2015/TT-NHNN ngày 25 tháng 12 năm 2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:117031
+  number: "35/2016/TT-NHNN"
+  set: {eff_to: "2025-01-01"}
+  reason: "50/2024/TT-NHNN Điều 22 khoản 5 điểm a ends the whole circular from the acting circular's effective date 2025-01-01; the later dates cover only named provisions of the acting circular."
+  evidence:
+    key: vn:vbpl:171687
+    anchor: "dieu-22/khoan-5/diem-a"
+    quote: "Thông tư số 35/2016/TT-NHNN ngày 29 tháng 12 năm 2016"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:164719
+  number: "22/2023/TT-NHNN"
+  set: {eff_to: "2030-01-01"}
+  reason: "Whole circular is listed for repeal by 14/2025/TT-NHNN Điều 82 khoản 3, which states the repeal takes effect from 2030-01-01, so that is the first day it is no longer in force."
+  evidence:
+    key: vn:vbpl:179459
+    anchor: "dieu-82/khoan-3/diem-c"
+    quote: "Thông tư số 22/2023/TT-NHNN ngày 29 tháng 12 năm 2023 của Thống đốc Ngân hàng Nhà nước Việt Nam"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:7342
+  number: "11/1998/QH10"
+  set: {eff_to: "2006-01-01"}
+  reason: "Replaced by Luật Giáo dục 38/2005/QH11 from its effective date, which Điều 119 khoản 1 states as 2006-01-01."
+  evidence:
+    key: vn:vbpl:18129
+    anchor: "dieu-119/khoan-2"
+    quote: "Luật này thay thế Luật giáo dục năm 1998."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:129907
+  number: "70/2018/NĐ-CP"
+  set: {eff_to: "2025-10-01"}
+  reason: "267/2025/NĐ-CP Điều 55 khoản 2 điểm b ends the whole decree from the date that clause states, 2025-10-01, which precedes the acting decree's own effective date of 2025-10-14."
+  evidence:
+    key: vn:vbpl:183410
+    anchor: "dieu-55/khoan-2/diem-b"
+    quote: "Nghị định số 70/2018/NĐ-CP ngày 15 tháng 5 năm 2018 của Chính phủ quy định việc quản lý, sử dụng tài sản"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8040
+  number: "96/QĐ-NH2"
+  set: {eff_to: "2026-02-16"}
+  reason: "67/2025/TT-NHNN Điều 1 repeals the whole decision, written 96/1997/QĐ-NH2 with the same issue date and subject, and the circular takes effect on 2026-02-16, the first day the decision is no longer in force."
+  evidence:
+    key: vn:vbpl:186181
+    anchor: "dieu-1/khoan-1"
+    quote: "Quyết định số 96/1997/QĐ-NH2 ngày 19 tháng 4 năm 1997 của Thống đốc Ngân hàng Nhà nước Việt Nam về việc ban hành mẫu giấy lĩnh tiền mặt"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:39858
+  number: "1747/ 2005/QĐ-NHNN"
+  set: {eff_to: "2011-07-01"}
+  reason: "21/2010/TT-NHNN replaces the whole decision and takes effect on 2011-07-01, so that is the first day the target is no longer in force."
+  evidence:
+    key: vn:vbpl:25733
+    anchor: "dieu-25/khoan-2"
+    quote: "Quyết định số 1747/2005/QĐ-NHNN ngày 01/12/2005 về việc sửa đổi, bổ sung một số điều của Chế độ báo cáo thống kê"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:25150
+  number: "09/2010/TT-NHNN"
+  set: {eff_to: "2012-02-01"}
+  reason: "40/2011/TT-NHNN Điều 37 khoản 2 điểm c ends the whole circular from the day the acting circular takes effect, 2012-02-01, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:27152
+    anchor: "dieu-37/khoan-2/diem-c"
+    quote: "Thông tư số 09/2010/TT-NHNN ngày 26/3/2010 của Ngân hàng Nhà nước về việc cấp giấy phép thành lập và hoạt động của ngân hàng thương mại cổ phần"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:110876
+  number: "132/2009/TTLT-BTC-BGĐĐT"
+  set: {eff_to: "2012-06-12"}
+  reason: "66/2012/TTLT-BTC-BGDĐT Điều 7 khoản 4 replaces the whole joint circular and takes effect on 2012-06-12, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:27564
+    anchor: "dieu-7/khoan-4"
+    quote: "Thông tư liên tịch số 132/2009/TTLT/BTC-BGDĐT ngày 29/6/2009 của Liên Bộ Tài chính - Bộ Giáo dục và Đào tạo"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:71267
+  number: "32/2012/TT-NHNN"
+  set: {eff_to: "2013-03-26"}
+  reason: "08/2013/TT-NHNN Điều 4 khoản 1 replaces the whole circular and takes effect on 2013-03-26, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:30432
+    anchor: "dieu-4/khoan-1"
+    quote: "thay thế Thông tư số 32/2012/TT-NHNN ngày 21 tháng 12 năm 2012"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:71272
+  number: "33/2012/TT-NHNN"
+  set: {eff_to: "2013-03-26"}
+  reason: "09/2013/TT-NHNN Điều 4 khoản 1 replaces the whole circular and takes effect on 2013-03-26, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:30438
+    anchor: "dieu-4/khoan-1"
+    quote: "thay thế Thông tư số 33/2012/TT-NHNN ngày 21 tháng 12 năm 2012"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:25787
+  number: "106/2010/NĐ-CP"
+  set: {eff_to: "2013-09-15"}
+  reason: "83/2013/NĐ-CP Điều 54 replaces the whole decree and takes effect on 2013-09-15, the target's first day out of force."
+  evidence:
+    key: vn:vbpl:30676
+    anchor: "dieu-54"
+    quote: "thay thế các Nghị định: số 85/2007/NĐ-CP ngày 25 tháng 5 năm 2007 và số 106/2010/NĐ-CP ngày 28 tháng 10 năm 2010 của Chính phủ"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:132772
+  number: "36/2018/TT-NHNN"
+  set: {eff_to: "2026-08-18"}
+  reason: "32/2026/TT-NHNN repeals the whole circular and takes effect on 2026-08-18, so that is the first day the target is no longer in force."
+  evidence:
+    key: vn:vbpl:3fdc9170-7b3c-11f1-9af7-cf6e1d9c28f9
+    anchor: "dieu-13/khoan-2"
+    quote: "Thông tư này bãi bỏ Thông tư số 36/2018/TT-NHNN quy định về hoạt động cho vay để đầu tư ra nước ngoài"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:18394
+  number: "20/2005/QĐ-NHNN"
+  set: {eff_to: "2005-04-01"}
+  reason: "316/2005/QĐ-NHNN replaces the whole decision in the article that sets its effect from 2005-04-01, so the target ends on that date."
+  evidence:
+    key: vn:vbpl:44245
+    anchor: "dieu-2"
+    quote: "thay thế Quyết định số 20/QĐ-NHNN ngày 07 tháng 01 năm 2005 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:6833
+  number: "397/1999/QĐ-NHNN1"
+  set: {eff_to: "2000-04-05"}
+  reason: "102/2000/QĐ-NHNN1 replaces the whole decision in the article that sets its effect from 2000-04-05, so the target ends on that date."
+  evidence:
+    key: vn:vbpl:5631
+    anchor: "dieu-2"
+    quote: "thay thế Quyết định số 397/1999/QĐ-NHNN1 ngày 05 tháng 11 năm 1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:5649
+  number: "239/2000/QĐ-NHNN1"
+  set: {eff_to: "2000-11-06"}
+  reason: "466/2000/QĐ-NHNN1 replaces the whole decision in the article that sets its effect from 2000-11-06, so the target ends on that date."
+  evidence:
+    key: vn:vbpl:5708
+    anchor: "dieu-2"
+    quote: "thay thế quyết định số 239/2000/QĐ-NHNN1 ngày 31 tháng 7 năm 2000"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8038
+  number: "297/QĐ-NH2"
+  set: {eff_to: "2000-12-01"}
+  reason: "448/2000/QĐ-NHNN2 replaces the whole decision in the article that sets its effect from 2000-12-01, so the target ends on that date."
+  evidence:
+    key: vn:vbpl:5711
+    anchor: "dieu-2"
+    quote: "thay thế cho Quyết định số 162/QĐ-NH2 ngày 19/8/1993 của Thống đốc ngân hàng Nhà nước về việc thu phí dịch vụ thanh toán qua ngân hàng và Quyết định số 297/QĐ-NH2 ngày 9/9/1997"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:168150
+  number: "26/2024/TT-NHNN"
+  set: {eff_to: "2026-08-15"}
+  reason: "31/2026/TT-NHNN replaces the whole circular in the article that sets its effect from 2026-08-15, so the target ends on that date."
+  evidence:
+    key: vn:vbpl:624bae90-7b3b-11f1-92e1-779aeaf2000c
+    anchor: "dieu-34"
+    quote: "thay thế Thông tư 26/2024/TT-NHNN ngày 28/6/2024 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8155
+  number: "396/1997/QĐ-NHNN1"
+  set: {eff_to: "1999-03-01"}
+  reason: "Điều 2 of 51/1999/QĐ-NHNN1 replaces the whole decision and takes effect on 1999-03-01, the first day the target is no longer in force."
+  evidence:
+    key: vn:vbpl:6676
+    anchor: "dieu-2"
+    quote: "Quyết định này thay thế Quyết định số 396/1997/QĐ-NHNN1 ngày 1/12/1997"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:43241
+  number: "20/2013/TT-NHNN"
+  set: {eff_to: "2015-12-10"}
+  reason: "Replaced as a whole by 18/2015/TT-NHNN, which takes effect and replaces the target from 2015-12-10."
+  evidence:
+    key: vn:vbpl:92152
+    anchor: "dieu-16"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 10 tháng 12 năm 2015 và thay thế Thông tư số 20/2013/TT-NHNN ngày 09 tháng 9 năm 2013 của Thống đốc Ngân hàng Nhà nước"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:167154
+  number: "03/2024/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm e repeals this whole amending circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-e"
+    quote: "Thông tư số 03/2024/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư số 19/2013/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:105618
+  number: "08/2016/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm c repeals this whole amending circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-c"
+    quote: "Thông tư số 08/2016/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư số 19/2013/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:124189
+  number: "09/2017/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm d repeals this whole amending circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-d"
+    quote: "Thông tư số 09/2017/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư số 19/2013/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:86531
+  number: "14/2015/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm b repeals this whole amending circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-b"
+    quote: "Thông tư số 14/2015/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư số 19/2013/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:43247
+  number: "19/2013/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm a repeals this whole circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-a"
+    quote: "Thông tư số 19/2013/TT-NHNN quy định về việc mua, bán và xử lý nợ xấu"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:139875
+  number: "32/2019/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm đ repeals this whole amending circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-đ"
+    quote: "Thông tư số 32/2019/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư số 19/2013/TT-NHNN"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:117029
+  number: "33/2016/TT-NHNN"
+  set: {eff_to: "2026-11-06"}
+  reason: "54/2026/TT-NHNN Điều 60 khoản 2 điểm h repeals this whole circular, from the acting circular's effective date 2026-11-06."
+  evidence:
+    key: vn:vbpl:a13b9c90-d0e6-11f1-a5ab-47d3abb3b109
+    anchor: "dieu-60/khoan-2/diem-h"
+    quote: "Thông tư số 33/2016/TT-NHNN quy định về các tỷ lệ khoản thu của Công ty Quản lý tài sản"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:136020
+  number: "07/2019/TT-NHNN"
+  set: {eff_to: "2026-08-09"}
+  reason: "26/2026/TT-NHNN Điều 12 khoản 2 điểm a ends this whole circular, stated beside the number as 2019-07-03, from the acting circular's effective date 2026-08-09."
+  evidence:
+    key: vn:vbpl:a9cd9430-710a-11f1-ae81-c57414013587
+    anchor: "dieu-12/khoan-2/diem-a"
+    quote: "Thông tư số 07/2019/TT-NHNN ngày 03 tháng 7 năm 2019"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:154481
+  number: "07/2022/TT-NHNN"
+  set: {eff_to: "2026-08-09"}
+  reason: "26/2026/TT-NHNN Điều 12 khoản 2 điểm b ends this whole amending circular, stated beside the number as 2022-06-30, from the acting circular's effective date 2026-08-09."
+  evidence:
+    key: vn:vbpl:a9cd9430-710a-11f1-ae81-c57414013587
+    anchor: "dieu-12/khoan-2/diem-b"
+    quote: "Thông tư số 07/2022/TT-NHNN ngày 30 tháng 6 năm 2022"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15408
+  number: "01/2005/TT-NHNN"
+  set: {eff_to: "2015-12-10"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-279"
+    quote: "01/2005/TT-NHNN ngày 10/03/2005\nHướng dẫn thi hành Nghị định số 202/2004/NĐ-CP của Chính phủ ngày 10/12/2004 về xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và hoạt động ngân hàng\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9255
+  number: "01/CT-NH20"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-199"
+    quote: "01-CT/NH20 ngày 03/01/1996\nVề mở rộng dịch vụ thanh toán của Ngân hàng trong khu vực dân cư\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8666
+  number: "02/CT-NH12"
+  set: {eff_to: "2012-10-20"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 25/2012/TT-NHNN of 06/9/2012, and its own row gives 20/10/2012 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-354"
+    quote: "02/1997/CT-NH12 ngày 19/03/1997\nTăng cường tuyên truyền hoạt động Ngân hàng trên các phương tiện thông tin đại chúng\nBị bãi bỏ bởi Thông tư 25/2012/TT-NHNN ngày 06/9/2012 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n20/10/2012"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:109248
+  number: "03/2001/TTLT/NHNN-BTP-BCA-BTC-TCÐC"
+  set: {eff_to: "2007-01-27"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 03/2001/TTLT/NHNN-BTP-BCA-BTC-TCÐC as ended because its parent decrees were replaced by 163/2006/NĐ-CP, and the row's end-date column gives 2007-01-27, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-357"
+    quote: "03/2001/TTLT/NHNN-BTP-BCA-BTC-TCĐC ngày 23/04/2001\nHướng dẫn việc xử lý tài sản bảo đảm tiền vay để thu hồi nợ cho các tổ chức tín dụng\nThông tư liên tịch này hướng dẫn Nghị định số 165/1999/NĐ-CP và Nghị định số 178/1999/NĐ-CP hết hiệu lực do Nghị định số 165/1999/NĐ-CP và Nghị định số 178/1999/NĐ-CP bị thay thế, bãi bỏ bởi Nghị định số 163/2006/NĐ-CP ngày 29/12/2006 về giao dịch bảo đảm\n27/01/2007"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9857
+  number: "03/CT-NH2"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 03-CT/NH2 says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 in the Ngày hết hiệu lực column, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-315"
+    quote: "Chỉ thị\n03-CT/NH2 ngày 26/5/1995\nVề việc chấn chỉnh công tác thanh toán liên hàng và cập nhật công tác kế toán trong ngành Ngân hàng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8244
+  number: "04/1997/TT-NHNN1"
+  set: {eff_to: "2015-12-10"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2538/QĐ-NHNN of 10/12/2015, and its own row gives 10/12/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-129"
+    quote: "04/1997/TT-NHNN1 ngày 23/10/1997\nHướng dẫn xác nhận và phong toả tín phiếu, trái phiếu ghi sổ phát hành qua Ngân hàng Nhà nước trong quan hệ tín dụng\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9281
+  number: "04/CT-NH3"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 04-CT/NH3 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-265"
+    quote: "04-CT/NH3 ngày 17/5/1996\nTiếp tục tăng cường công tác thanh tra, kiểm soát và kiểm toán trong ngành ngân hàng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9788
+  number: "04/TT-NH1"
+  set: {eff_to: "1998-01-01"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 04-TT/NH1 as wholly expired, ended by Decision 396/1997/QĐ-NHNN of 01/12/1997, and its own row gives 01/01/1998 as the end date, so eff_to is 1998-01-01."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-125"
+    quote: "04-TT/NH1 ngày 19/9/1995\nHướng dẫn thực hiện Quy chế dự trữ bắt buộc\nBị hết hiệu lực bởi Quyết định số 396/1997/QĐ-NHNN ngày 01/12/1997 về việc ban hành “Quy chế dự trữ bắt buộc đối với ngân hàng, tổ chức tín dụng”\n01/01/1998"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9259
+  number: "04/TT-NH14"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 04/TT-NH14 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-219"
+    quote: "04/TT-NH14 16/5/1996\nHướng dẫn thực hiện Quyết định số 256/TTg ngày 24/4/1996 của Thủ tướng Chính phủ về việc cho hộ gia đình thuộc diện chính sách và hộ nghèo vùng đồng bằng sông Cửu Long vay vốn để tôn nền hoặc làm sàn nhà trên cọc\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:21512
+  number: "05/2003/TT-NHNN"
+  set: {eff_to: "2015-12-10"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force. The row continues in doan-232, which opens with its end-date cell 10/12/2015."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-231"
+    quote: "05/2003/TT-NHNN ngày 24/02/2003"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:107615
+  number: "05/2007/TTLT-NHNN-BKH&ĐT-BTC-BTM"
+  set: {eff_to: "2015-09-18"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 05/2007/TTLT-NHNN-BKH&ĐT-BTC-BTM says it was repealed by Quyết định 1891/QĐ-NHNN of 18/9/2015 and gives 18/9/2015 as its end date, so the first day out of force is 2015-09-18 (the row continues in doan-149)."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-148"
+    quote: "Thông tư liên tịch\n05/2007/TTLT-NHNN-BKH&ĐT-BTC-BTM ngày 14/06/2007\nHướng dẫn thực hiện một số điểm về lập và phân tích cán cân thanh toán quốc tế của Việt Nam"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9260
+  number: "05/CT-NH1"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 05-CT/NH1 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-220, which opens with its end-date cell 16/10/2015."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-219"
+    quote: "05-CT/NH1 ngày 6/6/1996"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10126
+  number: "05/CT-NH14"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 05/CT-NH14 says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 as its end date, so the first day out of force is 2015-10-16 (the row continues in doan-215)."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-214"
+    quote: "Chỉ thị\n05-CT/NH14 ngày 18/6/1994\nVề việc nhiều Ngân hàng thương mại, Ngân hàng đầu tư và phát triển cho vay đối với một doanh nghiệp"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:11267
+  number: "05/NH-QĐ"
+  set: {eff_to: "2015-10-16"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 05/NH-QĐ as repealed by 2039/QĐ-NHNN, and the row's end-date column gives 2015-10-16, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-249"
+    quote: "05-NH/QĐ ngày 07/01/1991\nBan hành Quy chế cấp giấy phép hoạt động cho các tổ chức tín dụng Việt Nam\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9099
+  number: "05/TT-NH1"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-128"
+    quote: "05-TT/NH1 ngày 17/8/1996\nHướng dẫn về phạm vi áp dụng trần lãi suất cho vay trên địa bàn nông thôn và phương pháp tính chênh lệch lãi suất bình quân\nBị bãi bỏ bởi Quyết định số 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9798
+  number: "05/TT-NH5"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 05-TT/NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-262, which holds its reason cell and its end-date cell 16/10/2015."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-261"
+    quote: "05-TT/NH5 ngày 22/9/1995"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10135
+  number: "05/TT-NH7"
+  set: {eff_to: "1999-11-11"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 05/TT-NH7 says it was replaced by Quyết định 389/1999/QĐ-NHNN10 of 27/10/1999 and gives 11/11/1999 as its end date, so the first day out of force is 1999-11-11."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-167"
+    quote: "Thông tư\n05/TT-NH7 ngày 10/3/1994\nHướng dẫn thực hiện Quy chế quản lý các hoạt động điều tra địa chất, khai thác mỏ, chế tác và buôn bán đá quý, ban hành kèm theo Nghị định số 67-CP ngày 7-1-1993 của Chính phủ\nBị thay thế bởi Quyết định 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản quy phạm pháp luật trong ngành ngân hàng\n11/11/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:13117
+  number: "06/2007/TT-NHNN"
+  set: {eff_to: "2018-07-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 06/2007/TT-NHNN as ended because its parent decrees 48/2001/NĐ-CP and 69/2005/NĐ-CP ended, and the row's end-date column gives 2018-07-01, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-285"
+    quote: "06/2007/TT-NHNN ngày 06/11/2007\nSửa đổi, bổ sung Thông tư số 08/2005/TT-NHNN ngày 30/12/2005 của Ngân hàng Nhà nước hướng dẫn thực hiện Nghị định số 48/2001/NĐ-CP ngày 13/8/2001 về tổ chức và hoạt động của Quỹ tín dụng nhân dân và Nghị định số 69/2005/NĐ-CP ngày 26/5/2005 về việc sửa đổi, bổ sung một số Điều của Nghị định số 48/2001/NĐ-CP ngày 13/8/2001 về tổ chức và hoạt động của Quỹ tín dụng nhân dân\nThông tư số 06/2007/TT-NHNN sửa đổi, bổ sung Thông tư số 08/2005/TT-NHNN quy định chi tiết Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực do Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực\n01/7/2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10860
+  number: "07-NHNN/TT"
+  set: {eff_to: "1996-07-03"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 07-NHNN/TT says it ended by Quyết định 175-QĐ/NH5 of 3/7/1996 and gives 3/7/1996 as its end date, so the first day out of force is 1996-07-03."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-251"
+    quote: "Thông tư\n07/TT-NH ngày 02/6/1992\nHướng dẫn việc mở hoặc chấm dứt hoạt động của chi nhánh, văn phòng đại diện ở trong nước thuộc Ngân hàng Thương mại cổ phần\nHết hiệu lực bởi Quyết định 175-QĐ/NH5 ngày 3/7/1996 về việc ban hành Quy chế mở, hoạt động và chấm dứt hoạt động chi nhánh, văn phòng đại diện trong nước của Ngân hàng thương mại cổ phần Việt Nam\n3/7/1996"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10589
+  number: "07/NH-TT"
+  set: {eff_to: "2000-05-13"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 07/NH-TT says it was replaced by Thông tư 07/2000/TT-NHNN7 of 28/4/2000 and gives 13/5/2000 as its end date, so the first day out of force is 2000-05-13 (the row continues in doan-167)."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-166"
+    quote: "Thông tư\n07/NH-TT ngày 29/10/1993\nHướng dẫn thực hiện Nghị định số 63/CP ngày 24/9/1993 của Chính phủ về quản lý Nhà nước đối với hoạt động kinh doanh vàng"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16676
+  number: "08/2005/TT-NHNN"
+  set: {eff_to: "2018-07-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: expired because its parent decrees 48/2001/NĐ-CP and 69/2005/NĐ-CP expired, with 01/7/2018 in the Ngày hết hiệu lực column, so 2018-07-01 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-281"
+    quote: "Thông tư số 08/2005/TT-NHNN quy định chi tiết Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực do Nghị định số 48/2001/NĐ-CP và Nghị định số 69/2005/NĐ-CP hết hiệu lực\n01/7/2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:26511
+  number: "08/2011/TT-NHNN"
+  set: {eff_to: "2018-10-01"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired because Nghị định 109/2010/NĐ-CP, replaced by Nghị định 107/2018/NĐ-CP expired, and that row gives 2018-10-01 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-238"
+    quote: "08/2011/TT-NHNN ngày 08/4/2011\nQuy định chi tiết về tín dụng kinh doanh xuất khẩu gạo theo Nghị định 109/2010/NĐ-CP ngày 04/11/2010 của Chính phủ\nThông tư 08/2011/QĐ-NHNN quy định chi tiết Nghị định số 109/2010/NĐ-CP hết hiệu lực do Nghị định số 109/2010/NĐ-CP hết hiệu lực do bị thay thế bởi Nghị định số 107/2018/NĐ-CP ngày 15/8/2018 về kinh doanh xuất khẩu gạo\n01/10/2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9152
+  number: "08/CT-NH1"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-220"
+    quote: "08-CT/NH1 ngày 01/8/1996\nVề một số biện pháp chấn chỉnh việc chấp hành quy định một khách hàng vay vốn nhiều tổ chức tín dụng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:27458
+  number: "10/2012/TT-NHNN"
+  set: {eff_to: "2015-12-10"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly repealed by Quyết định 2538/QĐ-NHNN of 2015-12-10, and that row gives 2015-12-10 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-291"
+    quote: "10/2012/TT-NHNN ngày 16/04/2012\nQuy định xử lý sau thanh tra, giám sát đối với các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\nBị bãi bỏ bởi Quyết định 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9709
+  number: "10/CT-NH17"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 10-CT/NH17 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-262"
+    quote: "10-CT/NH17 ngày 26/10/1995\nVề công tác kiểm soát, thanh tra, giám sát đối với hệ thống quỹ tín dụng nhân dân và hợp tác xã tín dụng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9431
+  number: "10/QĐ-NH1"
+  set: {eff_to: "1996-05-01"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 10/QĐ-NH1 as wholly expired, replaced by Decision 107/QĐ-NH1 of 3/5/1996, and its own row gives 01/5/1996 as the end date, so eff_to is 1996-05-01; Điều 2 of 107/QĐ-NH1 applies its rate from 01-05-1996, which explains an end date before that decision was issued. The row continues in doan-127, which opens with its end-date cell 01/5/1996."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-126"
+    quote: "10/QĐ-NH1 ngày 06/01/1996"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:23155
+  number: "1004/2001/QĐ-NHNN"
+  set: {eff_to: "2018-11-01"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired because Nghị định 70/2000/NĐ-CP expired, and that row gives 2018-11-01 as the end date. The row continues in doan-274, which holds its reason cell and its end-date cell 01/11/2018."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-273"
+    quote: "1004/2001/QĐ-NHNN ngày 08/08/2001\nSửa đổi tiết a điểm 2.2 Mục II Thông tư số 02/2001/TT-NHNN ngày 04/4/2001 của Thống đốc Ngân hàng Nhà nước về việc hướng dẫn thực hiện Nghị định 70/2000/NĐ-CP ngày"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9277
+  number: "104/QĐ-NH5"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 104/QĐ-NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-264"
+    quote: "104/QĐ-NH5 ngày 02/5/1996\nVề việc ban hành Mẫu điều lệ công ty tài chính trong tổng công ty Nhà nước\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10859
+  number: "106-NH/QĐ"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 106-NH/QĐ says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 as its end date, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-251"
+    quote: "Quyết định\n106-QĐ/NH5 ngày 09/6/1992\nBan hành Quy chế trích lập và sử dụng các quỹ dự trữ của tổ chức tín dụng\nBãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9829
+  number: "11/CT-NH17"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 11/CT-NH17 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-262"
+    quote: "11/CT-NH17 ngày 04/12/1995\nVề việc tăng cường chỉ đạo công tác thí điểm thành lập Quỹ tín dụng Nhân dân\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10855
+  number: "11/TT-NH5"
+  set: {eff_to: "1995-10-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 11/TT-NH5 as ended by 04/TT-NH1, and the row's end-date column gives 1995-10-01, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-252"
+    quote: "11/TT-NH5 ngày 06/7/1992\nVề việc hướng dẫn thực hiện Quy chế dự trữ bắt buộc\nHết hiệu lực bởi Thông tư 04/TT-NH1 ngày 19/9/1995 hướng dẫn thực hiện Quy chế dự trữ bắt buộc\n01/10/1995"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10125
+  number: "12/TT-NH7"
+  set: {eff_to: "1999-11-11"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 12/TT-NH7 says it was repealed by Quyết định 389/1999/QĐ-NHNN10 of 27/10/1999 and gives 11/11/1999 as its end date, so the first day out of force is 1999-11-11."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-170"
+    quote: "Thông tư\n12/TT-NH7 ngày 05/9/1994\nVề việc hướng dẫn thi hành Quyết định số 396-TTg ngày 4/8/1994 của Thủ tướng Chính phủ về việc bổ sung, sửa đổi một số điểm về quản lý ngoại tệ trong tình hình mới\nBị bãi bỏ bởi Quyết định 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản quy phạm pháp luật trong ngành ngân hàng\n11/11/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9276
+  number: "125/QĐ-NH5"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 125-QĐ/NH5 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-265, which holds its reason cell and its end-date cell 16/10/2015."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-264"
+    quote: "125-QĐ/NH5 ngày 9/5/1996"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:104724
+  number: "1278/2001/QĐ-NHNN"
+  set: {eff_to: "2005-01-30"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 1278/2001/QĐ-NHNN says it was repealed under Khoản 2 Điều 8 of Quyết định 12/QĐ-NHNN.m of 30/01/2005 and gives 30/01/2005 as its end date, so the first day out of force is 2005-01-30."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-179"
+    quote: "Quyết định\n1278/2001/QĐ-NHNN ngày 09/10/2001\nBan hành Quy chế hoạt động của Ban Điều hành quản lý dự trữ ngoại hối nhà nước\nBị bãi bỏ theo quy định tại Khoản 2 Điều 8 Quyết định số 12/QĐ-NHNN.m ngày 30/01/2005 về việc thành lập và tổ chức hoạt động của Ban Điều hành, quản lý dự trữ ngoại hối Nhà nước\n30/01/2005"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:13994
+  number: "13/2007/QĐ-NHNN"
+  set: {eff_to: "2008-10-06"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 13/2007/QĐ-NHNN as replaced by 2210/QĐ-NHNN, and the row's end-date column gives 2008-10-06, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-372"
+    quote: "13/2007/QĐ-NHNN ngày 30/03/2007\nSửa đổi Quy chế tổ chức và hoạt động của Vụ Tổng kiểm soát ban hành kèm theo Quyết định số 1128/2004/QĐ-NHNN ngày 09/9/2004 của Thống đốc Ngân hàng Nhà n­ước\nBị thay thế bởi Quyết định số 2210/QĐ-NHNN ngày 06/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Vụ Kiểm toán nội bộ.\n6/10/2008"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8937
+  number: "13/CT-NH14"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-333"
+    quote: "13-CT-NH14 ngày 07/11/1996\nVề củng cố tăng cường công tác thông tin tín dụng trong ngành ngân hàng\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9852
+  number: "135/QĐ-NH6"
+  set: {eff_to: "1999-03-25"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 135-QĐ/NH6 as wholly expired, replaced by Decision 81/1999/QĐ-NH6 of 10/03/1999, and its own row gives 25/3/1999 as the end date, so eff_to is 1999-03-25."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-300"
+    quote: "135-QĐ/NH6 ngày 06/5/1995\nBan hành Quy chế tiêu huỷ các loại tiền giấy rách nát, hư hỏng và tiền đình chỉ lưu hành\nBị thay thế bởi Quyết định 81/1999/QĐ-NH6 ngày 10/03/1999 về việc ban hành Quy chế tiêu hủy tiền\n25/3/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9853
+  number: "136/QĐ-NH2"
+  set: {eff_to: "1999-04-01"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 136-QĐ/NH2 as wholly expired, replaced by Decision 435/1998/QĐ-NHNN2 of 25/12/1998, and its own row gives 01/4/1999 as the end date, so eff_to is 1999-04-01."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-314"
+    quote: "136-QĐ/NH2 ngày 10/5/1995\nVề việc bổ sung một số tài khoản vào hệ thống tài khoản kế toán tổ chức tín dụng\nBị thay thế bởi Quyết định 435/1998/QĐ-NHNN2 ngày 25/12/1998 về việc ban hành Hệ thống tài khoản kế toán các tổ chức tín dụng\n01/4/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9854
+  number: "139/QĐ-NH1"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 139-QĐ/NH1 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-124"
+    quote: "139-QĐ/NH1 ngày 18/5/1995\nBan hành “Quy chế phát hành trái phiếu quốc tế của các Ngân hàng thương mại quốc doanh”\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:7458
+  number: "14-1998/QĐ-NHNN2"
+  set: {eff_to: "2015-12-10"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2538/QĐ-NHNN of 10/12/2015, and its own row gives 10/12/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-317"
+    quote: "14/1998/QĐ-NHNN2 ngày 10/01/1998\nBan hành Quy định về quản lý tài chính, tài sản đối với Ban quản lý các dự án ngân hàng\nBị bãi bỏ bởi Quyết định số 2538/QĐ-NHNN ngày 10/12/2015 về bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\n10/12/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:16268
+  number: "14/2006/QĐ-NHNN"
+  set: {eff_to: "2018-11-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: ended by 22/2018/TT-NHNN of 2018-09-05, with 01/11/2018 in the Ngày hết hiệu lực column, so 2018-11-01 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-281"
+    quote: "14/2006/QĐ-NHNN ngày 04/04/2006\nSửa đổi, bổ sung một số điều của Quy định về tổ chức và hoạt động của Hội đồng quản trị, Ban kiểm soát, Tổng giám đốc (Giám đốc) Tổ chức tín dụng phi ngân hàng ban hành kèm theo Quyết định số 516/2003/QĐ-NHNN ngày 26/5/2003 của Thống đốc Ngân hàng Nhà nước\nBị hết hiệu lực bởi Thông tư số 22/2018/TT-NHNN ngày 05/9/2018 hướng dẫn về thủ tục, hồ sơ chấp thuận danh sách dự kiến nhân sự của ngân hàng thương mại, tổ chức tín dụng phi ngân hàng và chi nhánh ngân hàng nước ngoài\n01/11/2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9855
+  number: "140/QĐ-NH4"
+  set: {eff_to: "1999-11-11"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 140-QĐ/NH4 says it was repealed by Quyết định 389/1999/QĐ-NHNN10 of 27/10/1999 and gives 11/11/1999 in the Ngày hết hiệu lực column, so the first day out of force is 1999-11-11."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-300"
+    quote: "Quyết định\n140-QĐ/NH4 ngày 18/5/1995\nBan hành Quy chế giám sát tiêu huỷ các loại tiền giấy rách nát, hư hỏng và tiền đình chỉ lưu hành\nBị bãi bỏ bởi Quyết định số 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản quy phạm pháp luật trong ngành ngân hàng\n11/11/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9275
+  number: "142/QĐ-NH17"
+  set: {eff_to: "2001-08-28"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 142/QĐ-NH17 as wholly expired, repealed by Decree 48/2001/NĐ-CP of 13/08/2001, and its own row gives 28/8/2001 as the end date, so eff_to is 2001-08-28."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-265"
+    quote: "142/QĐ-NH17 ngày 21/5/1996\nVề việc bổ sung, sửa đổi một số điểm về Quy chế tổ chức hoạt động của Quỹ tín dụng khu vực\nBị bãi bỏ bởi Nghị định 48/2001/NĐ-CP ngày 13/08/2001 về tổ chức và hoạt động của Quỹ tín dụng nhân dân\n28/8/2001"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9858
+  number: "149/QĐ-NH5"
+  set: {eff_to: "1996-10-11"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 149-QĐ/NH5 says it was cancelled by Quyết định 278/QĐ-NH5 of 11/10/1996 and gives 11/10/1996 in the Ngày hết hiệu lực column, so the first day out of force is 1996-10-11."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-261"
+    quote: "Quyết định\n149-QĐ/NH5 ngày 27/5/1995\nVề việc ban hành Thể lệ Tín dụng thuê mua\nBị hủy bỏ bởi Quyết định số 278/QĐ-NH5 ngày 11/10/1996 về việc hủy bỏ Quyết định 149-QĐ/NH5 ngày 27/5/1995 của Thống đốc Ngân hàng Nhà nước ban hành Thể lệ tín dụng thuê mua\n11/10/1996"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:32582
+  number: "156/2013/NĐ-CP"
+  set: {eff_to: "2017-02-17"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired through Nghị định 16/2017/NĐ-CP of 2017-02-17, and that row gives 2017-02-17 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-335"
+    quote: "156/2013/NĐ-CP ngày 11/11/2013\nQuy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam\nBị hết hiệu lực bởi Nghị định số 16/2017/NĐ-CP ngày 17/02/2017 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam\n17/02/2017"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8854
+  number: "16/CT-NH9"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-353"
+    quote: "16-CT/NH9 ngày 31/12/1996\nVề công tác tổ chức cán bộ trong thời gian tới\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10122
+  number: "174/QĐ-NH5"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 174/QĐ-NH5 says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 as its end date, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-258"
+    quote: "Quyết định\n174/QĐ-NH5 ngày 26/8/1994\nVề việc bổ sung, sửa đổi về nội dung phạm vi hoạt động của chi nhánh ngân hàng nước ngoài, ngân hàng liên doanh hoạt động tại Việt Nam\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10123
+  number: "175/QĐ-NH5"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 175/QĐ-NH5 says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 as its end date, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-169"
+    quote: "Quyết định\n175-QĐ/NH5 ngày 26/8/1994\nVề việc cho vay ngoại tệ của chi nhánh ngân hàng nước ngoài, Ngân hàng liên doanh đối với các Ngân hàng trong nước\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9859
+  number: "180/QĐ-NH1"
+  set: {eff_to: "1995-09-15"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 180-QĐ/NH1 says it was ended by Quyết định 241-QĐ/NH1 of 09/09/1995 and gives 15/9/1995 in the Ngày hết hiệu lực column, so the first day out of force is 1995-09-15."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-124"
+    quote: "Quyết định\n180-QĐ/NH1 ngày 29/6/1995\nVề điều chỉnh lãi suất tiền gửi của tổ chức kinh tế\nBị hết hiệu lực bởi Quyết định số 241-QĐ/NH1 ngày 09/09/1995 về điều chỉnh lãi suất tiền gửi của tổ chức kinh tế\n15/9/1995"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10100
+  number: "185-QĐ/NH5"
+  set: {eff_to: "1998-10-15"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 185-QĐ/NH5 says it was replaced by Quyết định 324/1998/QĐ-NHNN1 of 30/9/1998 and gives 15/10/1998 as its end date, so the first day out of force is 1998-10-15."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-215"
+    quote: "Quyết định\n185-QĐ/NH5 ngày 6/9/1994\nVề việc ban hành Quy chế dịch vụ cầm cố\nBị thay thế bởi Quyết định 324/1998/QĐ-NHNN1 ngày 30/9/1998 về việc ban hành Quy chế cho vay của tổ chức tín dụng đối với khách hàng\n15/10/1998"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10070
+  number: "196-NH14/QĐ"
+  set: {eff_to: "2000-09-09"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 196-NH14/QĐ says it was replaced by Quyết định 283/2000/QĐ-NHNN15 of 25/08/2000 and its date cell, opening doan-216, gives 9/9/2000, so the first day out of force is 2000-09-09."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-215"
+    quote: "Quyết định\n196/QĐ-NH14 ngày 16/9/1994\nVề việc ban hành “Quy chế về nghiệp vụ bảo lãnh của các ngân hàng’"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:8635
+  number: "196/TTg"
+  set: {eff_to: "2002-04-06"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, replaced by 44/2002/QĐ-TTg of 21/3/2002, and its own row gives 06/04/2002 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-193"
+    quote: "196/TTg ngày 01/4/1997\nSử dụng các dữ liệu thông tin trên vật mang tin để làm chứng từ kế toán và thanh toán vốn của các ngân hàng và tổ chức tín dụng\nBị thay thế bởi Quyết định 44/2002/QĐ-TTg ngày 21/3/2002 của Thủ tướng Chính phủ về sử dụng chứng từ điện tử làm chứng từ kế toán để hạch toán và thanh toán vốn của các Tổ chức cung ứng dịch vụ thanh toán\n06/04/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:25761
+  number: "20/2010/TT-NHNN"
+  set: {eff_to: "2018-07-13"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired through Thông tư 14/2018/TT-NHNN of 2018-05-29, and that row gives 2018-07-13 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-151"
+    quote: "20/2010/TT-NHNN ngày 29/9/2010\nHướng dẫn thực hiện các biện pháp điều hành công cụ chính sách tiền tệ để hỗ trợ tổ chức tín dụng cho vay phát triển nông nghiệp, nông thôn\nBị hết hiệu lực bởi Thông tư số 14/2018/TT-NHNN ngày 29/5/2018 hướng dẫn thực hiện các biện pháp điều hành công cụ chính sách tiền tệ để hỗ trợ các tổ chức tín dụng cho vay phát triển nông nghiệp, nông thôn\n13/7/2018"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:11429
+  number: "203/NH-TT"
+  set: {eff_to: "1999-11-11"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 203/NH-TT as repealed by 389/1999/QĐ-NHNN10, and the row's end-date column gives 1999-11-11, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-161"
+    quote: "203/NH-TT ngày 31/10/1991\nHướng dẫn thi hành Quyết định số 337-HĐBT ngày 25/10/1991 của Hội đồng Bộ trưởng về một số biện pháp quản lý ngoại tệ trong thời gian trước mắt\nBị bãi bỏ bởi Quyết định số 389/1999/QĐ-NHNN10 ngày 27/10/1999 bãi bỏ một số văn bản trong ngành ngân hàng\n11/11/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:14128
+  number: "22/2007/QĐ-NHNN"
+  set: {eff_to: "2013-12-10"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 22/2007/QĐ-NHNN as repealed by 2899/QĐ-NHNN, and the row's end-date column gives 2013-12-10, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-372"
+    quote: "22/2007/QĐ-NHNN ngày 28/05/2007\nBan hành Quy chế về công tác văn thư và lưu trữ\nBị bãi bỏ bởi Quyết định số 2899/QĐ-NHNN ngày 06/12/2013 ban hành Quy chế công tác văn thư và lưu trữ của NHNN Việt Nam\n10/12/2013"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10127
+  number: "22/QĐ-NH1"
+  set: {eff_to: "2002-04-10"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 22/QĐ-NH1 says it was replaced by Quyết định 226/2002/QĐ-NHNN of 26/03/2002 and gives 10/4/2002 as its end date, so the first day out of force is 2002-04-10."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-197"
+    quote: "Quyết định\n22/QĐ-NH1 ngày 21/02/1994\nBan hành \"Thể lệ thanh toán không dùng tiền mặt\"\nBị thay thế bởi Quyết định 226/2002/QĐ-NHNN ngày 26/03/2002 về việc ban hành quy chế hoạt động thanh toán qua các tổ chức cung ứng dịch vụ thanh toán\n10/4/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:1907
+  number: "222/NH-TT"
+  set: {eff_to: "1999-11-11"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 389/1999/QĐ-NHNN10 of 1999-10-27, with 11/11/1999 in the Ngày hết hiệu lực column, so 1999-11-11 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-159"
+    quote: "222/NH-TT ngày 20/10/1990\nHướng dẫn thi hành Chỉ thị 330-CT ngày 13-9-1990 của Chủ tịch Hội đồng Bộ trưởng về việc tăng cường quản lý ngoại hối\nBị bãi bỏ bởi Quyết định số 389/1999/QĐ-NHNN10 ngày 27/10/1999 bãi bỏ một số văn bản trong ngành ngân hàng\n11/11/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9065
+  number: "224/QĐ-NH6"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-301"
+    quote: "224/QĐ-NH6 ngày 24/8/1996\nVề việc bổ sung chế độ quản lý kho, quỹ trong ngành ngân hàng ban hành theo Quyết định 184-QĐ/NH ngày 10/10/1991\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:11356
+  number: "228-NH/QĐ"
+  set: {eff_to: "2015-10-16"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 228-NH/QĐ as repealed by 2039/QĐ-NHNN, and the row's end-date column gives 2015-10-16, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-161"
+    quote: "228-NH/QĐ ngày 02/12/1991\nThay Điều 12 Quy chế tổ chức và hoạt động của Trung tâm giao dịch ngoại tệ về phí giao dịch\nBị bãi bỏ bởi Quyết định số 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10608
+  number: "228/QĐ-NH5"
+  set: {eff_to: "2007-12-24"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 228/QĐ-NH5 says it was replaced by Thông tư 07/2007/TT-NHNN of 29/11/2007 and gives 24/12/2007 as its end date, so the first day out of force is 2007-12-24."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-257"
+    quote: "Quyết định\n228/QĐ-NH5 ngày 02/12/1993\nBan hành quy định việc các tổ chức tín dụng Việt Nam gọi vốn cổ phần từ cổ đông nước ngoài\nBị thay thế bởi Thông tư 07/2007/TT-NHNN ngày 29/11/2007 hướng dẫn thi hành một số nội dung của Nghị định số 69/2007/NĐ-CP ngày 20/4/2007của Chính phủ về việc nhà đầu tư nước ngoài mua cổ phần của Ngân hàng thương mại Việt Nam\n24/12/2007"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9817
+  number: "230/QĐ-NH5"
+  set: {eff_to: "2002-10-04"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 230-QĐ/NH5 as wholly expired, repealed by Decision 131/2002/QĐ-TTg of 04/10/2002, and its own row gives 04/10/2002 as the end date, so eff_to is 2002-10-04."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-261"
+    quote: "230-QĐ/NH5 ngày 01/9/1995\nVề việc thành lập Ngân hàng phục vụ người nghèo\nBị bãi bỏ bởi Quyết định 131/2002/QĐ-TTg ngày 04/10/2002 về việc thành lập Ngân hàng Chính sách xã hội\n04/10/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9815
+  number: "236/QĐ-NH9"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 236-QĐ/NH9 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-352"
+    quote: "236-QĐ/NH9 ngày 09/9/1995\nBan hành Quy chế về trách nhiệm phối hợp công tác giữa các Vụ, Cục ở Ngân hàng Nhà nước Trung ương\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10099
+  number: "259-QĐ/NH6"
+  set: {eff_to: "1999-07-29"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 259-QĐ/NH6 says it was replaced by Quyết định 247/QĐ-NH6 of 14/07/1999 and gives 29/07/1999 as its end date, so the first day out of force is 1999-07-29."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-299"
+    quote: "Quyết định\n259-QĐ/NH6 ngày 22/10/1994\nVề việc ban hành Quy chế về nhận bảo quản tài sản quý hiếm\nBị thay thế bởi Quyết định 247/QĐ-NH6 ngày 14/07/1999 Ban hành Chế độ giao nhận, bảo quản, vận chuyển tiền mặt, tài sản quý, giấy tờ có giá\n29/07/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9794
+  number: "261/QĐ-NH1"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 261-QĐ/NH1 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-125"
+    quote: "261-QĐ/NH1 ngày 19/9/1995\nVề tỷ lệ và cơ cấu dự trữ bắt buộc đối với tổ chức tín dụng\nBị bãi bỏ bởi Quyết định số 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9833
+  number: "262/QĐ-NH14"
+  set: {eff_to: "2000-09-09"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 262-QĐ/NH14 as wholly expired, replaced by Decision 283/2000/QĐ-NHNN14 of 25/08/2000, and its own row gives 9/9/2000 as the end date, so eff_to is 2000-09-09. The row continues in doan-218, which opens with its end-date cell 9/9/2000."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-217"
+    quote: "262-QĐ/NH14 ngày 19/9/1995"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:88182
+  number: "263/1997/QĐ-NH21"
+  set: {eff_to: "2012-10-20"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 25/2012/TT-NHNN of 06/9/2012, and its own row gives 20/10/2012 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-221"
+    quote: "263/1997/QĐ-NH21 ngày 04/08/1997\nQuản lý và sử dụng nguồn vốn vay lại của ngân hàng Đầu tư và phát triển Việt Nam trong khuôn khổ Dự án hiện đại hoá ngân hàng và hệ thống thanh toán\nBị bãi bỏ bởi Thông tư 25/2012/TT-NHNN ngày 06/9/2012 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước ban hành\n20/10/2012"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9837
+  number: "263/QĐ-NH14"
+  set: {eff_to: "2000-09-09"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 263-QĐ/NH14 as wholly expired, replaced by Decision 283/2000/QĐ-NHNN14 of 25/08/2000, and its own row gives 9/9/2000 as the end date, so eff_to is 2000-09-09."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-218"
+    quote: "263-QĐ/NH14 ngày 19/9/1995\nVề việc sửa một số điều của Quy chế bảo lãnh và tái bảo lãnh vay vốn nước ngoài ban hành kèm theo Quyết định số 23-QĐ/NH14 ngày 21/02/1994 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 283/2000/QĐ-NHNN14 ngày 25/08/2000 về việc ban hành Quy chế bảo lãnh ngân hàng\n9/9/2000"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9800
+  number: "269/QĐ-NH9"
+  set: {eff_to: "1999-03-18"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 269-QĐ/ NH9 as wholly expired, replaced by Decision 75/1999/QĐ-NHNN9 of 03/03/1999, and its own row gives 18/3/1999 as the end date, so eff_to is 1999-03-18."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-352"
+    quote: "269-QĐ/ NH9 ngày 23/9/1995\nVề thành lập Ban quản lý dự án Ngân hàng\nBị thay thế bởi Quyết định 75/1999/QĐ-NHNN9 ngày 03/03/1999 về việc ban hành “Quy chế tổ chức và hoạt động của Ban Quản lý các dự án tín dụng quốc tế”\n18/3/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15380
+  number: "272/2005/QĐ-NHNN"
+  set: {eff_to: "2005-09-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 1247/2005/QĐ-NHNN of 2005-08-26, with 01/09/2005 in the Ngày hết hiệu lực column, so 2005-09-01 is the first day it is out of force. The row continues in doan-146, which opens with its end-date cell 01/09/2005."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-145"
+    quote: "272/2005/QĐ-NHNN ngày 21/03/2005"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9838
+  number: "273/QĐ-NH2"
+  set: {eff_to: "1999-04-01"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 273-QĐ/NH2 as wholly expired, replaced by Decision 435/1998/QĐ-NHNN2 of 25/12/1998, and its own row gives 01/4/1999 as the end date, so eff_to is 1999-04-01."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-315"
+    quote: "273-QĐ/NH2 ngày 26/9/1995\nVề việc huỷ bỏ một số tài khoản trong hệ thống tài khoản kế toán các tổ chức tín dụng\nBị thay thế bởi Quyết định số 435/1998/QĐ-NHNN2 ngày 25/12/1998 về hệ thống tài khoản kế toán của các tổ chức tín dụng\n01/4/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15631
+  number: "28/2006/QĐ-NHNN"
+  set: {eff_to: "2012-06-27"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 1280/QĐ-NHNN of 2012-06-27, with 27/6/2012 in the Ngày hết hiệu lực column, so 2012-06-27 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-370"
+    quote: "28/2006/QĐ-NHNN ngày 30/06/2006\nBan hành Quy chế đào tạo, bồi dưỡng cán bộ, công chức, viên chức Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 1280/QĐ-NHNN ngày 27/6/2012 về việc ban hành Quy chế đào tạo, bồi dưỡng cán bộ, công chức, viên chức Ngân hàng Nhà nước\n27/6/2012"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:13889
+  number: "30/2007/QĐ-NHNN"
+  set: {eff_to: "2008-10-07"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 30/2007/QĐ-NHNN as replaced by 2236/QĐ-NHNN, and the row's end-date column gives 2008-10-07, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-373"
+    quote: "30/2007/QĐ-NHNN ngày 29/06/2007\nSửa đổi, bổ sung một số điều Quy chế Tổ chức và hoạt động của Vụ Kế toán - Tài chính ban hành kèm theo Quyết định số 01/2006/QĐ-NHNN ngày 16/01/2006 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 2236/QĐ-NHNN ngày 07/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Vụ Tài chính – Kế toán\n7/10/2008"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9821
+  number: "308/QĐ-NH6"
+  set: {eff_to: "1999-07-29"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 308-QĐ/NH6 as wholly expired, replaced by Decision 247/1999/QĐ-NHNN6 of 14/07/1999, and its own row gives 29/7/1999 as the end date, so eff_to is 1999-07-29."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-301"
+    quote: "308-QĐ/NH6 ngày 31/10/1995\nBan hành Quy định về quản lý nghiệp vụ kho quĩ và điều hoà tiền mặt thực hiện trên máy vi tính\nBị thay thế bởi Quyết định 247/1999/QĐ-NHNN6 ngày 14/07/1999 ban hành Chế độ giao nhận, bảo quản, vận chuyển tiền mặt, tài sản quý, giấy tờ có giá\n29/7/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:13888
+  number: "31/2007/QĐ-NHNN"
+  set: {eff_to: "2008-10-06"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 31/2007/QĐ-NHNN as replaced by 2221/QĐ-NHNN, and the row's end-date column gives 2008-10-06, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-373"
+    quote: "31/2007/QĐ-NHNN ngày 29/06/2007\nSửa đổi Quy chế tổ chức và hoạt động của Văn phòng đại diện tại Thành phố Hồ Chí Minh ban hành kèm theo Quyết định số 1050/2004/QĐ-NHNN ngày 23/8/2004 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 2221/QĐ-NHNN ngày 06/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Văn phòng đại diện tại thành phố Hồ Chí Minh\n6/10/2008"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:13883
+  number: "34/2007/QĐ-NHNN"
+  set: {eff_to: "2008-10-06"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 34/2007/QĐ-NHNN as replaced by 2213/QĐ-NHNN, and the row's end-date column gives 2008-10-06, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-373"
+    quote: "34/2007/QĐ-NHNN ngày 06/07/2007\nSửa đổi, bổ sung Quy chế tổ chức và hoạt động của Sở Giao dịch Ngân hàng Nhà nước ban hành kèm theo Quyết định số 1136/2004/QĐ-NHNN ngày 09/9/2004 của Thống đốc Ngân hàng Nhà nước\nBị thay thế bởi Quyết định số 2213/QĐ-NHNN ngày 06/10/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Sở Giao dịch\n6/10/2008"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9827
+  number: "342/QĐ-NH17"
+  set: {eff_to: "2015-10-16"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 342-QĐ/NH17 as wholly expired, repealed by Decision 2039/QĐ-NHNN of 16/10/2015, and its own row gives 16/10/2015 as the end date, so eff_to is 2015-10-16. The row continues in doan-126, which opens with its end-date cell 16/10/2015."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-125"
+    quote: "342-QĐ/NH17 ngày 04/12/1995"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9826
+  number: "343/QĐ-NH17"
+  set: {eff_to: "2004-10-17"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 343-QĐ/NH17 as wholly expired, repealed by Decision 1232/2004/QĐ-NHNN of 24/09/2004, and its own row gives 17/10/2004 as the end date, so eff_to is 2004-10-17."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-262"
+    quote: "343-QĐ/NH17 ngày 04/12/1995\nVề việc bổ sung, sửa đổi một số điểm về điều hành vốn trong hệ thống Quỹ tín dụng nhân dân\nBị bãi bỏ bởi Quyết định 1232/2004/QĐ-NHNN ngày 24/09/2004 về việc bãi bỏ các quy định về nhận tiền gửi và cho vay áp dụng đối với hệ thống Quỹ tín dụng nhân dân trong giai đoạn thí điểm\n17/10/2004"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9700
+  number: "367/QĐ-NH1"
+  set: {eff_to: "1998-10-15"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 367-QĐ/NH1 as wholly expired, replaced by Decision 324/1998/QĐ-NHNN1 of 30/09/1998, and its own row gives 15/10/1998 as the end date, so eff_to is 1998-10-15."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-219"
+    quote: "367-QĐ/NH1 21/12/1995\nQuy định về thể lệ tín dụng trung và dài hạn đối với các tổ chức kinh tế\nBị thay thế bởi Quyết định số 324/1998/QĐ-NHNN1 ngày 30/09/1998 về việc ban hành Quy chế cho vay của tổ chức tín dụng đối với khách hàng\n15/10/1998"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:6028
+  number: "37/2000/QĐ-NHNN1"
+  set: {eff_to: "2014-12-29"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired through Quyết định 2795/QĐ-NHNN of 2014-12-29, and that row gives 2014-12-29 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-133"
+    quote: "37/2000/QĐ-NHNN1 ngày 24/01/2000\nBan hành Quy chế quản lý vốn khả dụng\nBị hết hiệu lực bởi Quyết định số 2795/QĐ-NHNN ngày 29/12/2014 về việc dự báo vốn khả dụng của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\n29/12/2014"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:6010
+  number: "38/2000/QĐ-NHNN1"
+  set: {eff_to: "2014-12-29"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly expired through Quyết định 2795/QĐ-NHNN of 2014-12-29, and that row gives 2014-12-29 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-133"
+    quote: "38/2000/QĐ-NHNN1 ngày 24/01/2000\nVề kỳ dự báo và định kỳ cung cấp thông tin cho công tác quản lý vốn khả dụng\nBị hết hiệu lực bởi Quyết định số 2795/QĐ-NHNN ngày 29/12/2014 về việc dự báo vốn khả dụng của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài\n29/12/2014"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:18396
+  number: "425/2005/QĐ-NHNN"
+  set: {eff_to: "2015-02-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by the circular written as 01/2014/TT-NHNN of 2014-12-10, with 01/02/2015 in the Ngày hết hiệu lực column, so 2015-02-01 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-184"
+    quote: "425/2005/QĐ-NHNN ngày 13/4/2005\nSửa đổi khoản 3 Điều 7 và khoản 3 Điều 18 quy chế tổ chức thực hiện những nhiệm vụ về quản lý dự trữ ngoại hối nhà nước ban hành kèm theo Quyết định số 653/2001/QĐ-NHNN ngày 17/5/2001 của Thống đốc\nBị thay thế bởi Thông tư 01/2014/TT-NHNN.m ngày 10/12/2014 hướng dẫn việc tổ chức thực hiện hoạt động quản lý dự trữ ngoại hối nhà nước\n01/02/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10380
+  number: "45/QĐ-NH1"
+  set: {eff_to: "1994-10-01"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 45/QĐ-NH1 says it was replaced by Quyết định 244-QĐ/NH1 of 01/10/1994 and gives 01/10/1994 as its end date, so the first day out of force is 1994-10-01."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-118"
+    quote: "Quyết định\n45-QĐ/NH1 ngày 23/3/1994\nVề lãi suất tái cấp vốn của Ngân hàng Nhà nước đối với các tổ chức tín dụng\nBị thay thế bởi Quyết định số 244-QĐ/NH1 ngày 01/10/1994 về việc điều chỉnh lãi suất tái cấp vốn của Ngân hàng nhà nước đối với các tổ chức tín dụng\n01/10/1994"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:15149
+  number: "508/2004/QĐ-NHNN"
+  set: {eff_to: "2009-01-15"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 3289/QĐ-NHNN of 2008-12-31, with 15/1/2009 in the Ngày hết hiệu lực column, so 2009-01-15 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-362"
+    quote: "508/2004/QĐ-NHNN ngày 11/05/2004\nBan hành Quy chế tổ chức và hoạt động của Trung tâm Thông tin tín dụng\nBị thay thế bởi Quyết định số 3289/QĐ-NHNN ngày 31/12/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Trung tâm Thông tin tín dụng.\n15/1/2009"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10864
+  number: "51-NH/QĐ"
+  set: {eff_to: "1994-03-10"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 51-NH/QĐ as ended by 05-TT/NH7, and the row's end-date column gives 1994-03-10, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-163"
+    quote: "51/NH-QĐ ngày 14/3/1992\nBan hành Quy chế quản lý Nhà nước về kinh doanh đá quý\nBị hết hiệu lực bởi Thông tư số 05-TT/NH7 ngày 10/3/1994 hướng dẫn thực hiện Quy chế quản lý các hoạt động điều tra địa chất, khai thác mỏ, chế tác và buôn bán đá quý ban hành kèm theo Nghị định số 67-CP ngày 7/10/1993 của Chính phủ\n10/3/1994"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:21129
+  number: "516/2003/QĐ-NHNN"
+  set: {eff_to: "2018-11-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: ended by 22/2018/TT-NHNN of 2018-09-05, with 01/11/2018 in the Ngày hết hiệu lực column, so 2018-11-01 is the first day it is out of force. The row continues in doan-277, which holds its reason cell and its end-date cell 01/11/2018."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-276"
+    quote: "516/2003/QĐ-NHNN ngày 26/5/2003"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9804
+  number: "525-TTg"
+  set: {eff_to: "2002-10-04"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists 525-TTg as wholly expired, repealed by Decision 131/2002/QĐ-TTg of 04/10/2002, and its own row gives 04/10/2002 as the end date, so eff_to is 2002-10-04."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-248"
+    quote: "525-TTg ngày 31/8/1995\nVề thành lập Ngân hàng phục vụ người nghèo\nBị bãi bỏ bởi Quyết định 131/2002/QĐ-TTg ngày 04/10/2002 thành lập Ngân hàng Chính sách xã hội\n04/10/2002"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:14866
+  number: "54/2006/QĐ-NHNN"
+  set: {eff_to: "2008-12-31"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 3290/QĐ-NHNN of 2008-12-31, with 31/12/2008 in the Ngày hết hiệu lực column, so 2008-12-31 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-371"
+    quote: "54/2006/QĐ-NHNN ngày 31/10/2006\nSửa đổi, bổ sung Quy chế tổ chức và hoạt động của Thời báo Ngân hàng ban hành kèm theo Quyết định số 1049/2004/QĐ-NHNN ngày 23/8/2004\nBị thay thế Quyết định số 3290/QĐ-NHNN ngày 31/12/2008 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Thời báo ngân hàng.\n31/12/2008"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:11276
+  number: "56-NHNN/TT"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 56-NHNN/TT says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and its date cell, opening doan-194, gives 16/10/2015, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-193"
+    quote: "Thông tư\n56/NH-TT ngày 14/5/1991\nHướng dẫn thi hành Quyết định số 112/CT ngày 12/4/1991 của Chủ tịch Hội đồng Bộ trưởng về việc thanh toán hàng xuất nhập khẩu"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:21497
+  number: "648/2003/QĐ-NHNN"
+  set: {eff_to: "2015-12-10"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: repealed by 2538/QĐ-NHNN of 2015-12-10, with 10/12/2015 in the Ngày hết hiệu lực column, so 2015-12-10 is the first day it is out of force. The row continues in doan-143, which opens with its end-date cell 10/12/2015."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-142"
+    quote: "648/2003/QĐ-NHNN ngày 24/06/2003"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:22652
+  number: "653/2001/QĐ-NHNN"
+  set: {eff_to: "2015-02-01"}
+  reason: "211/QĐ-NHNN Appendix 2 lists this document in its own row as wholly replaced by Thông tư 01/2014/TT-NHNN.m of 2014-12-10, and that row gives 2015-02-01 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-178"
+    quote: "653/2001/QĐ-NHNN ngày 17/05/2001\nBan hành Quy chế tổ chức thực hiện những nhiệm vụ về quản lý dự trữ ngoại hối nhà nước\nBị thay thế bởi Thông tư số 01/2014/TT-NHNN.m ngày 10/12/2014 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn việc tổ chức thực hiện hoạt động quản lý dự trữ ngoại hối nhà nước\n01/02/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9253
+  number: "67/QĐ-NH5"
+  set: {eff_to: "1999-11-11"}
+  reason: "211/QĐ-NHNN Phụ lục 2 lists the target as wholly expired, repealed by 389/1999/QĐ-NHNN10 of 27/10/1999, and its own row gives 11/11/1999 as the end date."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-264"
+    quote: "67/QĐ-NH5 ngày 27/3/1996\nVề mức vốn điều lệ tối thiểu đối với các tổ chức tín dụng thành lập từ năm 1996\nBị bãi bỏ bởi Quyết định 389/1999/QĐ-NHNN10 ngày 27/10/1999 về việc bãi bỏ một số văn bản trong ngành Ngân hàng\n11/11/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:10372
+  number: "7/TT-NH7"
+  set: {eff_to: "1999-08-27"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 7/TT-NH7 says it was ended by Thông tư 03/1999/TT-NHNN7 of 12/8/1999 and gives 27/8/1999 as its end date, so the first day out of force is 1999-08-27."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-168"
+    quote: "Thông tư\n07-TT/NH7 ngày 26/3/1994\nHướng dẫn việc quản lý vay và trả nợ nước ngoài của các doanh nghiệp\nBị hết hiệu lực bởi Thông tư 03/1999/TT-NHNN7 ngày 12/8/1999 hướng dẫn việc vay và trả nợ nước ngoài của các doanh nghiệp\n27/8/1999"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9881
+  number: "74/QĐ-NH14"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 74-QĐ/NH14 says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 in the Ngày hết hiệu lực column, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-217"
+    quote: "Quyết định\n74-QĐ/NH14 ngày 17/3/1995\nVề việc lập Quỹ cho vay ưu đãi hộ nghèo thiếu vốn sản xuất của Ngân hàng Nông nghiệp\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:9889
+  number: "76/QĐ-NH14"
+  set: {eff_to: "2015-10-16"}
+  reason: "The 211/QĐ-NHNN Phụ lục 2 row for 76-QĐ/NH14 says it was repealed by Quyết định 2039/QĐ-NHNN of 16/10/2015 and gives 16/10/2015 in the Ngày hết hiệu lực column, so the first day out of force is 2015-10-16."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-349"
+    quote: "Quyết định\n76-QĐ/NH14 ngày 18/3/1995\nVề việc ban hành Quy chế tổ chức và hoạt động của thị trường mua bán lại tín phiếu\nBị bãi bỏ bởi Quyết định 2039/QĐ-NHNN ngày 16/10/2015 về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc NHNNVN ban hành\n16/10/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:18146
+  number: "826/2005/QĐ-NHNN"
+  set: {eff_to: "2009-02-04"}
+  reason: "Appendix 2 of 211/QĐ-NHNN gives this document its own row: replaced by 202/QĐ-NHNN of 2009-02-04, with 4/2/2009 in the Ngày hết hiệu lực column, so 2009-02-04 is the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-368"
+    quote: "826/2005/QĐ-NHNN ngày 06/06/2005\nSửa đổi, bổ sung Điều 5 Quy chế tổ chức và hoạt động của Tạp chí Ngân hàng\nBị thay thế bởi Quyết định số 202/QĐ-NHNN ngày 04/02/2009 quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Tạp chí ngân hàng.\n4/2/2009"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:111146
+  number: "92/2016/TTLT-BTC-NHNN"
+  set: {eff_to: "2019-01-01"}
+  reason: "Appendix 2 of 211/QĐ-NHNN (wholly expired documents) lists 92/2016/TTLT-BTC-NHNN as replaced by 111/2018/TT-BTC, and the row's end-date column gives 2019-01-01, the first day it is out of force."
+  evidence:
+    key: vn:vbpl:hhtquyetdinh_65
+    anchor: "doan-190"
+    quote: "92/2016/TTLT-BTC-NHNN ngày 27/6/2016\nHướng dẫn việc phát hành tín phiếu kho bạc qua Ngân hàng Nhà nước Việt Nam do Bộ trưởng Bộ Tài chính - Thống đốc Ngân hàng Nhà nước Việt Nam ban hành\nBị thay thế bởi Thông tư Thông tư 111/2018/TT-BTC ngày 15/11/2018 hướng dẫn phát hành và thanh toán công cụ nợ của Chính phủ tại thị trường trong nước do Bộ trưởng Bộ Tài chính ban hành\n01/01/2019"
   reviewed: "2026-11-18"
