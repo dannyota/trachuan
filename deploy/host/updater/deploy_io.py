@@ -142,12 +142,24 @@ def failure_reason(args, stderr):
     return 'failed'
 
 
-def bounded_output(process, limit, timeout):
+def bounded_output(process, limit, timeout, input=None):
     deadline = time.monotonic() + timeout
     output, errors = bytearray(), bytearray()
+    pending = memoryview(input) if input else None
+    def finish_input(selector=None):
+        if selector is not None:
+            selector.unregister(process.stdin)
+        process.stdin.close()
+        process.stdin = None
     with selectors.DefaultSelector() as selector:
         selector.register(process.stdout, selectors.EVENT_READ, output)
         selector.register(process.stderr, selectors.EVENT_READ, errors)
+        if process.stdin is not None:
+            if pending:
+                os.set_blocking(process.stdin.fileno(), False)
+                selector.register(process.stdin, selectors.EVENT_WRITE, 'input')
+            else:
+                finish_input()
         while selector.get_map():
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -156,6 +168,16 @@ def bounded_output(process, limit, timeout):
             if not ready:
                 raise subprocess.TimeoutExpired('host command', timeout)
             for key, _ in ready:
+                if key.data == 'input':
+                    try:
+                        pending = pending[os.write(key.fd, pending[:65536]):]
+                    except BlockingIOError:
+                        continue
+                    except BrokenPipeError:
+                        pending = None
+                    if not pending:
+                        finish_input(selector)
+                    continue
                 size = min(65536, limit + 1 - len(output)) if key.data is output else 65536
                 chunk = os.read(key.fd, size)
                 if not chunk:
@@ -183,9 +205,9 @@ def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None,
                 if stdout_limit is None:
                     output, errors = process.communicate(input=input, timeout=timeout)
                 else:
-                    if input is not None or type(stdout_limit) is not int or stdout_limit < 0:
+                    if type(stdout_limit) is not int or stdout_limit < 0:
                         raise ValueError('invalid streaming command limits')
-                    output, errors = bounded_output(process, stdout_limit, timeout)
+                    output, errors = bounded_output(process, stdout_limit, timeout, input)
                 if process.returncode:
                     code = None
                     if error_prefix:

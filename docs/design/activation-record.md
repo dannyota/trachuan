@@ -53,7 +53,8 @@ updater deletes.
 
 The order for each change is: record, then tables, then `state.json`. The step
 moves in the record before the matching table write, and `swapping` is written
-before the pointer transaction.
+before the pointer transaction. `swapping` has no journal row, because older
+updaters refuse unknown steps; its table write is the `activated` row.
 
 ## Reconciling
 
@@ -92,14 +93,14 @@ bootstrap.
 
 ## Mode
 
-`retained` needs a `retired` entry with the manifest's database and dump digest,
-and that OID in the catalog; the operation starts with that OID. Otherwise the
-operation is `new`. It requires `previous` to equal the pointer and, when
-`active` exists, `active` too, and it needs a target that is neither `active`
-nor in `retired`. When these do not hold the phase waits and spends nothing,
-because a forged pointer can cause them. A rollback to a database with no entry,
-such as one restored by hand, is the owner's manual swap. Only the newest
-accepted manifest starts an operation.
+`retained` needs a `retired` entry no older than seven days with the manifest's
+database and dump digest, and that OID in the catalog; the operation starts with
+that OID. Otherwise the operation is `new`. It requires `previous` to equal the
+pointer and, when `active` exists, `active` too, and it needs a target that is
+neither `active` nor in `retired`. When these do not hold the phase waits and
+spends nothing, because a forged pointer can cause them. A rollback to a
+database with no entry, such as one restored by hand, is the owner's manual
+swap. Only the newest accepted manifest starts an operation.
 
 ## Recovery
 
@@ -142,8 +143,8 @@ updater settles `state.json` and clears the operation.
 record: a re-signed active release, a crash combined with a lost file, or a
 forgery. The database must exist, belong to `activator`, have the recorded OID
 if one exists, and pass the release row check, the catalog check and the smoke
-test, all read-only. It then finishes. Anything else waits and alarms, and the
-manifest stays pending.
+test, all read-only. It is recorded as a `retained` operation and then finishes.
+Anything else waits and alarms, and the manifest stays pending.
 
 **Leaving a wait.** Setting the pointer back to `expected` resumes the
 operation. A newer accepted manifest replaces it: the phase still fetches while
@@ -184,14 +185,14 @@ alarm. Each code is recorded in `alerts` with the time it was last seen and
 stays in the kind's result file, as the list `integrity`, for 24 hours after
 that, so a one-off event cannot be missed between runs.
 
-| Code                    | Raised when                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `pointer_changed`       | on any run the pointer differs from `active`, other than by a `swapping` operation; or Mode waits on it |
-| `serving_database_gone` | the database `active` or the pointer's target names is missing or has another OID while it serves       |
-| `active_cleared`        | reconciling rule 5 cleared `active`                                                                     |
-| `adoption_failed`       | a database failed an adoption check                                                                     |
-| `record_rebuilt`        | an unreadable file was rebuilt; seeding a missing file raises nothing                                   |
-| `journal_row_refused`   | a journal row failed its shape check, or `RETURNING` differed from the insert                           |
+| Code                    | Raised when                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pointer_changed`       | on any run the pointer differs from a non-null `active`, other than by a `swapping` operation; or Mode waits on it |
+| `serving_database_gone` | the database `active` or the pointer's target names is missing or has another OID while it serves                  |
+| `active_cleared`        | reconciling rule 5 cleared `active`                                                                                |
+| `adoption_failed`       | a database failed an adoption check                                                                                |
+| `record_rebuilt`        | an unreadable file was rebuilt; seeding a missing file raises nothing                                              |
+| `journal_row_refused`   | a journal row failed its shape check, or `RETURNING` differed from the insert                                      |
 
 The metrics timer publishes `release_integrity` with the `kind` dimension, 1
 while the list is not empty. The OCI alarm `release_integrity[1m].max() > 0` is

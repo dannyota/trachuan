@@ -3,13 +3,16 @@
 The updater refuses a `release_journal` row, or a pointer or retired name, that
 does not have its exact shape
 ([database roles](../design/system.md#database-roles)). That kind's phase then
-fails on every run. The result shows `invalid release journal row` (step
-`recovery`, `activation` or `prune`), or `invalid corpus database name` or
+stops on every run, with status `waiting` and the manifest still pending. The
+result shows `invalid release journal row` (step `recovery`, `activation` or
+`prune`), or `invalid corpus database name` or
 `invalid frameworks database name` (step `manifest`, `activation` or `prune`).
-Treat it as a possible compromise of the server. These queries print counts
-only, as `|`-separated lines. The first prints a line only for a kind that has
-journal rows, so an empty result is normal for a kind that has none. Run them as
-`trachuan`; the script connects as `auth_owner`, never as `postgres`.
+It raises the [integrity alarm](alarms.md#release-integrity-alarm) and stays
+stopped until the row is dealt with. Treat it as a possible compromise of the
+server. These queries print counts only, as `|`-separated lines. The first
+prints a line only for a kind that has journal rows, so an empty result is
+normal for a kind that has none. Run them as `trachuan`; the script connects as
+`auth_owner`, never as `postgres`.
 
 Journal rows, latest per operation. After the kind comes the row count, and
 every later number must be 0:

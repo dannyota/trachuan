@@ -1,51 +1,9 @@
-import json
-from pathlib import Path
-import tempfile
 import unittest
 
 
 def target():
     from updater import deploy_release_target
     return deploy_release_target
-
-
-class TargetRecordTest(unittest.TestCase):
-    def setUp(self):
-        self.work = tempfile.TemporaryDirectory()
-        self.addCleanup(self.work.cleanup)
-        self.directory = Path(self.work.name) / 'corpus-targets'
-        self.operation = 'a' * 32
-
-    def test_record_is_private_and_read_back_for_its_database_only(self):
-        store = target().Targets(self.directory)
-        self.assertIsNone(store.read(self.operation, 'corpus_vn_20990101'))
-        store.write(self.operation, 'corpus_vn_20990101', '16400')
-        self.assertEqual(store.read(self.operation, 'corpus_vn_20990101'), '16400')
-        self.assertEqual(self.directory.stat().st_mode & 0o777, 0o700)
-        self.assertEqual(store.path(self.operation).stat().st_mode & 0o777, 0o600)
-        with self.assertRaisesRegex(ValueError, 'identity changed'):
-            store.read(self.operation, 'corpus_vn_20990102')
-
-    def test_malformed_records_and_values_are_refused(self):
-        store = target().Targets(self.directory)
-        store.write(self.operation, 'corpus_vn_20990101', '16400')
-        store.path(self.operation).write_text(json.dumps({'database': 'corpus_vn_20990101', 'oid': 'x'}))
-        with self.assertRaisesRegex(ValueError, 'identity changed'):
-            store.read(self.operation, 'corpus_vn_20990101')
-        with self.assertRaisesRegex(ValueError, 'identity changed'):
-            store.write(self.operation, 'corpus_vn_20990101', '1; DROP')
-        with self.assertRaisesRegex(ValueError, 'invalid activation operation id'):
-            store.path('../../secret')
-
-    def test_keep_removes_records_of_closed_operations(self):
-        store = target().Targets(self.directory)
-        store.keep({self.operation})
-        other = 'b' * 32
-        store.write(self.operation, 'corpus_vn_20990101', '1')
-        store.write(other, 'corpus_vn_20990102', '2')
-        store.keep({self.operation})
-        self.assertTrue(store.path(self.operation).exists())
-        self.assertFalse(store.path(other).exists())
 
 
 class TargetSqlTest(unittest.TestCase):
@@ -59,6 +17,25 @@ class TargetSqlTest(unittest.TestCase):
         self.assertTrue(sql.endswith('\\endif\n'))
         with self.assertRaises(ValueError):
             target().guard("1' OR true", 'SELECT 1;')
+
+    def test_sweep_keeps_every_protected_name_as_a_literal(self):
+        sql = target().strays({"corpus_vn_20990101_1", "it's"})
+        self.assertIn("ARRAY['corpus_vn_20990101_1','it''s']::pg_catalog.text[]", sql)
+        self.assertIn('pg_catalog.pg_get_userbyid(d.datdba)=current_user', sql)
+        self.assertTrue(sql.rstrip().endswith(');'))
+        self.assertEqual(sql.count("pg_catalog.format('DROP DATABASE %I',s.datname)"), 1)
+
+    def test_sweep_with_nothing_protected_is_valid_sql(self):
+        self.assertIn('ALL(ARRAY[]::pg_catalog.text[])', target().strays(set()))
+
+    def test_a_drop_is_bound_to_the_name_owner_and_recorded_oid(self):
+        sql = target().drop('corpus_vn_20990101_1', 41001)
+        self.assertIn("d.datname='corpus_vn_20990101_1'", sql)
+        self.assertIn('pg_catalog.pg_get_userbyid(d.datdba)=current_user', sql)
+        self.assertIn('d.oid=41001::pg_catalog.oid', sql)
+        self.assertNotIn('d.oid', target().drop('corpus_vn_20990101_1'))
+        with self.assertRaises(ValueError):
+            target().drop('corpus_vn_20990101_1', '1; DROP')
 
     def test_backend_pid_must_be_a_number(self):
         self.assertIn('pg_catalog.pg_backend_pid(),77)', target().end_backends(77))

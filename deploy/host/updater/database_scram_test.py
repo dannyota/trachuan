@@ -42,7 +42,7 @@ class AdminScramTest(LawFixture, unittest.TestCase):
 
     def test_activator_provisioning(self):
         self.assertTrue(self.host.provision_activator())
-        self.assert_scram(lambda args: args[-2:] == ['bash', '-s'])
+        self.assert_scram(lambda args: args[-4:] == ['bash', '-s', '--', '--no-auth-tables'])
 
     def test_target_preparation_session(self):
         self.db.target_admin(self.row, 'SELECT 1;')
@@ -67,9 +67,9 @@ class ActivatorScramTest(LawFixture, unittest.TestCase):
         self.db.query('SELECT 1;')
         self.host.activator_psql(LAW_NAME, 'SELECT 1;')
         self.db.make(self.row)
-        self.db.drop(LAW_NAME)
+        self.db.drop_database(LAW_NAME)
         self.db.load(self.row, '/synthetic/dump', '/run/pgbackrest/corpus-x.list')
-        for program in ('psql', 'createdb', 'dropdb', 'pg_restore'):
+        for program in ('psql', 'createdb', 'pg_restore'):
             with self.subTest(program=program):
                 found = [args for args in self.calls if program in args and '-U' in args
                          and args[args.index('-U') + 1] == 'activator']

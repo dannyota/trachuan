@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from updater.deploy_corpus_heading import headings_approved
+from updater.deploy_corpus_kind import LAW
 from updater.corpus_verify_test import manifest as sample_manifest
 from updater.deploy_verify import policy
 from updater.deploy_corpus_verify import manifest
@@ -62,7 +63,6 @@ class HeadingTest(unittest.TestCase):
                         manifest(canonical(obj), rules)
 
     def test_activation_probes_target_capability_before_recording_approval(self):
-        import json
         from updater.deploy_corpus_database import Database
         evidence = dict(projection=1, scan_sha256='a' * 64, exclusions_sha256='b' * 64)
         obj = dict(sample_manifest(), schema_version=8, heading_evidence=evidence,
@@ -74,9 +74,6 @@ class HeadingTest(unittest.TestCase):
             calls = []
             def query(text, database='auth', options=None):
                 calls.append((text, database))
-                if database == 'auth':
-                    return json.dumps(dict(row, step='activated', state='complete', message='corpus activated',
-                                           corpus_kind='law'))
                 self.assertEqual(database, obj['database'])
                 self.assertEqual(options, '-c search_path=pg_catalog')
                 if text == "SELECT pg_catalog.to_regclass('public.document_summary') IS NOT NULL;":
@@ -86,8 +83,8 @@ class HeadingTest(unittest.TestCase):
                 self.fail('unexpected capability query')
             db = Database(None, None)
             db.query = query
-            db.target_oid = lambda row: None
+            db.guarded = lambda row, statements: statements
             with self.subTest(present=present, supported=supported):
-                self.assertEqual(db.activate(row)['step'], 'activated')
+                statement = LAW.activation(db, row)
                 value = 'summary_projection=1,headings_approved=true' if present and supported else 'summary_projection=0,headings_approved=false'
-                self.assertIn(value, calls[-1][0])
+                self.assertIn(value, statement)

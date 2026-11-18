@@ -98,10 +98,7 @@ func TestLawRestore_HonestDumpMatchesSourceAndHostileObjectsAreRefused(t *testin
 		operation any
 		want      bool
 	}{{nil, true}, {own, false}, {other, true}} {
-		var protected bool
-		if err = auth.QueryRow(ctx, lawSQL(t, "sql", "protected", name, tc.operation)).Scan(&protected); err != nil {
-			t.Fatal(err)
-		}
+		protected := protectedNames(t, auth, lawSQL(t, "sql", "protected_names", tc.operation))[name]
 		if protected != tc.want {
 			t.Fatalf("protected for operation %v: got %v", tc.operation, protected)
 		}

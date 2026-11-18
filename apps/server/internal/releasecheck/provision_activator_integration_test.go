@@ -236,3 +236,105 @@ func TestProvisionActivator_PinnedSearchPathIgnoresPlantedFunctions(t *testing.T
 		})
 	}
 }
+
+func runProvisionScript(t *testing.T, config *pgx.ConnConfig, path string, flags ...string) {
+	t.Helper()
+	cmd := exec.CommandContext(t.Context(), "bash", append([]string{path}, flags...)...)
+	cmd.Env = append(os.Environ(), "PGHOST="+config.Host, "PGPORT="+strconv.Itoa(int(config.Port)), "PGPASSWORD="+config.Password, "PGCONNECT_TIMEOUT=5")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("run provision script %v: %v: %.400s", flags, err, output)
+	}
+}
+
+func TestProvisionActivator_FlagRevokesAndItsAbsenceGrantsBack(t *testing.T) {
+	ctx := t.Context()
+	psql := journalPsql(t)
+	admin, _, err := testpg.OpenAdministrator(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = admin.Close(context.Background()) })
+	owner, ownerPassword := provisionName(t, "test_auth_owner_"), provisionName(t, "")
+	role, password := provisionName(t, "test_activator_"), provisionName(t, "")
+	provisionRoleCleanup(t, admin, owner)
+	provisionRoleCleanup(t, admin, role)
+	if _, err = admin.Exec(ctx, "CREATE ROLE "+owner+" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '"+ownerPassword+"'"); err != nil {
+		t.Fatal("create owner role")
+	}
+	authURL := testpg.NewDatabase(t)
+	if err = migrate.Up(ctx, authURL); err != nil {
+		t.Fatal(err)
+	}
+	auth, err := pgx.Connect(ctx, authURL)
+	if err != nil {
+		t.Fatal("connect fixture auth")
+	}
+	t.Cleanup(func() { _ = auth.Close(context.Background()) })
+	config := auth.Config()
+	database := config.Database
+	if _, err = auth.Exec(ctx, "ALTER DATABASE "+database+" OWNER TO "+owner); err != nil {
+		t.Fatal(err)
+	}
+	tables := []string{"corpus_release", "frameworks_release", "release_journal", "retired_release"}
+	for _, table := range tables {
+		if _, err = auth.Exec(ctx, "ALTER TABLE public."+table+" OWNER TO "+owner); err != nil {
+			t.Fatal(err)
+		}
+	}
+	work := t.TempDir()
+	secret, ownerSecret := filepath.Join(work, "password"), filepath.Join(work, "owner-password")
+	for path, value := range map[string]string{secret: password, ownerSecret: ownerPassword} {
+		if err = os.WriteFile(path, []byte(value), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	path := filepath.Join(work, "provision-activator.sh")
+	if err = os.WriteFile(path, []byte(provisionScript(t, psql, config.User, config.Host, database, owner, role, secret, ownerSecret)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	check := func(label, query string, want bool, args ...any) {
+		t.Helper()
+		var got bool
+		if scanErr := auth.QueryRow(ctx, query, args...).Scan(&got); scanErr != nil {
+			t.Fatalf("%s: %v", label, scanErr)
+		}
+		if got != want {
+			t.Errorf("%s = %t; want %t", label, got, want)
+		}
+	}
+	revoked := func() {
+		t.Helper()
+		for _, table := range tables {
+			for _, privilege := range []string{"SELECT", "INSERT", "UPDATE", "DELETE"} {
+				check(table+" "+privilege, `SELECT pg_catalog.has_table_privilege($1, $2, $3)`, false, role, "public."+table, privilege)
+			}
+		}
+		check("sequence", `SELECT pg_catalog.has_sequence_privilege($1, 'public.release_journal_id_seq', 'USAGE')`, false, role)
+		check("schema usage", `SELECT pg_catalog.has_schema_privilege($1, 'public', 'USAGE')`, false, role)
+		check("database connect", `SELECT pg_catalog.has_database_privilege($1, $2, 'CONNECT')`, true, role, database)
+	}
+	runProvisionScript(t, config, path, "--no-auth-tables")
+	revoked()
+	login := config.Copy()
+	login.User, login.Password = role, password
+	session, err := pgx.ConnectConfig(ctx, login)
+	if err != nil {
+		t.Fatal("connect with revoked rights")
+	}
+	defer func() { _ = session.Close(context.Background()) }()
+	var locked bool
+	if err = session.QueryRow(ctx, `SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended('activation',0))`).Scan(&locked); err != nil || !locked {
+		t.Fatalf("advisory lock after revocation: %v %t", err, locked)
+	}
+	var count int
+	if err = session.QueryRow(ctx, `SELECT pg_catalog.count(*) FROM pg_catalog.pg_database`).Scan(&count); err != nil || count == 0 {
+		t.Fatalf("catalog read after revocation: %v %d", err, count)
+	}
+	if err = session.QueryRow(ctx, `SELECT count(*) FROM public.release_journal`).Scan(&count); err == nil {
+		t.Fatal("a missed table path did not fail after revocation")
+	}
+	runProvisionScript(t, config, path)
+	assertProvisioned(t, auth, config, role, password)
+	runProvisionScript(t, config, path, "--no-auth-tables")
+	revoked()
+}

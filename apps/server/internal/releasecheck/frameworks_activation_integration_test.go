@@ -103,7 +103,7 @@ func TestFrameworksActivation_PointerRetirementProtectionAndPruneAsActivator(t *
  VALUES ('vn','corpus_vn_20990104',now()-interval '8 days',now()-interval '1 day',NULL,repeat('e',64))`); err != nil {
 		t.Fatal(err)
 	}
-	law := map[string]any{"operation_id": strings.Repeat("9", 32), "country": "vn", "rel": "20990102", "mode": "new", "database_name": "corpus_vn_20990102", "manifest_hash": strings.Repeat("a", 64), "dump_sha256": strings.Repeat("f", 64), "expected_active_db": "corpus_vn_20990101", "manifest": map[string]any{"fixture": true}}
+	law := map[string]any{"operation_id": strings.Repeat("9", 32), "country": "vn", "rel": "20990102", "mode": "new", "database_name": "corpus_vn_20990102", "manifest_hash": strings.Repeat("a", 64), "dump_sha256": strings.Repeat("f", 64), "expected_active_db": "corpus_vn_20990101", "manifest": map[string]any{"fixture": true}, "retire": []any{"corpus_vn_20990101", nil}}
 	if _, err = activator.Exec(ctx, pythonSQL(t, "activate", law)); err != nil {
 		t.Fatal(err)
 	}
@@ -156,11 +156,7 @@ func TestFrameworksActivation_PointerRetirementProtectionAndPruneAsActivator(t *
 	}
 	protected := func(name string) bool {
 		t.Helper()
-		var value bool
-		if scanErr := activator.QueryRow(ctx, frameworksSQL(t, "protected", name)).Scan(&value); scanErr != nil {
-			t.Fatal(scanErr)
-		}
-		return value
+		return protectedNames(t, auth, pythonSQL(t, "protected", nil))[name]
 	}
 	retired := func(name string) (string, time.Time, bool) {
 		t.Helper()
@@ -177,13 +173,13 @@ func TestFrameworksActivation_PointerRetirementProtectionAndPruneAsActivator(t *
 	}
 	expired := func() []string {
 		t.Helper()
-		var raw []byte
-		if scanErr := activator.QueryRow(ctx, frameworksSQL(t, "expired")).Scan(&raw); scanErr != nil {
-			t.Fatal(scanErr)
+		rows, queryErr := auth.Query(ctx, `SELECT db_name FROM retired_release WHERE corpus_kind='frameworks' AND retain_until <= now() ORDER BY db_name`)
+		if queryErr != nil {
+			t.Fatal(queryErr)
 		}
-		var names []string
-		if scanErr := json.Unmarshal(raw, &names); scanErr != nil {
-			t.Fatal(scanErr)
+		names, collectErr := pgx.CollectRows(rows, pgx.RowTo[string])
+		if collectErr != nil {
+			t.Fatal(collectErr)
 		}
 		return names
 	}
@@ -205,11 +201,14 @@ func TestFrameworksActivation_PointerRetirementProtectionAndPruneAsActivator(t *
 	if err = auth.QueryRow(ctx, `SELECT count(*) FROM retired_release WHERE corpus_kind='frameworks'`).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("bootstrap retired a database: %d %v", count, err)
 	}
-	refuse(frameworksSQL(t, "activate", first), "active frameworks changed")
+	apply(frameworksSQL(t, "activate", first))
+	if frameworksPointer(t, activator) != "frameworks_20990101" {
+		t.Fatal("repeating the finished swap moved the pointer")
+	}
 
 	second := frameworksRow("2", "20990102", "new", "frameworks_20990101", "c")
 	journal(second, "started")
-	apply(frameworksSQL(t, "activate", second))
+	apply(frameworksSQL(t, "activate", second, []any{"frameworks_20990101", strings.Repeat("b", 64)}))
 	if frameworksPointer(t, activator) != "frameworks_20990102" {
 		t.Fatal("pointer not swapped from the journaled value")
 	}
@@ -229,7 +228,7 @@ func TestFrameworksActivation_PointerRetirementProtectionAndPruneAsActivator(t *
 
 	retained := frameworksRow("4", "20990101", "retained", "frameworks_20990102", "b")
 	journal(retained, "started")
-	apply(frameworksSQL(t, "activate", retained))
+	apply(frameworksSQL(t, "activate", retained, []any{"frameworks_20990102", strings.Repeat("c", 64)}))
 	if frameworksPointer(t, activator) != "frameworks_20990101" {
 		t.Fatal("retained reactivation did not move the pointer")
 	}
@@ -251,36 +250,28 @@ func TestFrameworksActivation_PointerRetirementProtectionAndPruneAsActivator(t *
 	if protected("frameworks_20990103") {
 		t.Fatal("aborted journal target still protected")
 	}
-	var operations []byte
-	if err = activator.QueryRow(ctx, frameworksSQL(t, "operations")).Scan(&operations); err != nil {
+	var openRows []byte
+	if err = activator.QueryRow(ctx, frameworksSQL(t, "operations")).Scan(&openRows); err != nil {
 		t.Fatal(err)
 	}
-	var latest []map[string]any
-	if err = json.Unmarshal(operations, &latest); err != nil {
-		t.Fatal(err)
+	if string(openRows) != "[]" {
+		t.Fatalf("closed operations read as open: %s", openRows)
 	}
 	steps := map[string]string{}
-	for _, row := range latest {
-		if row["corpus_kind"] != "frameworks" {
-			t.Fatalf("operations returned a %v row", row["corpus_kind"])
+	for _, operation := range []string{"1", "2", "4", "5"} {
+		var raw []byte
+		if err = activator.QueryRow(ctx, frameworksSQL(t, "operations", strings.Repeat(operation, 32))).Scan(&raw); err != nil {
+			t.Fatal(err)
 		}
-		steps[row["operation_id"].(string)[:1]] = row["step"].(string)
+		var latest []map[string]any
+		if err = json.Unmarshal(raw, &latest); err != nil || len(latest) != 1 || latest[0]["corpus_kind"] != "frameworks" {
+			t.Fatalf("own operation %s: %v %s", operation, err, raw)
+		}
+		steps[operation] = latest[0]["step"].(string)
 	}
 	if want := map[string]string{"1": "activated", "2": "activated", "4": "activated", "5": "aborted"}; len(steps) != len(want) || steps["1"] != want["1"] || steps["2"] != want["2"] || steps["4"] != want["4"] || steps["5"] != want["5"] {
 		t.Fatalf("frameworks operations: %v", steps)
 	}
-	var retirement []byte
-	if err = activator.QueryRow(ctx, frameworksSQL(t, "retirement", "frameworks_20990102")).Scan(&retirement); err != nil {
-		t.Fatal(err)
-	}
-	var retention struct {
-		Digest string `json:"dump_sha256"`
-		Live   bool   `json:"live"`
-	}
-	if err = json.Unmarshal(retirement, &retention); err != nil || retention.Digest != strings.Repeat("c", 64) || !retention.Live {
-		t.Fatalf("retirement read: %v %s", err, retirement)
-	}
-
 	if names := expired(); len(names) != 0 {
 		t.Fatalf("expired returned %v while the only expired row is law", names)
 	}

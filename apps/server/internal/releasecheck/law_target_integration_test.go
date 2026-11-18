@@ -22,12 +22,13 @@ import (
 const lawActivationBridge = `import json,os,sys
 from pathlib import Path
 sys.path.insert(0,sys.argv[1])
+from updater.deploy_activation_reconcile import Records
 from updater.deploy_corpus_activate import Activation
 from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_host import Host
 from updater.deploy_io import command
-from updater.deploy_release_target import Leftover
+from updater.deploy_release_target import Waiting
 from updater.deploy_store import Paths
 c=json.load(sys.stdin)
 def translate(cmd):
@@ -48,24 +49,53 @@ def runner(args,input=None,**kwargs):
         raise AssertionError('postgres session opened')
     if args[4:6]!=['sh','-c']:
         return b''
-    return command(translate(args[8:]),input=input).replace(c['role'].encode(),b'activator')
+    return command(translate(args[8:]),input=input,stdout_limit=kwargs.get('stdout_limit'),timeout=kwargs.get('timeout',300)).replace(c['role'].encode(),b'activator')
 class Held:
     def poll(self):
         return None
+class State:
+    def records(self,key):
+        return {'1':{'hash':c['row']['manifest_hash'],'status':'pending'}} if key==kind.key else {}
 kind=FRAMEWORKS if c['kind']=='frameworks' else LAW
 db=Database(Host(Paths(Path(c['root'])),runner,user_prefix=[]),{'extensions':['vector','ltree']},kind)
 db.holder=Held()
 db.backend=c.get('backend',0)
-engine=Activation(db,kind)
-actions={'choose':lambda:engine.choose(c['manifest'])[0],'make':lambda:db.make(c['row']) or 'ok','abort':lambda:engine.abort(c['row']) or 'ok',
- 'verify':lambda:db.verify_target(c['row']) or 'ok','oid':lambda:db.target_oid(c['row'])}
+records=Records(Path(c['root']),kind,State())
+engine=Activation(db,kind,records)
+records.reconcile(db.catalog())
+record=records.own
+row=dict(c['row'])
+def opened():
+    current=record.operation
+    if current is None or current['id']!=row['operation_id']:
+        if current is not None:
+            record.clear_operation()
+        current=record.begin(dict(id=row['operation_id'],mode=row['mode'],database=row['database_name'],
+            manifest_hash=row['manifest_hash'],dump_sha256=row['dump_sha256'],expected=row['expected_active_db'],
+            oid=None,step='creating'))
+    row['oid']=current['oid']
+    return current
+def make():
+    opened()
+    db.make(row)
+    return 'ok'
+def abort():
+    opened()
+    engine.abort(c['manifest'])
+    return 'ok'
+def verify():
+    opened()
+    db.verify_target(row)
+    return 'ok'
+actions={'choose':lambda:engine.choose(c['manifest'],db.tables.pointer(),db.catalog())[0],'make':make,'abort':abort,
+ 'verify':verify,'oid':lambda:str(opened()['oid'])}
 results=[]
 for name in c['actions']:
     try:
         results.append(actions[name]())
     except ValueError as error:
         results.append('refused: '+str(error))
-    except Leftover as error:
+    except Waiting as error:
         results.append('waiting: '+str(error))
 print(json.dumps(results))
 `
@@ -121,6 +151,18 @@ func lawTargetAuth(t *testing.T, activator string) *pgx.Conn {
 	return auth
 }
 
+func cleanupReleaseDatabase(t *testing.T, admin *pgx.Conn, name, runKey string) {
+	t.Helper()
+	var exists bool
+	if err := admin.QueryRow(context.Background(), `SELECT EXISTS(SELECT FROM pg_catalog.pg_database WHERE datname=$1)`, name).Scan(&exists); err != nil {
+		t.Errorf("look up test database %s: %v", name, err)
+		return
+	}
+	if exists && !testpg.DropCorpusDatabase(t, admin, name, runKey) {
+		t.Errorf("test database %s was left behind", name)
+	}
+}
+
 func withLawReleases(t *testing.T, count int, found []string, body func(*testing.T, []string)) {
 	t.Helper()
 	found = append(found, testpg.Release(t))
@@ -161,10 +203,11 @@ func TestLawRestore_CreateEndsBackendsDropsStraysAndPinsTheTarget(t *testing.T) 
 				t.Fatal(err)
 			}
 			mark(item.name, item.key)
-			t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, item.name, item.key) })
+			t.Cleanup(func() { cleanupReleaseDatabase(t, admin, item.name, item.key) })
 		}
-		t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, target, runKey) })
-		t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, moved, runKey) })
+		t.Cleanup(func() { cleanupReleaseDatabase(t, admin, target, runKey) })
+		t.Cleanup(func() { cleanupReleaseDatabase(t, admin, moved, runKey) })
+		t.Cleanup(func() { cleanupReleaseDatabase(t, admin, replacement, runKey) })
 
 		auth := lawTargetAuth(t, activator.Role)
 		digest := strings.Repeat("d", 64)
@@ -218,7 +261,8 @@ func TestLawRestore_CreateEndsBackendsDropsStraysAndPinsTheTarget(t *testing.T) 
 		if err = lock.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&backend); err != nil {
 			t.Fatal(err)
 		}
-		request := map[string]any{"kind": "law", "auth": auth.Config().Database, "row": row, "root": t.TempDir(), "backend": backend}
+		request := map[string]any{"kind": "law", "auth": auth.Config().Database, "row": row, "root": t.TempDir(), "backend": backend,
+			"manifest": map[string]any{"database": target, "country": "vn", "rel": rels[0], "previous": strings.TrimPrefix(lawActive, "corpus_vn_"), "dump": map[string]any{"sha256": digest}}}
 		blockerConfig := admin.Config().Copy()
 		blockerConfig.Database = spare
 		blocker, err := pgx.ConnectConfig(ctx, blockerConfig)
@@ -322,7 +366,7 @@ func TestLawRestore_TargetOwnedByAnotherRoleIsRefusedAndKept(t *testing.T) {
 				t.Fatal(err)
 			}
 			mark()
-			t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, runKey) })
+			t.Cleanup(func() { cleanupReleaseDatabase(t, admin, name, runKey) })
 			adminTarget := admin.Config().Copy()
 			adminTarget.Database = name
 			frameworksPsql(t, psqlPath, adminTarget, "", "CREATE TABLE hand_restored (id integer);\n")

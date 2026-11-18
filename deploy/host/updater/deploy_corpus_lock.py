@@ -4,6 +4,7 @@ import selectors
 import signal
 import subprocess
 
+from .deploy_corpus_sql import LOCK_OPTIONS
 from .deploy_io import Busy, CommandError
 
 
@@ -12,7 +13,7 @@ class AdvisoryLock:
         self.db = database
 
     def __enter__(self):
-        args = self.db.host.user_prefix + self.db.arguments(*self.db.session('auth'))
+        args = self.db.host.user_prefix + self.db.arguments(*self.db.session('auth', LOCK_OPTIONS))
         self.process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, start_new_session=True)
         try:

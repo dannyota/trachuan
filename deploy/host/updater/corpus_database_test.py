@@ -29,68 +29,72 @@ class CorpusDatabaseTest(unittest.TestCase):
         self.row = dict(operation_id='e'*32, country='vn', rel=self.m['rel'], mode='new',
                         database_name=self.m['database'], manifest_hash='a'*64,
                         dump_sha256=self.m['dump']['sha256'], expected_active_db='corpus_vn_20990101_1',
-                        manifest=self.m, step='checked')
-        self.db.targets().write('e' * 32, self.m['database'], '16400')
+                        manifest=self.m, step='checked', oid=16400)
 
-    def test_unprivileged_sql_loads_password_only_inside_container(self):
-        self.response = b'corpus_vn_20990101_1'
-        self.db.current('vn')
+    def test_catalog_read_loads_the_password_only_inside_the_container(self):
+        self.response = b'{"corpus_vn_20990101_1":{"oid":41001,"owner":"activator"}}'
+        self.assertEqual(self.db.catalog(), {'corpus_vn_20990101_1': dict(oid=41001, owner='activator')})
         args, kwargs = self.calls[0]
         self.assertIn('activator', args)
         self.assertIn('PGPASSWORD=$(cat /run/secrets/activator_db_password)', ' '.join(args))
         self.assertNotIn('postgres-admin.sh', ' '.join(args))
-        self.assertIn('SELECT active_db', kwargs['input'].decode())
+        self.assertIn('pg_catalog.pg_database', kwargs['input'].decode())
 
-    def test_cas_is_one_transaction_with_journal_and_nullable_old_digest(self):
+    def test_catalog_read_refuses_anything_but_an_object(self):
+        self.response = b'[]'
+        with self.assertRaises(ValueError):
+            self.db.catalog()
+
+    def test_cas_is_one_transaction_with_journal_and_retirement_of_the_recorded_database(self):
         self.response = json.dumps(dict(self.row, step='activated', state='complete', message='corpus activated',
                                         corpus_kind='law')).encode()
-        self.db.activate(self.row)
+        statement = d.LAW.activation(self.db, self.row, ('corpus_vn_20990101_1', 'b' * 64))
+        self.assertEqual(self.db.tables.swap(statement, self.row)['step'], 'activated')
         sql = self.calls[-1][1]['input'].decode()
-        for word in ('BEGIN;', 'FOR UPDATE', 'IS DISTINCT FROM', 'retired_release',
-                     "interval '7 days'", 'dump_sha256', 'release_journal', "'activated'", 'COMMIT;'):
+        for word in ('BEGIN;', 'FOR UPDATE', 'IS DISTINCT FROM', 'public.retired_release',
+                     "interval '7 days'", 'dump_sha256', 'public.release_journal', "'activated'", 'COMMIT;'):
             self.assertIn(word, sql)
         self.assertEqual(sql.count('BEGIN;'), 1)
+        self.assertIn('auth_owner', self.calls[-1][0])
+        self.assertIn('default_transaction_read_only=off', ' '.join(self.calls[-1][0]))
 
     def test_cas_checks_pointer_and_update_count_before_retirement(self):
         for mode in ('new', 'retained'):
-            self.response = json.dumps(dict(self.row, mode=mode, step='activated', state='complete',
-                                            message='corpus activated', corpus_kind='law')).encode()
-            self.db.activate(dict(self.row, mode=mode))
-            sql = self.calls[-1][1]['input'].decode()
+            sql = d.LAW.activation(self.db, dict(self.row, mode=mode), ('corpus_vn_20990101_1', None))
             with self.subTest(mode=mode):
                 self.assertTrue('IF NOT FOUND THEN' in sql, 'missing pointer must raise')
                 self.assertRegex(sql, r'GET DIAGNOSTICS \w+ = ROW_COUNT;')
                 self.assertRegex(sql, r'IF \w+ <> 1 THEN')
-                self.assertLess(sql.index('IF NOT FOUND THEN'), sql.index('UPDATE corpus_release'))
-                self.assertLess(sql.index('UPDATE corpus_release'), sql.index('GET DIAGNOSTICS'))
-                self.assertLess(sql.index('GET DIAGNOSTICS'), sql.index('INSERT INTO retired_release'))
+                self.assertLess(sql.index('IF NOT FOUND THEN'), sql.index('UPDATE public.corpus_release'))
+                self.assertLess(sql.index('UPDATE public.corpus_release'), sql.index('GET DIAGNOSTICS'))
+                self.assertLess(sql.index('GET DIAGNOSTICS'), sql.index('INSERT INTO public.retired_release'))
                 if mode == 'retained':
-                    self.assertLess(sql.index('GET DIAGNOSTICS'), sql.index('DELETE FROM retired_release'))
+                    self.assertLess(sql.index('GET DIAGNOSTICS'), sql.index('DELETE FROM public.retired_release'))
 
-    def test_protection_query_covers_active_open_journals_and_retention(self):
-        self.response = b't\n'
-        self.assertTrue(self.db.protected(self.m['database']))
-        sql = self.calls[-1][1]['input'].decode()
-        for text in ('active_db', 'operation_id', 'retain_until > now()', "'activated'", "'reverted'", "'aborted'"):
-            self.assertIn(text, sql)
-        self.calls.clear()
-        with self.assertRaises(ValueError):
-            self.db.drop(self.m['database'])
-        self.assertFalse(any('dropdb' in args for args, _ in self.calls))
+    def test_protected_names_combine_the_tables_and_the_host_records(self):
+        self.response = b'["corpus_vn_20990101_1"]'
+        self.db.catalog = mock.Mock(return_value={})
+        self.db.guard = mock.Mock()
+        self.db.guard.names.return_value = {'corpus_vn_20990103_1'}
+        self.assertEqual(self.db.protected_names('e' * 32, {'x'}), {'corpus_vn_20990101_1', 'corpus_vn_20990103_1'})
+        self.db.guard.names.assert_called_once_with({}, own='e' * 32, pruning={'x'})
 
-    def test_dead_advisory_lock_refuses_mutations(self):
+    def test_dead_advisory_lock_refuses_catalog_reads(self):
         self.db.holder.poll.return_value = 1
         with self.assertRaises(ValueError):
-            self.db.append(self.row, 'checked')
+            self.db.catalog()
         self.assertEqual(self.calls, [])
 
-    def test_drop_prepares_legacy_postgres_owned_database_as_activator(self):
+    def test_a_drop_runs_as_activator_in_auth_bound_to_the_recorded_oid(self):
         self.response = b'f\n'
-        self.db.drop(self.m['database'])
-        sql = [kwargs['input'].decode() for args, kwargs in self.calls if 'postgres-admin.sh' in ' '.join(args)]
-        self.assertTrue(any('OWNER TO activator' in text for text in sql))
-        self.assertIn('activator', self.calls[-1][0])
-        self.assertIn('dropdb', self.calls[-1][0])
+        self.db.drop_database(self.m['database'], 16400)
+        args, kwargs = self.calls[0]
+        self.assertEqual(args[args.index('-U') + 1], 'activator')
+        self.assertEqual(args[args.index('-d') + 1], 'auth')
+        text = kwargs['input'].decode()
+        self.assertIn('d.oid=16400::pg_catalog.oid', text)
+        self.assertNotIn('OWNER TO', text)
+        self.assertFalse(any('postgres-admin.sh' in ' '.join(call) for call, _ in self.calls))
 
     def test_large_stdin_file_is_passed_without_reading_into_memory(self):
         path = Path(self.work.name)/'input'
@@ -123,3 +127,7 @@ class CorpusDatabaseTest(unittest.TestCase):
         self.response = b'{"vector":"wrong","ltree":"1.3"}'
         with self.assertRaises(ValueError):
             self.db.check_extensions(self.m)
+
+
+if __name__ == '__main__':
+    unittest.main()

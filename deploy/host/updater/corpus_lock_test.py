@@ -25,7 +25,7 @@ class AdvisoryLockTest(unittest.TestCase):
                     raise ValueError('synthetic interruption')
         args = start.call_args.args[0]
         self.assertEqual(args[args.index('-U')+1], 'activator')
-        self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public', args)
+        self.assertIn('PGOPTIONS=-c search_path=pg_catalog -c idle_session_timeout=0', args)
         statement = process.stdin.write.call_args.args[0]
         self.assertIn(b'pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended(', statement)
         self.assertIn(b'pg_catalog.pg_backend_pid()', statement)

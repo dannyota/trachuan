@@ -14,6 +14,7 @@ STEPS = ('started', 'creating', 'created', 'restoring', 'restored', 'validated',
 ROW_FIELDS = ('operation_id', 'country', 'rel', 'mode', 'database_name', 'manifest_hash',
               'dump_sha256', 'expected_active_db', 'manifest')
 REFUSED = 'invalid release journal row'
+CLOSED = "('activated','reverted','aborted','pruned')"
 
 
 class JournalRefused(ValueError):
@@ -97,6 +98,7 @@ def activation_values(row, check=database, country=COUNTRY):
 
 
 CATALOG_PATH = '-c search_path=pg_catalog'
+LOCK_OPTIONS = CATALOG_PATH + ' -c idle_session_timeout=0'
 SCHEMA_PATH = '-c search_path=pg_catalog,public'
 AUTH_SCHEMA_VERSION = 'SELECT coalesce(pg_catalog.max(version_id),0) FROM public.goose_db_version;'
 AUTH_ACTIVE_DATABASE = "SELECT active_db FROM public.corpus_release WHERE country = 'vn';"
@@ -184,27 +186,23 @@ def kind(name):
 
 
 def current(country):
-    return 'SELECT active_db FROM corpus_release WHERE country=' + literal(country) + ';'
+    return 'SELECT active_db FROM public.corpus_release WHERE country=' + literal(country) + ';'
 
 
-def retirement(name, corpus='law'):
-    return ("SELECT json_build_object('dump_sha256',dump_sha256,'live',retain_until > now()) "
-            'FROM retired_release WHERE ' + kind(corpus) + ' AND db_name=' + literal(name) + ';')
+LATEST = ('SELECT DISTINCT ON (operation_id) * FROM public.release_journal WHERE {kind} '
+          'AND operation_id IS NOT NULL ORDER BY operation_id,id DESC')
 
 
-def operations(corpus='law'):
-    return ("SELECT coalesce(json_agg(j ORDER BY id),'[]') FROM ("
-            'SELECT DISTINCT ON (operation_id) * FROM release_journal WHERE ' + kind(corpus) +
-            ' AND operation_id IS NOT NULL ORDER BY operation_id,id DESC) j;')
-
-
-def expired(corpus='law'):
-    return ("SELECT coalesce(json_agg(db_name),'[]') FROM retired_release "
-            'WHERE ' + kind(corpus) + ' AND retain_until <= now();')
+def operations(corpus='law', own=None):
+    wanted = 'j.step NOT IN ' + CLOSED
+    if own is not None:
+        wanted += ' OR j.operation_id=' + literal(own)
+    return ("SELECT coalesce(pg_catalog.json_agg(j ORDER BY j.id),'[]') FROM (" + LATEST.format(kind=kind(corpus)) +
+            ') j WHERE ' + wanted + ';')
 
 
 def forget(name, corpus='law'):
-    return 'DELETE FROM retired_release WHERE ' + kind(corpus) + ' AND db_name=' + literal(name) + ';'
+    return 'DELETE FROM public.retired_release WHERE ' + kind(corpus) + ' AND db_name=' + literal(name) + ';'
 
 
 def written(step, label='corpus'):
@@ -219,67 +217,87 @@ def journal(row, step, corpus='law', label='corpus'):
     if corpus != 'law':
         fields += ('corpus_kind',)
         value['corpus_kind'] = corpus
-    return ('INSERT INTO release_journal (' + ','.join(fields) + ') VALUES (' +
-            ','.join(literal(value[f]) for f in fields) + ') RETURNING row_to_json(release_journal);')
+    return ('INSERT INTO public.release_journal (' + ','.join(fields) + ') VALUES (' +
+            ','.join(literal(value[f]) for f in fields) +
+            ') RETURNING pg_catalog.row_to_json(release_journal);')
 
 
-def activate(row, projection=0):
+def other_operation(operation, alias=''):
+    return '' if operation is None else ' AND ' + alias + 'operation_id <> ' + literal(operation)
+
+
+def close_open(keep=None, corpus='law', label='corpus'):
+    columns = ','.join(ROW_FIELDS)
+    return ('INSERT INTO public.release_journal (' + columns + ',step,state,message,corpus_kind) '
+            "SELECT " + columns + ",'aborted','complete'," + literal(label + ' aborted') + ',corpus_kind FROM (' +
+            LATEST.format(kind=kind(corpus)) + ") j WHERE mode <> 'prune' AND step NOT IN " + CLOSED +
+            other_operation(keep) + ';')
+
+
+def protected_names(operation=None):
+    return f"""SELECT coalesce(pg_catalog.json_agg(DISTINCT p.name),'[]') FROM (
+ SELECT active_db AS name FROM public.corpus_release
+ UNION ALL SELECT active_db FROM public.frameworks_release
+ UNION ALL SELECT db_name FROM public.retired_release WHERE retain_until > pg_catalog.now()
+ UNION ALL SELECT j.database_name FROM (
+  SELECT DISTINCT ON (operation_id) operation_id, database_name, mode, step FROM public.release_journal
+  WHERE operation_id IS NOT NULL ORDER BY operation_id, id DESC
+ ) j WHERE j.mode <> 'prune' AND j.step NOT IN {CLOSED}{other_operation(operation, 'j.')}
+ UNION ALL SELECT 'corpus_'||country||'_'||rel FROM public.release_journal
+  WHERE operation_id IS NULL AND step NOT IN {CLOSED}
+  AND state NOT IN ('complete','done','activated','reverted','aborted','pruned')
+) p WHERE p.name IS NOT NULL;
+"""
+
+
+def retire_values(retire, check=database):
+    name, digest = retire
+    check(name)
+    if digest is not None and not shaped(DIGEST, digest):
+        raise ValueError('invalid activation value')
+    return dollar_body(name), dollar_body(digest)
+
+
+def retirement(country, retire, check=database, kind_column='', kind_value=''):
+    if retire is None:
+        return ''
+    name, digest = retire_values(retire, check)
+    kind_update = ',corpus_kind=EXCLUDED.corpus_kind' if kind_column else ''
+    return f"""INSERT INTO public.retired_release (country,db_name,retired_at,retain_until,dropped_at,dump_sha256{kind_column})
+    VALUES ({country},{name},now(),now()+interval '7 days',NULL,{digest}{kind_value})
+    ON CONFLICT (country,db_name) DO UPDATE SET retired_at=EXCLUDED.retired_at,
+      retain_until=EXCLUDED.retain_until,dropped_at=NULL,dump_sha256=EXCLUDED.dump_sha256{kind_update};"""
+
+
+def activate(row, projection=0, retire=None):
     if type(projection) is not int or projection not in (0, 1):
         raise ValueError('invalid activation projection')
     approved = 'true' if projection == 1 and headings_approved(row['manifest']) else 'false'
     country, target, expected = activation_values(row)
-    retained = ("DELETE FROM retired_release WHERE corpus_kind='law' AND country=" + country +
+    retained = ("DELETE FROM public.retired_release WHERE corpus_kind='law' AND country=" + country +
                 ' AND db_name=' + target + ';' if row['mode'] == 'retained' else '')
     return f"""BEGIN;
 DO $activation$
-DECLARE previous text; old_digest text; changed bigint;
+DECLARE current_db text; changed bigint;
 BEGIN
-  SELECT active_db INTO previous FROM corpus_release WHERE country={country} FOR UPDATE;
+  SELECT active_db INTO current_db FROM public.corpus_release WHERE country={country} FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'active corpus pointer missing';
   END IF;
-  IF previous IS DISTINCT FROM {expected} THEN
+  IF current_db IS DISTINCT FROM {target} AND current_db IS DISTINCT FROM {expected} THEN
     RAISE EXCEPTION 'active corpus changed';
   END IF;
-  UPDATE corpus_release SET active_db={target},activated_at=now(),activated_by='activator',
+  UPDATE public.corpus_release SET active_db={target},activated_at=now(),activated_by='activator',
     summary_database={target},summary_projection={projection},headings_approved={approved}
-    WHERE country={country} AND active_db IS NOT DISTINCT FROM {expected};
+    WHERE country={country} AND (active_db={target} OR active_db IS NOT DISTINCT FROM {expected});
   GET DIAGNOSTICS changed = ROW_COUNT;
   IF changed <> 1 THEN
     RAISE EXCEPTION 'active corpus update must affect exactly one row';
   END IF;
-  SELECT dump_sha256 INTO old_digest FROM release_journal
-    WHERE corpus_kind='law' AND country={country} AND database_name=previous AND step='activated'
-    ORDER BY id DESC LIMIT 1;
-  IF previous IS NOT NULL AND previous <> {target} THEN
-    INSERT INTO retired_release (country,db_name,retired_at,retain_until,dropped_at,dump_sha256)
-      VALUES ({country},previous,now(),now()+interval '7 days',NULL,old_digest)
-      ON CONFLICT (country,db_name) DO UPDATE SET retired_at=EXCLUDED.retired_at,
-        retain_until=EXCLUDED.retain_until,dropped_at=NULL,dump_sha256=EXCLUDED.dump_sha256;
-  END IF;
+  {retirement(country, retire)}
   {retained}
 END;
 $activation$;
 {journal(row, 'activated')}
 COMMIT;
-"""
-
-
-def other_operation(operation):
-    return '' if operation is None else ' AND operation_id <> ' + literal(operation)
-
-
-def protected(name, operation=None):
-    target = literal(name)
-    return f"""SELECT EXISTS(SELECT FROM corpus_release WHERE active_db={target})
-OR EXISTS(SELECT FROM retired_release WHERE corpus_kind='law' AND db_name={target} AND retain_until > now())
-OR EXISTS(SELECT FROM release_journal WHERE corpus_kind='law' AND operation_id IS NULL
-  AND 'corpus_' || country || '_' || rel = {target}
-  AND step NOT IN ('activated','reverted','aborted','pruned')
-  AND state NOT IN ('complete','done','activated','reverted','aborted','pruned'))
-OR EXISTS(SELECT FROM (
-  SELECT DISTINCT ON (operation_id) * FROM release_journal
-  WHERE corpus_kind='law' AND operation_id IS NOT NULL ORDER BY operation_id,id DESC
-) j WHERE database_name={target} AND mode <> 'prune'{other_operation(operation)}
-  AND step NOT IN ('activated','reverted','aborted','pruned'));
 """

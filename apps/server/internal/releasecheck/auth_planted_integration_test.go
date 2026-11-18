@@ -40,6 +40,7 @@ type plantedEntry struct{ who, outcome string }
 type plantedAuth struct {
 	auth, ownerConn *pgx.Conn
 	admin, owner    *pgx.ConnConfig
+	authURL         string
 	ownerRole       string
 	victim          string
 	provisioned     string
@@ -103,7 +104,7 @@ func newPlantedAuth(t *testing.T) *plantedAuth {
 		t.Fatal("connect planted owner")
 	}
 	t.Cleanup(func() { _ = ownerConn.Close(context.Background()) })
-	fixture := &plantedAuth{auth: auth, ownerConn: ownerConn, admin: adminConfig, owner: ownerConfig,
+	fixture := &plantedAuth{auth: auth, ownerConn: ownerConn, admin: adminConfig, owner: ownerConfig, authURL: authURL,
 		ownerRole: owner, victim: victim, provisioned: provisioned, psql: psql}
 	fixture.plant(t, strings.ReplaceAll(plantedAttempt, "VICTIM_ROLE", pgx.Identifier{victim}.Sanitize()))
 	return fixture
@@ -265,15 +266,15 @@ func prepareProvisioner(t *testing.T, fixture *plantedAuth) provisionerRun {
 	return provisionerRun{script: script, password: password, env: env}
 }
 
-func (r provisionerRun) run(t *testing.T, overStdin bool) string {
+func (r provisionerRun) run(t *testing.T, overStdin bool, flags ...string) string {
 	t.Helper()
-	cmd := exec.CommandContext(t.Context(), "bash", r.script)
+	cmd := exec.CommandContext(t.Context(), "bash", append([]string{r.script}, flags...)...)
 	if overStdin {
 		raw, err := os.ReadFile(r.script)
 		if err != nil {
 			t.Fatal(err)
 		}
-		cmd = exec.CommandContext(t.Context(), "bash", "-s")
+		cmd = exec.CommandContext(t.Context(), "bash", append([]string{"-s", "--"}, flags...)...)
 		cmd.Stdin = bytes.NewReader(raw)
 	}
 	cmd.Env = r.env

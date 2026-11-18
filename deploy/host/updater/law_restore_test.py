@@ -24,6 +24,8 @@ REFUSED = '^activation target database identity changed$'
 
 def classify(args, text):
     joined = ' '.join(args)
+    if 'auth_owner' in args:
+        return 'protected' if 'json_agg(DISTINCT' in text else 'tables'
     if 'release-check' in args:
         return 'release-check'
     if 'grant-corpus.sh' in joined:
@@ -39,11 +41,13 @@ def classify(args, text):
         return 'remove-list'
     if '/usr/local/bin/postgres-admin.sh' in args:
         return 'prepare' if 'CREATE EXTENSION' in text else 'postgres'
-    for word, name in (('pg_terminate_backend', 'end-backends'), ('DROP DATABASE %I', 'strays'),
+    if 'DROP DATABASE %I' in text and "d.datname='" in text:
+        return 'drop'
+    for word, name in (('json_object_agg(d.datname', 'catalog'), ('pg_terminate_backend', 'end-backends'),
+                       ('pg_stat_activity', 'connections'), ('DROP DATABASE %I', 'strays'),
                        ('AS target_oid', 'target-oid'), ('pg_catalog.pg_event_trigger', 'check'),
                        ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
                        ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'),
-                       ('corpus_release WHERE active_db', 'protected'),
                        ("to_regclass('public.release')", 'restored'), ('GRANT SELECT ON ALL TABLES', 'grants'),
                        ('FROM public.release WHERE singleton', 'validate'), ('public.pg_prewarm', 'prewarm'),
                        ('document_summary', 'projection'), ('release_target', 'verify'),
@@ -61,8 +65,8 @@ class LawFixture:
         self.name = self.m['database']
         self.calls, self.failures = [], {}
         release = {key: self.m[key] for key in ('country', 'rel', 'schema_version', 'recipes')}
-        self.responses = dict(extensions=json.dumps(self.m['extensions']).encode(), exists=b'f\n', protected=b'f\n',
-                              owner=b'activator\n', prepare=b'configured\n', restored=b'f\n',
+        self.responses = dict(extensions=json.dumps(self.m['extensions']).encode(), exists=b'f\n', protected=b'[]',
+                              catalog=b'{}', connections=b'f\n', owner=b'activator\n', prepare=b'configured\n', restored=b'f\n',
                               list=(HEADER + DATA).encode(), check=b'ok\n', prewarm=b'12\n',
                               strays=b'f\n', **{'end-backends': b'0\nf\n', 'target-oid': b'16400\n'},
                               validate=json.dumps(release).encode())
@@ -80,8 +84,9 @@ class LawFixture:
         self.db.backend = 77
         self.row = dict(operation_id=OPERATION, country='vn', rel=self.m['rel'], mode='new', database_name=self.name,
                         manifest_hash='a' * 64, dump_sha256=self.m['dump']['sha256'],
-                        expected_active_db='corpus_vn_20990101_1', manifest=self.m, step='restoring')
-        self.db.targets().write(OPERATION, self.name, '16400')
+                        expected_active_db='corpus_vn_20990101_1', manifest=self.m, step='restoring', oid=16400)
+        self.remembered = []
+        self.db.remember = lambda operation, oid: self.remembered.append((operation, oid))
 
     def names(self):
         return [name for name, _, _ in self.calls]
@@ -106,8 +111,8 @@ class LawFixture:
 class LawCreateTest(LawFixture, unittest.TestCase):
     def test_create_as_activator_then_one_postgres_step_before_any_dump_byte(self):
         self.db.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'strays', 'createdb', 'owner',
-                                        'target-oid', 'prepare'])
+        self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'protected', 'catalog', 'strays',
+                                        'createdb', 'owner', 'target-oid', 'prepare'])
         args, _ = self.call('createdb')
         self.assertIn('--template=template0', args)
         self.assertEqual(args[-1], self.name)
@@ -141,15 +146,17 @@ class LawCreateTest(LawFixture, unittest.TestCase):
             self.db.create(self.row)
 
     def test_existing_target_is_dropped_and_created_again(self):
-        self.responses['exists'] = b't\n'
+        self.responses['exists'] = [b't\n', b'f\n']
         self.db.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'end-backends', 'strays', 'protected', 'dropdb',
-                                        'createdb', 'owner', 'target-oid', 'prepare'])
-        self.assertIn("operation_id <> '" + OPERATION + "'", self.sql('protected'))
-        args, _ = self.call('dropdb')
+        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'end-backends', 'protected', 'catalog', 'strays',
+                                        'protected', 'catalog', 'connections', 'drop', 'exists', 'createdb', 'owner',
+                                        'target-oid', 'prepare'])
+        protected = [kwargs['input'].decode() for name, _, kwargs in self.calls if name == 'protected']
+        self.assertIn("operation_id <> '" + OPERATION + "'", protected[1])
+        args, kwargs = self.call('drop')
         self.assertEqual(args[args.index('-U') + 1], 'activator')
-        self.assertEqual(args[-2:], ['--if-exists', self.name])
-        self.assertEqual(self.options(args), ADMIN)
+        self.assert_activator(args, 'auth')
+        self.assertIn('d.oid=16400::pg_catalog.oid', kwargs['input'].decode())
 
     def test_existing_target_activator_does_not_own_is_refused_without_a_postgres_session(self):
         self.responses.update(exists=b't\n', owner=b'postgres\n')
@@ -163,7 +170,7 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertIn('pg_catalog.pg_terminate_backend(a.pid,5000)', text)
         self.assertIn('a.usename=current_user', text)
         self.assertEqual(text.count('a.pid NOT IN (pg_catalog.pg_backend_pid(),77)'), 2)
-        self.assert_activator(self.call('end-backends')[0], 'auth', 'pg_catalog,public')
+        self.assert_activator(self.call('end-backends')[0], 'auth')
 
     def assert_leftover(self, reason):
         with self.assertRaises(target.Leftover) as caught:
@@ -188,37 +195,56 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertNotIn('end-backends', self.names())
 
     def test_strays_are_every_owned_database_no_kind_protects(self):
+        self.responses['protected'] = b'["corpus_vn_20990101_1"]'
         self.db.create(self.row)
-        text = self.sql('strays')
+        text = self.sql('protected')
         for word in ('public.corpus_release', 'public.frameworks_release', 'public.retired_release',
-                     'public.release_journal', 'retain_until > pg_catalog.now()', "mode <> 'prune'",
+                     'public.release_journal', 'retain_until > pg_catalog.now()', "mode <> 'prune'"):
+            self.assertIn(word, text)
+        self.assertNotIn('corpus_kind', text)
+        text = self.sql('strays')
+        for word in ("ARRAY['corpus_vn_20990101_1']::pg_catalog.text[]",
                      'pg_catalog.pg_get_userbyid(d.datdba)=current_user', "format('DROP DATABASE %I',s.datname)",
                      "format('ALTER DATABASE %I IS_TEMPLATE false',s.datname)", '\\gexec'):
             self.assertIn(word, text)
-        self.assertNotIn('corpus_kind', text)
-        order = ['\\set ON_ERROR_STOP off', '\\gexec', '\\set ON_ERROR_STOP on', 'SELECT EXISTS(WITH protected']
+        for word in ('public.', 'corpus_release', 'release_journal', 'retired_release'):
+            self.assertNotIn(word, text)
+        order = ['\\set ON_ERROR_STOP off', '\\gexec', '\\set ON_ERROR_STOP on', 'SELECT EXISTS(SELECT d.datname']
         self.assertEqual([text.index(word) for word in order], sorted(text.index(word) for word in order))
         self.assertLess(self.names().index('strays'), self.names().index('createdb'))
 
     def test_target_identity_is_recorded_after_createdb_and_checked_first_in_the_postgres_step(self):
         self.responses['target-oid'] = b'17001\n'
         self.db.create(self.row)
-        self.assertEqual(self.db.targets().read(OPERATION, self.name), '17001')
+        self.assertEqual(self.row['oid'], 17001)
+        self.assertEqual(self.remembered, [(OPERATION, 17001)])
         self.assertIn("='17001' AS release_target", self.sql('prepare'))
         self.responses['prepare'] = MISMATCH
         with self.assertRaisesRegex(ValueError, REFUSED):
             self.db.create(self.row)
 
     def test_dropping_an_owned_target_opens_no_postgres_session(self):
-        self.db.drop_owned(self.name)
-        self.assertEqual(self.names(), ['protected', 'dropdb'])
+        self.db.drop_target(self.row)
+        self.assertEqual(self.names(), ['protected', 'catalog', 'connections', 'drop', 'exists'])
 
     def test_protected_existing_target_is_refused_and_kept(self):
-        self.responses.update(exists=b't\n', protected=b't\n')
-        with self.assertRaisesRegex(ValueError, 'refusing to drop protected database'):
+        self.responses.update(exists=b't\n', protected=json.dumps([self.name]).encode())
+        with self.assertRaisesRegex(target.Waiting, 'activation target is protected'):
             self.db.create(self.row)
-        for name in ('dropdb', 'createdb', 'prepare'):
+        for name in ('drop', 'createdb', 'prepare'):
             self.assertNotIn(name, self.names())
+
+    def test_existing_target_with_connections_waits(self):
+        self.responses.update(exists=b't\n', connections=b't\n')
+        with self.assertRaisesRegex(target.Waiting, 'activation target has connections'):
+            self.db.create(self.row)
+        self.assertNotIn('drop', self.names())
+
+    def test_a_target_that_survives_its_drop_waits(self):
+        self.responses['exists'] = b't\n'
+        with self.assertRaisesRegex(target.Waiting, 'leftover database in use'):
+            self.db.create(self.row)
+        self.assertNotIn('createdb', self.names())
 
     def test_target_owned_by_another_role_refuses_before_the_postgres_step(self):
         self.responses['owner'] = b'postgres\n'
@@ -300,27 +326,13 @@ class LawRestoreTest(LawFixture, unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, REFUSED):
                 action()
 
-    def test_the_swap_verifies_the_target_first(self):
-        self.responses['verify'] = MISMATCH
-        with self.assertRaisesRegex(ValueError, REFUSED):
-            self.db.activate(self.row)
-        self.assertEqual(self.names(), ['verify'])
-
-    def test_a_resume_without_a_record_adopts_the_current_identity(self):
-        self.db.targets().path(OPERATION).unlink()
-        self.responses['target-oid'] = b'17002\n'
-        self.db.validate(self.row)
-        self.assertEqual(self.names(), ['end-backends', 'strays', 'target-oid', 'validate'])
-        self.assertIn("='17002' AS release_target", self.sql('validate'))
-        self.assertEqual(self.db.targets().read(OPERATION, self.name), '17002')
-
-    def test_a_target_is_not_adopted_while_leftovers_remain(self):
-        self.db.targets().path(OPERATION).unlink()
-        self.responses['strays'] = b't\n'
-        with self.assertRaisesRegex(target.Leftover, '^leftover database in use$'):
-            self.db.validate(self.row)
-        self.assertEqual(self.names(), ['end-backends', 'strays'])
-        self.assertIsNone(self.db.targets().read(OPERATION, self.name))
+    def test_a_row_without_a_recorded_oid_reaches_no_session(self):
+        del self.row['oid']
+        for action in (lambda: self.db.validate(self.row), lambda: self.db.on_target(self.row, 'SELECT 1;'),
+                       lambda: self.db.target_admin(self.row, 'SELECT 1;')):
+            with self.assertRaisesRegex(ValueError, REFUSED):
+                action()
+        self.assertEqual(self.names(), [])
 
     def test_pg_restore_failure_removes_the_list_and_skips_the_check(self):
         self.failures['pg_restore'] = CommandError('command failed', detail='pg_restore: exit 1')

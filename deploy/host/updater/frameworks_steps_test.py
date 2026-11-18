@@ -9,6 +9,7 @@ from updater import deploy_frameworks_sql as sql
 from updater.deploy_corpus_kind import FRAMEWORKS
 from updater.deploy_host import Host
 from updater.deploy_io import CommandError
+from updater.deploy_release_target import Waiting
 from updater.deploy_store import Paths
 from updater.frameworks_toc_test import DATA, EXECUTABLE, HEADER, SPECIAL, executable_sql
 from updater.frameworks_verify_test import manifest, rules
@@ -25,6 +26,8 @@ GUARD = tuple("pg_catalog.current_setting('" + name + "') OPERATOR(pg_catalog.<>
 
 def classify(args, text):
     joined = ' '.join(args)
+    if 'auth_owner' in args:
+        return 'protected' if 'json_agg(DISTINCT' in text else 'tables'
     if 'frameworks-schema' in args:
         return 'schema'
     if 'release-check' in args:
@@ -44,10 +47,13 @@ def classify(args, text):
         return 'remove-list'
     if '/usr/local/bin/postgres-admin.sh' in args:
         return 'prewarm' if 'pg_prewarm' in text else 'configure' if 'ALTER DATABASE' in text else 'postgres'
-    for word, name in (('pg_terminate_backend', 'end-backends'), ('DROP DATABASE %I', 'strays'),
+    if 'DROP DATABASE %I' in text and "d.datname='" in text:
+        return 'drop'
+    for word, name in (('json_object_agg(d.datname', 'catalog'), ('pg_terminate_backend', 'end-backends'),
+                       ('pg_stat_activity', 'connections'), ('DROP DATABASE %I', 'strays'),
                        ('AS target_oid', 'target-oid'), ('frameworks_before', 'check'),
                        ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
-                       ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'), ('frameworks_release WHERE active_db', 'protected'),
+                       ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'),
                        ("to_regclass('public.release')", 'restored'),
                        ('frameworks_before', 'check'), ('CREATE OR REPLACE', 'apply'),
                        ('FROM public.release WHERE singleton', 'validate'), ('GRANT SELECT ON ALL TABLES', 'grants'),
@@ -70,7 +76,7 @@ class StepsFixture:
             restored=b'f\n', list=(HEADER + DATA + EXECUTABLE).encode(),
             validate=json.dumps(dict({key: self.m[key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
                                      kind='frameworks')).encode(),
-            check=b'ok\n', strays=b'f\n',
+            check=b'ok\n', strays=b'f\n', protected=b'[]', catalog=b'{}', connections=b'f\n',
             **{'release-check': b'{"status":"ok","search_hits":1,"read_items":1}\n', 'end-backends': b'0\nf\n',
                'target-oid': b'16400\n'})
         def runner(args, **kwargs):
@@ -88,8 +94,7 @@ class StepsFixture:
         self.name = self.m['database']
         self.row = dict(operation_id='e' * 32, country='vn', rel=self.m['rel'], mode='new', database_name=self.name,
                         manifest_hash='a' * 64, dump_sha256=self.m['dump']['sha256'], expected_active_db=None,
-                        manifest=self.m, step='restoring')
-        self.db.targets().write('e' * 32, self.name, '16400')
+                        manifest=self.m, step='restoring', oid=16400)
 
     def names(self):
         return [name for name, _, _ in self.calls]
@@ -125,8 +130,8 @@ class StepsFixture:
 class FrameworksCreateTest(StepsFixture, unittest.TestCase):
     def test_create_as_activator_then_one_postgres_log_step_then_effective_check(self):
         self.steps.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'strays', 'createdb', 'owner', 'target-oid',
-                                        'configure', 'effective'])
+        self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'protected', 'catalog', 'strays', 'createdb',
+                                        'owner', 'target-oid', 'configure', 'effective'])
         args, _ = self.call('createdb')
         self.assertIn('--template=template0', args)
         self.assertEqual(args[-1], self.name)
@@ -159,11 +164,13 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
         self.assertIn('pg_catalog.concat_ws(', self.sql('effective'))
 
     def test_existing_target_is_dropped_and_created_again(self):
-        self.responses['exists'] = b't\n'
+        self.responses['exists'] = [b't\n', b'f\n']
         self.steps.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'end-backends', 'strays', 'protected', 'dropdb',
-                                        'createdb', 'owner', 'target-oid', 'configure', 'effective'])
-        self.assertIn("operation_id <> '" + 'e' * 32 + "'", self.sql('protected'))
+        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'end-backends', 'protected', 'catalog', 'strays',
+                                        'protected', 'catalog', 'connections', 'drop', 'exists', 'createdb', 'owner',
+                                        'target-oid', 'configure', 'effective'])
+        protected = [kwargs['input'].decode() for name, _, kwargs in self.calls if name == 'protected']
+        self.assertIn("operation_id <> '" + 'e' * 32 + "'", protected[1])
 
     def test_existing_target_activator_does_not_own_is_refused_without_a_postgres_session(self):
         self.responses.update(exists=b't\n', owner=b'postgres\n')
@@ -172,10 +179,10 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
         self.assertEqual(self.names(), ['extensions', 'exists', 'owner'])
 
     def test_protected_existing_target_is_refused_and_kept(self):
-        self.responses.update(exists=b't\n', protected=b't\n')
-        with self.assertRaisesRegex(ValueError, 'refusing to drop protected database'):
+        self.responses.update(exists=b't\n', protected=json.dumps([self.name]).encode())
+        with self.assertRaisesRegex(Waiting, 'activation target is protected'):
             self.steps.create(self.row)
-        for name in ('dropdb', 'createdb', 'configure'):
+        for name in ('drop', 'createdb', 'configure'):
             self.assertNotIn(name, self.names())
 
     def test_configure_refuses_another_target_identity_first(self):

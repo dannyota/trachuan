@@ -95,7 +95,11 @@ def release(path, now):
         if timestamp.utcoffset() != timezone.utc.utcoffset(timestamp):
             raise ValueError('invalid corpus waiting timestamp')
         age = max(0, (now-timestamp).total_seconds())
-    return [('release_failed', int(status == 'failed')), ('release_waiting_age_seconds', age)]
+    integrity = result.get('integrity', [])
+    if not isinstance(integrity, list) or not all(isinstance(code, str) for code in integrity):
+        raise ValueError('invalid release integrity list')
+    return [('release_failed', int(status == 'failed')), ('release_waiting_age_seconds', age),
+            ('release_integrity', int(bool(integrity)))]
 
 
 def watch_stale(path, now):

@@ -36,7 +36,7 @@ sys.path.insert(0,sys.argv[1])
 from updater import deploy_corpus_sql as sql
 value=json.load(sys.stdin)
 action=sys.argv[2]
-print(sql.activate(value) if action=='activate' else sql.protected(value) if action=='protected' else sql.journal(value[0],value[1]))
+print(sql.activate(value, retire=tuple(value['retire']) if value.get('retire') else None) if action=='activate' else sql.protected_names() if action=='protected' else sql.journal(value[0],value[1]))
 `
 	cmd := exec.CommandContext(t.Context(), "python3", "-c", script, filepath.Join(root, "deploy/host"), function)
 	cmd.Stdin = bytes.NewReader(raw)
@@ -45,6 +45,23 @@ print(sql.activate(value) if action=='activate' else sql.protected(value) if act
 		t.Fatal("generate production activation SQL")
 	}
 	return string(output)
+}
+
+func protectedNames(t *testing.T, conn *pgx.Conn, statement string) map[string]bool {
+	t.Helper()
+	var raw []byte
+	if err := conn.QueryRow(t.Context(), statement).Scan(&raw); err != nil {
+		t.Fatalf("read protected names: %v", err)
+	}
+	var names []string
+	if err := json.Unmarshal(raw, &names); err != nil {
+		t.Fatalf("decode protected names: %v", err)
+	}
+	found := map[string]bool{}
+	for _, name := range names {
+		found[name] = true
+	}
+	return found
 }
 
 func pgCommand(t *testing.T, config *pgx.ConnConfig, program string, input []byte, args ...string) []byte {
@@ -107,7 +124,7 @@ func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
 		if createErr != nil {
 			t.Fatal(createErr)
 		}
-		t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, key) })
+		t.Cleanup(func() { cleanupReleaseDatabase(t, admin, name, key) })
 		if _, err = admin.Exec(ctx, "ALTER DATABASE "+pgx.Identifier{name}.Sanitize()+" OWNER TO "+pgx.Identifier{builder.Role}.Sanitize()); err != nil {
 			t.Fatal(err)
 		}
@@ -189,7 +206,8 @@ func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
 		t.Fatalf("restored vector and ltree data: read=%v close=%v path=%q", readErr, closeErr, path)
 	}
 	digest := sha256.Sum256(dump)
-	row := map[string]any{"operation_id": strings.Repeat("1", 32), "country": "vn", "rel": strings.TrimPrefix(names[1], "corpus_vn_"), "mode": "new", "database_name": names[1], "manifest_hash": strings.Repeat("a", 64), "dump_sha256": hex.EncodeToString(digest[:]), "expected_active_db": names[0], "manifest": map[string]any{"fixture": true}}
+	dumpDigest := hex.EncodeToString(digest[:])
+	row := map[string]any{"operation_id": strings.Repeat("1", 32), "country": "vn", "rel": strings.TrimPrefix(names[1], "corpus_vn_"), "mode": "new", "database_name": names[1], "manifest_hash": strings.Repeat("a", 64), "dump_sha256": dumpDigest, "expected_active_db": names[0], "manifest": map[string]any{"fixture": true}, "retire": []any{names[0], nil}}
 	apply := func(value map[string]any) {
 		t.Helper()
 		if _, applyErr := activator.Exec(ctx, pythonSQL(t, "activate", value)); applyErr != nil {
@@ -201,36 +219,41 @@ func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
 	if err = auth.QueryRow(ctx, `SELECT dump_sha256 FROM retired_release WHERE db_name=$1`, names[0]).Scan(&oldDigest); err != nil || oldDigest != nil {
 		t.Fatalf("manual release digest: %v", err)
 	}
-	if _, err = activator.Exec(ctx, pythonSQL(t, "activate", row)); err == nil {
+	apply(row)
+	stale := map[string]any{}
+	for key, value := range row {
+		stale[key] = value
+	}
+	stale["operation_id"], stale["rel"], stale["database_name"] = strings.Repeat("9", 32), strings.TrimPrefix(names[2], "corpus_vn_"), names[2]
+	if _, err = activator.Exec(ctx, pythonSQL(t, "activate", stale)); err == nil {
 		t.Fatal("stale compare-and-swap succeeded")
 	}
 	if _, err = activator.Exec(ctx, "ROLLBACK"); err != nil {
 		t.Fatal(err)
 	}
-	row["operation_id"], row["rel"], row["database_name"], row["expected_active_db"] = strings.Repeat("2", 32), strings.TrimPrefix(names[2], "corpus_vn_"), names[2], names[1]
+	row["operation_id"], row["rel"], row["database_name"], row["expected_active_db"], row["retire"] = strings.Repeat("2", 32), strings.TrimPrefix(names[2], "corpus_vn_"), names[2], names[1], []any{names[1], dumpDigest}
 	apply(row)
-	row["operation_id"], row["rel"], row["database_name"], row["expected_active_db"], row["mode"] = strings.Repeat("3", 32), strings.TrimPrefix(names[1], "corpus_vn_"), names[1], names[2], "retained"
+	row["operation_id"], row["rel"], row["database_name"], row["expected_active_db"], row["mode"], row["retire"] = strings.Repeat("3", 32), strings.TrimPrefix(names[1], "corpus_vn_"), names[1], names[2], "retained", []any{names[2], dumpDigest}
 	apply(row)
 	var count int
 	if err = auth.QueryRow(ctx, `SELECT count(*) FROM retired_release WHERE db_name=$1`, names[1]).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("retained target not removed: %v", err)
 	}
-	var protected bool
-	if err = activator.QueryRow(ctx, pythonSQL(t, "protected", names[2])).Scan(&protected); err != nil || !protected {
-		t.Fatalf("retained database not protected: %v", err)
+	if !protectedNames(t, auth, pythonSQL(t, "protected", nil))[names[2]] {
+		t.Fatal("retained database not protected")
 	}
 	if _, err = auth.Exec(ctx, `UPDATE retired_release SET retain_until=now()-interval '1 second' WHERE db_name=$1`, names[2]); err != nil {
 		t.Fatal(err)
 	}
-	if err = activator.QueryRow(ctx, pythonSQL(t, "protected", names[2])).Scan(&protected); err != nil || protected {
-		t.Fatalf("expired database protected: %v", err)
+	if protectedNames(t, auth, pythonSQL(t, "protected", nil))[names[2]] {
+		t.Fatal("expired database protected")
 	}
 	prune := map[string]any{"operation_id": strings.Repeat("4", 32), "country": "vn", "rel": strings.TrimPrefix(names[2], "corpus_vn_"), "mode": "prune", "database_name": names[2], "manifest_hash": nil, "dump_sha256": nil, "expected_active_db": nil, "manifest": nil}
 	if _, err = activator.Exec(ctx, pythonSQL(t, "journal", []any{prune, "pruning"})); err != nil {
 		t.Fatal(err)
 	}
 	testpg.DropCorpusDatabase(t, admin, names[2], "vn/"+strings.TrimPrefix(names[2], "corpus_vn_"))
-	if _, err = activator.Exec(ctx, `DELETE FROM retired_release WHERE db_name=$1`, names[2]); err != nil {
+	if _, err = activator.Exec(ctx, lawSQL(t, "sql", "forget", names[2])); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = activator.Exec(ctx, pythonSQL(t, "journal", []any{prune, "pruned"})); err != nil {

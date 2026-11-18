@@ -79,7 +79,8 @@ class SuperuserSessionTest(unittest.TestCase):
 
     def test_provisioner_reads_and_writes_no_relation_outside_the_catalog(self):
         for session in sessions('provision-activator.sh'):
-            self.assertEqual(re.findall(r'\b(?:FROM|JOIN|INTO|UPDATE)\s+(?!pg_catalog\.)[a-z_."]+', session['sql']), [])
+            self.assertEqual(re.findall(r'\b(?:FROM|JOIN|INTO|UPDATE)\s+(?!pg_catalog\.|activator\b|PUBLIC\b)[a-z_."]+',
+                                        session['sql']), [])
 
 
 class ProvisionerRunTest(unittest.TestCase):

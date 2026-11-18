@@ -63,6 +63,14 @@ def release_signals(state, prefix, release, now, message):
     update(state, prefix + '_waiting', waiting, now, facts=message(release))
 
 
+def integrity_signal(state, key, release, now):
+    if release is None:
+        update(state, key, None, now)
+        return
+    codes = release.get('integrity') or []
+    update(state, key, 'bad' if codes else 'good', now, facts=','.join(codes))
+
+
 def observe(state, data, now):
     ready = data['ready']
     update(state, 'site', None if ready is None else 'good' if ready == 200 else 'bad',
@@ -74,11 +82,13 @@ def observe(state, data, now):
     update(state, 'deploy_failed', status_value(deploy, ('failed', 'rolled_back'), ('ok', 'current')),
            now, 900, 3, attempt=(deploy or {}).get('started_at'), facts=message(deploy))
     release_signals(state, 'release', release, now, message)
+    integrity_signal(state, 'release_integrity', release, now)
     if data['frameworks'] is None:
-        for key in ('frameworks_failed', 'frameworks_waiting'):
+        for key in ('frameworks_failed', 'frameworks_waiting', 'frameworks_integrity'):
             state['signals'].pop(key, None)
     else:
         release_signals(state, 'frameworks', data['frameworks'], now, message)
+        integrity_signal(state, 'frameworks_integrity', data['frameworks'], now)
     secret_value = status_value(secrets, ('failed',), ('ok', 'current'))
     stale = (secrets or {}).get('last_success_at')
     stale = stale is not None and now-stale > 7200
@@ -129,7 +139,7 @@ def due(state, now):
             kind = 'reminder'
         if kind is None:
             continue
-        red = key in ('site', 'deploy_stopped', 'backup_old') or key.startswith('backup_')
+        red = key in ('site', 'deploy_stopped', 'backup_old', 'release_integrity', 'frameworks_integrity') or key.startswith('backup_')
         priority = 2 if kind == 'recovery' else 1 if kind == 'reminder' else 0 if red else 1
         messages.append(dict(key=key, kind=kind, priority=priority, facts=item['facts'],
                              since=item['since'] if item['since'] is not None else item['fired_at'],

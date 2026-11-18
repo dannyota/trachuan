@@ -5,6 +5,10 @@ import subprocess
 from . import network, storage
 
 
+INTEGRITY = ('pointer_changed', 'serving_database_gone', 'active_cleared', 'adoption_failed', 'record_rebuilt',
+             'journal_row_refused')
+
+
 def result(path, kind):
     value = storage.read(path)
     if value is None:
@@ -31,6 +35,9 @@ def result(path, kind):
         raise ValueError('invalid watch sequence')
     if value.get('message') is not None and not isinstance(value['message'], str):
         raise ValueError('invalid watch job message')
+    integrity = value.get('integrity', [])
+    if not isinstance(integrity, list) or not all(code in INTEGRITY for code in integrity):
+        raise ValueError('invalid watch integrity list')
     return value
 
 
