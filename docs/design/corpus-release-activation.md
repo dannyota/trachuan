@@ -62,8 +62,9 @@ even when the auth migrations ran before the role existed.
      `vector` and `ltree` at the versions in the manifest, which must equal the
      versions the PostgreSQL image provides.
    - As `activator`: create the database. A target that already exists when this
-     step starts is dropped and created again, so nothing made before this
-     operation survives; the protection rule below still applies.
+     step starts is dropped and created again if `activator` owns it and the
+     protection rule below allows it, so nothing dump SQL made earlier survives;
+     a target with another owner is refused and left alone.
    - As `postgres`, before any byte of the dump: refuse when a role other than
      `postgres` is a superuser or a member of one, create `vector`, `ltree` and
      `pg_prewarm` in `public`, and revoke `PUBLIC`'s rights on the database.
@@ -77,7 +78,8 @@ even when the auth migrations ran before the role existed.
 2. Require the restored `release` row to equal the manifest's `rel`,
    `schema_version` and recipes; otherwise abort.
 3. As `activator`, prewarm the target's tables, indexes and TOAST relations with
-   a schema-qualified `public.pg_prewarm`. Then
+   a schema-qualified `public.pg_prewarm`, skipping relations it may not read; a
+   `retained` database without the extension is not warmed. Then
    `server release-check --database <target>` runs one search and one read
    against it with the server code that will serve it, under the evaluation
    profile: no candidate cache or postings and the 60-second deadline, since the
@@ -114,8 +116,9 @@ recovery and cleanup:
 
 After a crash, an open journal continues from its last step when the guard holds
 (`new`: the target is neither active nor retired; `retained`: it is retired and
-not active). Otherwise the journal is closed as aborted, and a `new` target is
-dropped subject to the rule above. A daily `prune` under the same lock handles
-each unprotected database in `retired_release` without connections: it journals
-`pruning`, drops the database if it exists, deletes the row, and journals
-`pruned`. An open `pruning` journal is finished the same way on the next run.
+not active). Otherwise the journal is closed as aborted, and a `new` target that
+`activator` owns is dropped subject to the rule above. A daily `prune` under the
+same lock handles each unprotected database in `retired_release` without
+connections: it journals `pruning`, drops the database if it exists, deletes the
+row, and journals `pruned`. An open `pruning` journal is finished the same way
+on the next run.

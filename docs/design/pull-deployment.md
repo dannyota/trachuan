@@ -167,14 +167,14 @@ retries. A run has three phases, each skipped when nothing changed: secrets
    - Write `/srv/trachuan/host/images.env` from the manifest; install the
      bundle's `server.env` and `web.env`; render units; `daemon-reload`.
    - Stop Caddy, web, server, migrate and queryembed. Restart PostgreSQL only
-     when its image or rendered unit changed; then wait for it, run
-     `pgbackrest check` and prewarm the active corpus database
-     ([release restore](../runbooks/release-restore.md#prewarm-a-corpus-database)).
-   - Run `provision-activator.sh` when the running PostgreSQL container provides
-     both its readable script and password mount
-     ([corpus release](corpus-release-activation.md#steps)); skip provisioning
-     for older units without those mounts. Start queryembed, then migrate, a
-     oneshot unit, and require success; start server and web.
+     when its image or rendered unit changed; then wait for it and run
+     `pgbackrest check`.
+   - Run `provision-activator.sh` when the PostgreSQL container provides its
+     script and password mount ([steps](corpus-release-activation.md#steps));
+     older units skip it. After a restart `activator` prewarms the active corpus
+     database ([rules](corpus-release-activation.md#trust-in-the-dump)). Start
+     queryembed, then migrate, a oneshot unit, and require success; start server
+     and web.
    - Require loopback `http://127.0.0.1:8080/readyz`; start Caddy; require
      `https://trachuan.vn/` to answer 200 through Caddy on the host
      (`curl --resolve trachuan.vn:443:127.0.0.1`), since public `/readyz` is not

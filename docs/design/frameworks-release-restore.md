@@ -22,13 +22,14 @@ from reaching more privilege or changing what other sessions run:
   to `pg_catalog` first (`pg_catalog, public` where the image's SQL names its
   tables), so no planted object shadows a built-in, and the check names catalog
   objects with their schema.
-- After the image's executable SQL is applied, one check compares the database
-  with the image's schema version: schemas (only `public`), extensions (exactly
-  `vector` and `ltree`, owned by `postgres`), views, functions, procedures,
-  aggregates, triggers, rules, policies, operators, casts, types and domains,
-  and the database's role settings (exactly the four log settings, on the
-  database and for `activator` and `corpus_reader`). Any difference fails the
-  activation, naming only the kind of object.
+- After the image's executable SQL is applied, and before a `retained` database
+  becomes active again, one check compares the database with the image's schema
+  version: schemas (only `public`), extensions (exactly `vector` and `ltree`,
+  owned by `postgres`), views, functions, procedures, aggregates, triggers,
+  rules, policies, operators, casts, types and domains, and the database's role
+  settings (exactly the four log settings, on the database and for `activator`
+  and `corpus_reader`). Any difference fails the activation, naming only the
+  kind of object.
 - `activator` owns the law databases too, so a hostile signed dump can still act
   on them (settings, connection limits, dropping retired ones). This is accepted
   as it is for law dumps, since signing is the boundary for both.
