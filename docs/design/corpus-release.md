@@ -24,6 +24,8 @@ on the MacBook after the run is `evaluated` and uploads to bucket
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
 - `build.json`: the build record, listed in `MANIFEST.sha256`; schema 8 and
   later only, the source of the manifest's `heading_evidence`.
+- The three [evidence files](release-evidence.md#upload), for a run with a
+  decision.
 
 `corpus release-row <cc> <rel> --out <file>` reads the release database,
 workshop and the run's `eval` artifact read-only, without Temporal.

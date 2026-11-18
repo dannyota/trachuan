@@ -105,10 +105,11 @@ starts after the cutoff release is published and active.
 Schema version; bindings (`rel`, the dump's SHA-256, the build artifact hash,
 the report's SHA-256, the detector registry hash, the predecessor's `rel`, or
 `none` without one, and the SHA-256 of its `findings.json`, or `none` when it
-has none); per detector `complete: true` and the number of subjects observed and
-not observable; every finding with key, fingerprint, semantics number,
-`first_rel`, severity, status and `carried`; and the keys that are new, gone and
-carried.
+has none); per detector `complete: true`, its registry severity and the number
+of subjects observed and not observable, with an entry for every cross-signal
+detector of the stage's recipe; every finding with key, fingerprint, semantics
+number, `first_rel`, severity, status and `carried`; and the keys that are new,
+gone and carried.
 
 ## `identity.jsonl`
 
@@ -116,8 +117,8 @@ This release's identity summary. Its bindings are `rel`, the dump's SHA-256, the
 build artifact hash and the report's SHA-256. Then:
 
 - per document: key, `number_norm`, status class, `eff_from`, `eff_to`,
-  `is_current`, `validity_conflict`, text source, completeness and how it was
-  obtained;
+  `is_current`, `validity_conflict`, text source, completeness and
+  `baseline: true` when the document is served from a baseline;
 - per provision: document key, anchor, `parent` (the anchor of its parent
   provision, or null at the top of the document), `ambiguous: true` when the
   rule above holds, its text hash, the codes of its effective positive taxonomy
@@ -154,22 +155,26 @@ Records are before and after pairs by public identity, from this summary and the
 predecessor's:
 
 - documents added and removed, each with a cause class: `membership`, `coverage`
-  (a fetch gap, a baseline, a withheld text) or `source`. A removed document's
-  provisions are removed with it, under its cause class, and are not listed one
-  by one;
+  (a fetch gap, a baseline, a withheld text) or `source`, read from this run's
+  frozen membership inventory. A removed key whose disposition is
+  `source_replaced` is `source`; one that is `withdrawn`, `scope_removed` or has
+  no entry is `membership`; one still active with a fetch gap or a baseline is
+  `coverage`. An added key is `source` when a hand-over names it and otherwise
+  `membership`. A removed document's provisions are removed with it, under its
+  cause class, and are not listed one by one;
 - document key: the key before and after, only for a hand-over that fetch
-  recorded as an accepted `source_replaced` naming both keys
-  ([sources](sources.md#secondary-discovery-and-hand-over)), and only when the
-  old key has a document line in the predecessor's summary and the new key has
-  one in this summary. The document is then a surviving document, compared as
-  one: metadata and classification as on a surviving key; provisions paired by
-  equal anchor, each record carrying `provenance: true`; relation ends compared
-  with the old key read as the new key, so a relation that differs only by the
-  key is unchanged. When the new key has no document line, as after a failed
-  fetch of the replacement, the old document is a removal with cause `source`
-  that names the replacement key in `replaced_by`, and the replacement is an
-  addition in the release that first holds it. Any other change of key is one
-  removal and one addition;
+  recorded as `source_replaced` naming both keys (a release requires that gap
+  accepted) ([sources](sources.md#secondary-discovery-and-hand-over)), and only
+  when the old key has a document line in the predecessor's summary and the new
+  key has one in this summary. The document is then a surviving document,
+  compared as one: metadata and classification as on a surviving key; provisions
+  paired by equal anchor, each record carrying `provenance: true`; relation ends
+  compared with the old key read as the new key, so a relation that differs only
+  by the key is unchanged. When the new key has no document line, as after a
+  failed fetch of the replacement, the old document is a removal with cause
+  `source` that names the replacement key in `replaced_by`, and the replacement
+  is an addition in the release that first holds it. Any other change of key is
+  one removal and one addition;
 - document metadata: `number_norm` before and after on a surviving key;
 - provisions added, removed and changed (text hash before and after) in
   surviving documents. Each carries `provenance: true` when its document's text
@@ -192,10 +197,22 @@ identities, a move is one removal and one addition for the reader to review.
 
 The predecessor is frozen when the run is created, so comparing with another
 release takes a new run. Once a `rel` has an upload prefix it is never reused
-([corpus release](corpus-release.md)). The release upload gains `findings.json`,
+([corpus release](corpus-release.md)). A release whose `release.json` carries
+the [decision fields](#upload-and-signing) uploads `findings.json`,
 `identity.jsonl` and `changes.jsonl` beside the dump, `MANIFEST.sha256`,
-`report.json` and `release.json`, and the signed corpus manifest carries the
-SHA-256 of all three.
+`report.json` and `release.json`. Its signed corpus manifest gains
+`evidence: {findings_sha256, identity_sha256, changes_sha256}`, each 64
+lower-case hexadecimal characters.
+
+`findings.json` has the 16 MiB limit of the other JSON files. `identity.jsonl`
+and `changes.jsonl` may reach 1 GiB each and are hashed and validated line by
+line while streaming, because a release holds hundreds of thousands of
+provisions.
+
+The host updater accepts the optional `evidence` field and does not read the
+files. That updater is live before the first release with a decision is signed;
+an older one refuses the manifest, so the activation fails closed and is retried
+by signing again.
 
 ## Gate
 
@@ -204,13 +221,15 @@ SHA-256 of all three.
 | every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                  | unchanged                                                                                                                                    |
 | a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff` | refuse                                                                                                                                       |
 | a detector not complete                                                                                                      | refuse                                                                                                                                       |
-| an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                       |
+| an `open` finding whose detector is `blocking` in `findings.json`, fired or carried                                          | refuse                                                                                                                                       |
 | `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                             |
 | first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
 
-The sidecar rows apply from a cutoff of their own, set when they ship to the
-last `rel` published without sidecars, so those releases can still be signed
-again. Such a release counts as having no summary for `changes.jsonl`.
+The sidecar rows apply exactly to a release whose `release.json` carries the
+decision fields. Above the [cutoff](#runs-before-this-rule) a release without
+them is refused, so they cannot be dropped to avoid these rows. No release with
+a decision is published before these rows ship. A predecessor without
+`identity.jsonl` counts as having no summary for `changes.jsonl`.
 
 ## Downstream use
 
