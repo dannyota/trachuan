@@ -232,7 +232,7 @@ func (e *Engine) TaxonomyNode(ctx context.Context, code string) (NodePage, error
 	for id := target.parent; id != 0; id = byID[id].parent {
 		result.Path = append([]NodeEntry{byID[id].entry}, result.Path...)
 	}
-	result.Documents, err = taxonomyDocuments(ctx, tx, target.id)
+	result.Documents, err = taxonomyDocuments(ctx, tx, target.id, e.statusDate())
 	if err != nil {
 		return result, err
 	}

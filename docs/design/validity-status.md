@@ -4,8 +4,8 @@ This note owns how the build corrects document validity when the source is wrong
 or silent: automatic rules backed by the document text, a reviewed manual list,
 and the evidence both leave. [Build normalization](normalization.md) owns source
 status mapping and the consolidated derivation;
-[retrieval](retrieval-recipe.md#validity-and-evidence) owns eligibility at query
-time. The changes ship in corpus schema version 3 per
+[retrieval](retrieval-validity.md#validity-and-evidence) owns eligibility at
+query time. The changes ship in corpus schema version 3 per
 [scope adoption](scope-adoption.md).
 
 ## Problem
@@ -103,12 +103,14 @@ the issuer is verified: the item states an issuer equal to the target's, or the
 normalized number has the form `n/YYYY/<type>-<issuer code>` whose code names
 the issuer (`NĐ-CP`, `QH15`, `TT-NHNN`). Apply: the target's `eff_to = D`
 (exclusive) with basis `derived_from_text`, unless it already has an earlier
-end; the status class is not changed. Retrieval's date interval then keeps the
-target current until D and not after, so a replacement scheduled for a future
-date never hides the predecessor early. Several events on one target use the
-earliest D. An item that matches no document or several, lacks a stated date, or
-lacks a verified issuer produces no event and a review entry naming the failure.
-A diagram relation is recorded as agreement, never required.
+end; the stored status class is not changed. Retrieval's date interval then
+keeps the target current until D and not after, so a replacement scheduled for a
+future date never hides the predecessor early, and the
+[served status](retrieval-validity.md#served-status) reads as expired from D.
+Several events on one target use the earliest D. An item that matches no
+document or several, lacks a stated date, or lacks a verified issuer produces no
+event and a review entry naming the failure. A diagram relation is recorded as
+agreement, never required.
 
 **C. Unconfirmed replacement.** A resolved diagram `replaces` relation from a
 current, started source to a target whose source class is `in_force` (not
@@ -230,8 +232,8 @@ the relation cap.
   corrections file hash joins the build input; the shared `normalizer_version`
   is not bumped, because chunk recipes depend on it, so a frozen run is never
   rebuilt under new rules.
-- [Retrieval](retrieval-recipe.md#validity-and-evidence): eligibility adds "not
-  `validity_conflict`"; the `validity` policy version is bumped; `Validity`
+- [Retrieval](retrieval-validity.md#validity-and-evidence): eligibility adds
+  "not `validity_conflict`"; the `validity` policy version is bumped; `Validity`
   carries the evidence record.
 - [Evaluation](evaluation.md): current-law precision is described as consistency
   with stored status. Add adjudicated validity cases, scored over every primary
