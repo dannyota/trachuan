@@ -147,7 +147,8 @@ these differences:
   recipe's query hash must equal the running embedder's, else status `waiting`.
   Without `--kind` the output stays the law output, byte for byte.
 - **Staging.** `/srv/trachuan/data/releases/frameworks-<rel>/`, mode `0700`,
-  deleted when activation ends in any state.
+  deleted when activation ends in any state, and by every updater run that holds
+  the locks, with or without a `frameworks` block.
 - **Logs.** No session in a frameworks database may write an error, statement or
   parameter to the PostgreSQL log. Right after creating the database, as
   `postgres`, set `log_min_messages` and `log_min_error_statement` to `panic`,
@@ -183,9 +184,10 @@ these differences:
   database to `retired_release` with kind `frameworks`. The law phase never
   writes `frameworks_release`; the frameworks phase never writes
   `corpus_release`.
-- **Result.** `/srv/trachuan/state/deploy/release-frameworks.json` and the log
-  `/var/log/trachuan/release-frameworks.log`; the release-floor wait is step
-  `floor`; the metrics timer publishes `release_failed` and
+- **Result.** `/srv/trachuan/state/deploy/release-frameworks.json` (removed,
+  with the frameworks prune marker, by an updater whose policy has no block) and
+  the log `/var/log/trachuan/release-frameworks.log`; the release-floor wait is
+  step `floor`; the metrics timer publishes `release_failed` and
   `release_waiting_age_seconds` with a `kind` dimension, and the alarms fire for
   either kind.
 
