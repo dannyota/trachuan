@@ -182,9 +182,11 @@ these differences:
   database to `retired_release` with kind `frameworks`. The law phase never
   writes `frameworks_release`; the frameworks phase never writes
   `corpus_release`.
-- **Result.** `/srv/trachuan/state/deploy/release-frameworks.json`; the metrics
-  timer publishes `release_failed` and `release_waiting_age_seconds` with a
-  `kind` dimension, and the alarms fire for either kind.
+- **Result.** `/srv/trachuan/state/deploy/release-frameworks.json` and the log
+  `/var/log/trachuan/release-frameworks.log`; the release-floor wait is step
+  `floor`; the metrics timer publishes `release_failed` and
+  `release_waiting_age_seconds` with a `kind` dimension, and the alarms fire for
+  either kind.
 
 The daily prune handles retired databases of both kinds, parsing each name by
 its kind's prefix. Recovery, protection and the seven-day window are the law
