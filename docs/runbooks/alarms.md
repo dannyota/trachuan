@@ -115,8 +115,8 @@ any other row in the check above is a compromise.
 2. Stop activations:
    `printf 'verify\n' | sudo tee /etc/trachuan/deploy-mode >/dev/null`.
 3. Save the output above outside the host.
-4. [Repair access to `auth`](release-restore.md#repair-access-to-auth), then
-   rotate every database password ([secrets](host.md#create-secrets)).
+4. [Repair access to `auth`](auth-access.md), then rotate every database
+   password ([secrets](host.md#create-secrets)).
 5. Remove what was planted, or
    [restore production](backups.md#restore-production) from a backup older than
    the first evidence.

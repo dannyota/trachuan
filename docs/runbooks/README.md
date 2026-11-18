@@ -7,6 +7,7 @@ Exact operating, verification and recovery procedures for the running system.
 - [Plan and apply OCI infrastructure](opentofu.md)
 - [Deploy a release](deploy.md)
 - [Restore and select a corpus release](release-restore.md)
+- [Repair access to auth](auth-access.md)
 - [Release journal check](release-journal-check.md)
 - [Back up and restore PostgreSQL](backups.md)
 - [Run the MCP agent evaluation](agent-eval.md)

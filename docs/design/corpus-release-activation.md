@@ -87,7 +87,7 @@ newest manifest the host verified and accepted. A table that disagrees or cannot
 be read makes the phase wait without spending the manifest, as does a busy
 advisory lock. A server that locks the updater out of `auth` (its own password,
 `ALTER DATABASE auth` limits or defaults) stops deploys and raises the alarm;
-the owner [repairs it](../runbooks/release-restore.md#repair-access-to-auth).
+the owner [repairs it](../runbooks/auth-access.md).
 
 **Rollout.** The new updater passes `--no-auth-tables` on every provisioner
 call, and the installed script then revokes the rights; without the flag the
