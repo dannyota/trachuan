@@ -33,8 +33,9 @@ def classify(args, text):
         return 'grant-corpus'
     if 'rm -f /run/pgbackrest/corpus-*.list' in args:
         return 'discard-lists'
-    if 'createdb' in args:
-        return 'createdb'
+    for program in ('createdb', 'dropdb'):
+        if program in args:
+            return program
     if 'pg_restore' in args:
         return 'list' if '--list' in args else 'pg_restore'
     if 'umask 077; cat > "$1"' in args:
@@ -43,11 +44,14 @@ def classify(args, text):
         return 'remove-list'
     if '/usr/local/bin/postgres-admin.sh' in args:
         return 'prewarm' if 'pg_prewarm' in text else 'configure' if 'ALTER DATABASE' in text else 'postgres'
-    for word, name in (('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
-                       ('EXISTS(SELECT FROM pg_database', 'exists'), ("to_regclass('public.release')", 'restored'),
+    for word, name in (('pg_terminate_backend', 'end-backends'), ('DROP DATABASE %I', 'strays'),
+                       ('AS target_oid', 'target-oid'), ('frameworks_before', 'check'),
+                       ('pg_available_extensions', 'extensions'), ('datdba', 'owner'),
+                       ('EXISTS(SELECT FROM pg_catalog.pg_database', 'exists'), ('frameworks_release WHERE active_db', 'protected'),
+                       ("to_regclass('public.release')", 'restored'),
                        ('frameworks_before', 'check'), ('CREATE OR REPLACE', 'apply'),
                        ('FROM public.release WHERE singleton', 'validate'), ('GRANT SELECT ON ALL TABLES', 'grants'),
-                       ('current_setting', 'effective')):
+                       ('current_setting', 'effective'), ('release_target', 'verify')):
         if word in text:
             return name
     raise AssertionError('unexpected command')
@@ -66,22 +70,26 @@ class StepsFixture:
             restored=b'f\n', list=(HEADER + DATA + EXECUTABLE).encode(),
             validate=json.dumps(dict({key: self.m[key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
                                      kind='frameworks')).encode(),
-            check=b'ok\n',
-            **{'release-check': b'{"status":"ok","search_hits":1,"read_items":1}\n'})
+            check=b'ok\n', strays=b'f\n',
+            **{'release-check': b'{"status":"ok","search_hits":1,"read_items":1}\n', 'end-backends': b'0\nf\n',
+               'target-oid': b'16400\n'})
         def runner(args, **kwargs):
             name = classify(args, (kwargs.get('input') or b'').decode())
             self.calls.append((name, args, kwargs))
             if name in self.failures:
                 raise self.failures[name]
-            return self.responses.get(name, b'')
+            value = self.responses.get(name, b'')
+            return value.pop(0) if isinstance(value, list) else value
         self.db = Database(Host(self.paths, runner, user_prefix=[]), rules(), FRAMEWORKS)
         self.db.holder = mock.Mock()
         self.db.holder.poll.return_value = None
+        self.db.backend = 77
         self.steps = FRAMEWORKS.steps(self.db)
         self.name = self.m['database']
         self.row = dict(operation_id='e' * 32, country='vn', rel=self.m['rel'], mode='new', database_name=self.name,
                         manifest_hash='a' * 64, dump_sha256=self.m['dump']['sha256'], expected_active_db=None,
                         manifest=self.m, step='restoring')
+        self.db.targets().write('e' * 32, self.name, '16400')
 
     def names(self):
         return [name for name, _, _ in self.calls]
@@ -117,7 +125,8 @@ class StepsFixture:
 class FrameworksCreateTest(StepsFixture, unittest.TestCase):
     def test_create_as_activator_then_one_postgres_log_step_then_effective_check(self):
         self.steps.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'createdb', 'owner', 'configure', 'effective'])
+        self.assertEqual(self.names(), ['extensions', 'exists', 'end-backends', 'strays', 'createdb', 'owner', 'target-oid',
+                                        'configure', 'effective'])
         args, _ = self.call('createdb')
         self.assertIn('--template=template0', args)
         self.assertEqual(args[-1], self.name)
@@ -135,21 +144,51 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
                      "pg_catalog.has_parameter_privilege(r.oid,p,'SET')",
                      'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n',
                      "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public VERSION '0.8.1';",
-                     "CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public VERSION '1.3';"):
+                     "CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public VERSION '1.3';",
+                     "pg_catalog.pg_has_role(r.oid,s.oid,'MEMBER')"):
             self.assertIn(text, sql)
         self.assertNotIn('GRANT', sql)
-        self.assertLess(sql.index('pg_parameter_acl'), sql.index('\\if'))
-        self.assertLess(sql.index('\\if'), sql.index('ALTER DATABASE'))
+        self.assertLess(sql.index('pg_has_role'), sql.index('\\if :release_superuser'))
+        self.assertLess(sql.index('release_target'), sql.index('pg_parameter_acl'))
+        self.assertLess(sql.index('pg_parameter_acl'), sql.index('\\if :release_superuser'))
+        self.assertLess(sql.index('\\if :release_superuser'), sql.index('ALTER DATABASE'))
         args, _ = self.call('effective')
         self.assert_activator(args, self.name)
         for setting in ('log_min_messages', 'log_min_error_statement', 'log_min_duration_statement', 'log_statement'):
             self.assertIn("pg_catalog.current_setting('" + setting + "')", self.sql('effective'))
         self.assertIn('pg_catalog.concat_ws(', self.sql('effective'))
 
-    def test_existing_target_is_reconfigured_without_createdb(self):
+    def test_existing_target_is_dropped_and_created_again(self):
         self.responses['exists'] = b't\n'
         self.steps.create(self.row)
-        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'configure', 'effective'])
+        self.assertEqual(self.names(), ['extensions', 'exists', 'owner', 'end-backends', 'strays', 'protected', 'dropdb',
+                                        'createdb', 'owner', 'target-oid', 'configure', 'effective'])
+        self.assertIn("operation_id <> '" + 'e' * 32 + "'", self.sql('protected'))
+
+    def test_existing_target_activator_does_not_own_is_refused_without_a_postgres_session(self):
+        self.responses.update(exists=b't\n', owner=b'postgres\n')
+        with self.assertRaisesRegex(ValueError, '^activation target not owned by activator$'):
+            self.steps.create(self.row)
+        self.assertEqual(self.names(), ['extensions', 'exists', 'owner'])
+
+    def test_protected_existing_target_is_refused_and_kept(self):
+        self.responses.update(exists=b't\n', protected=b't\n')
+        with self.assertRaisesRegex(ValueError, 'refusing to drop protected database'):
+            self.steps.create(self.row)
+        for name in ('dropdb', 'createdb', 'configure'):
+            self.assertNotIn(name, self.names())
+
+    def test_configure_refuses_another_target_identity_first(self):
+        self.responses['configure'] = b'target-identity-differs\n'
+        with self.assertRaisesRegex(ValueError, '^activation target database identity changed$'):
+            self.steps.create(self.row)
+        self.assertNotIn('effective', self.names())
+
+    def test_another_superuser_refuses_before_the_effective_check(self):
+        self.responses['configure'] = b'superuser\n'
+        with self.assertRaisesRegex(ValueError, '^a role other than postgres is a superuser or a member of one$'):
+            self.steps.create(self.row)
+        self.assertNotIn('effective', self.names())
 
     def test_parameter_grant_refuses_before_effective_check(self):
         self.responses['configure'] = b'granted\n'
@@ -199,8 +238,8 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
 
     def test_restore_checks_settings_filters_toc_restores_applies_image_schema_then_grants(self):
         self.restore()
-        self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'list', 'write-list', 'pg_restore',
-                                        'remove-list', 'apply', 'check', 'grants'])
+        self.assertEqual(self.names(), ['effective', 'restored', 'schema', 'list', 'write-list', 'verify', 'pg_restore',
+                                        'remove-list', 'verify', 'apply', 'check', 'grants'])
         self.assert_activator(self.call('effective')[0], self.name)
         self.assert_activator(self.call('restored')[0], self.name)
         self.assert_guard_first(self.sql('restored'), "pg_catalog.to_regclass('public.release')")
@@ -230,9 +269,9 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
         self.assert_activator(args, self.name, 'pg_catalog,public')
         self.assertIn('ON_ERROR_STOP=1', args)
         sql = self.sql('apply')
-        self.assertTrue(sql.startswith('SET standard_conforming_strings=on;\nBEGIN;\nDO $guard$'))
+        self.assertIn('\\if :release_target\nBEGIN;\nDO $guard$', sql)
         self.assertIn('SET LOCAL search_path = public;\n' + executable_sql(), sql)
-        self.assertTrue(sql.endswith('COMMIT;\n'))
+        self.assertIn('COMMIT;\n\\else\n', sql)
         self.assert_activator(self.call('check')[0], self.name)
         args, _ = self.call('grants')
         self.assert_activator(args, self.name, 'pg_catalog,public')
@@ -300,6 +339,18 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
         with self.assertRaises(CommandError):
             self.restore()
         self.assertEqual(self.names()[-2:], ['pg_restore', 'remove-list'])
+
+    def test_target_identity_is_verified_before_and_after_pg_restore(self):
+        self.responses['verify'] = b'target-identity-differs\n'
+        with self.assertRaisesRegex(ValueError, '^activation target database identity changed$'):
+            self.restore()
+        self.assertNotIn('pg_restore', self.names())
+        self.calls.clear()
+        self.responses['verify'] = [b'', b'target-identity-differs\n']
+        with self.assertRaisesRegex(ValueError, '^activation target database identity changed$'):
+            self.restore()
+        self.assertIn('pg_restore', self.names())
+        self.assertNotIn('apply', self.names())
 
 
 if __name__ == '__main__':

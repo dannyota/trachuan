@@ -48,6 +48,32 @@ class FrameworksActivationTest(unittest.TestCase):
         self.m = manifest()
         self.hash = 'e' * 64
 
+    def test_target_activator_does_not_own_is_refused_and_survives_an_abort(self):
+        self.m['previous'] = None
+        name = self.m['database']
+        self.db.databases.add(name)
+        self.db.foreign.add(name)
+        with self.assertRaisesRegex(ValueError, '^new frameworks target already exists$'):
+            self.engine.choose(self.m)
+        self.assertFalse(self.db.rows)
+        self.engine.abort(self.engine.begin(self.hash, self.m, 'new', None))
+        self.assertEqual(self.db.operations()[0]['step'], 'aborted')
+        self.assertEqual(self.db.dropped, [])
+        self.assertTrue(self.db.exists(name))
+
+    def test_existing_target_with_connections_is_refused_before_any_journal(self):
+        self.m['previous'] = None
+        self.db.databases.add(self.m['database'])
+        self.db.connections = lambda name: True
+        with self.assertRaisesRegex(ValueError, '^new frameworks target has connections$'):
+            self.engine.choose(self.m)
+        self.assertFalse(self.db.rows)
+
+    def test_owned_unprotected_target_reaches_the_create_step(self):
+        self.m['previous'] = None
+        self.db.databases.add(self.m['database'])
+        self.assertEqual(self.engine.choose(self.m), ('new', None))
+
     def activate(self):
         return self.engine.run(self.hash, self.m, '/synthetic/dump', 'server-image')
 

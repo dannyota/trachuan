@@ -13,6 +13,9 @@ from updater.deploy_store import Candidate, Paths, Store
 from updater.verification_test import FIXTURES, archive
 
 
+PROVISIONER = b'#!/usr/bin/env bash\nsynthetic provisioner\n'
+
+
 class Crash(BaseException):
     pass
 
@@ -25,6 +28,7 @@ class ActivationFixture:
         for path in (self.paths.state, self.paths.host, self.paths.quadlet, self.paths.user_units,
                      self.paths.bundles, self.paths.result.parent, self.paths.log.parent):
             path.mkdir(parents=True, exist_ok=True)
+        self.paths.host.joinpath('provision-activator.sh').write_bytes(PROVISIONER)
         self.rules = {key: value for key, value in policy(Path(__file__).parents[1] / 'deploy-policy.json').items()
                       if key != 'release_floor'}
         self.store = Store(self.paths, self.rules, self.runner)
@@ -73,6 +77,8 @@ class ActivationFixture:
                 return (str(self.schema) + '\n').encode()
             if input and b'active_db' in input:
                 return b'corpus_vn_20990101_1\n'
+            if input and b'datdba' in input:
+                return b'activator\n'
         if args[:1] == ['curl']:
             return b'200'
         if 'show' in args:

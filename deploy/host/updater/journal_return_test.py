@@ -40,7 +40,8 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
                     self.journal_reply = dict(inserted, **{field: value})
                     with self.assertRaises(law.JournalRefused):
                         db.activate(row())
-                    self.assertEqual(len(self.calls), 1)
+                    self.assertEqual(len(self.calls), 2)
+                    self.assertIn('release_target', self.scripts[-2])
 
     def test_written_fields_must_be_present(self):
         for name, kind, _, row in KINDS:

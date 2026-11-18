@@ -2,7 +2,7 @@
 
 The host restore of a frameworks release, between creating `frameworks_<rel>`
 and the pointer swap of [frameworks release](frameworks-release.md#host). It
-follows the law [activation steps](corpus-release.md#activation-steps) except
+follows the law [activation steps](corpus-release-activation.md#steps) except
 where this file says otherwise.
 
 ## Trust in the dump
@@ -12,24 +12,27 @@ list keeps, so every statement in a frameworks dump runs with `activator`'s
 privileges. The signed manifest is the boundary; the rules below keep that SQL
 from reaching more privilege or changing what other sessions run:
 
-- Every `postgres` step (log settings, extensions, revoking `PUBLIC`'s rights on
-  the database) runs before the first byte of the dump. Once the restore starts,
-  no session with more privilege than `activator` connects to the database: the
-  owner grants the corpus reader, and there is no prewarm (the engine loads its
+- Every `postgres` step (refusing any superuser but `postgres` or a member of
+  one, log settings, extensions, revoking `PUBLIC`'s rights on the database)
+  runs before the first byte of the dump. Once the restore starts, no session
+  with more privilege than `activator` connects to the database: the owner
+  grants the corpus reader, and there is no prewarm (the engine loads its
   partitions when it opens the release).
 - Every updater session in the restored database starts with `search_path` set
   to `pg_catalog` first (`pg_catalog, public` where the image's SQL names its
   tables), so no planted object shadows a built-in, and the check names catalog
   objects with their schema.
-- After the image's executable SQL is applied, one check compares the database
-  with the image's schema version: schemas (only `public`), extensions (exactly
-  `vector` and `ltree`, owned by `postgres`), views, functions, procedures,
-  aggregates, triggers, rules, policies, operators, casts, types and domains,
-  and the database's role settings (exactly the four log settings, on the
-  database and for `activator` and `corpus_reader`). Any difference fails the
-  activation, naming only the kind of object.
+- After the image's executable SQL is applied, and before a `retained` database
+  becomes active again, one check compares the database with the image's schema
+  version: schemas (only `public`), extensions (exactly `vector` and `ltree`,
+  owned by `postgres`), views, functions, procedures, aggregates, triggers,
+  rules, policies, operators, casts, types and domains, and the database's role
+  settings (exactly the four log settings, on the database and for `activator`
+  and `corpus_reader`). Any difference fails the activation, naming only the
+  kind of object.
 - `activator` owns the law databases too, so a hostile signed dump can still act
-  on them (settings, connection limits, dropping retired ones). This is accepted
+  on them (settings, connection limits, dropping retired ones, or replacing the
+  active or a retained database while it has no connections). This is accepted
   as it is for law dumps, since signing is the boundary for both.
 
 ## Logs

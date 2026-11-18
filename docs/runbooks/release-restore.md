@@ -222,11 +222,15 @@ GiB memory cap; shared memory is charged to that cap, not an extra allowance.
 Rollback to a hand-restored release within its seven days is the owner's manual
 compare-and-swap of `corpus_release.active_db`.
 
-Prune drops only databases listed in `retired_release`. A database restored by
-hand that never became active through the pipeline, such as
-`corpus_vn_20261112_2`, has no row there and stays until it is dropped once by
-hand. Confirm it is not `active_db`, not in `retired_release`, and has no
-connections, then drop it:
+Prune drops databases listed in `retired_release`. Separately, each activation
+drops every `activator`-owned database that is neither active, retained nor the
+target of an open operation, and ends other `activator` sessions, so a pipeline
+release you rolled away from by hand goes at the next activation unless it is
+listed in `retired_release` with `retain_until` in the future, and a manual
+`activator` prewarm running then is ended. A database restored by hand that
+never became active through the pipeline, such as `corpus_vn_20261112_2`, has no
+row there and stays until it is dropped once by hand. Confirm it is not
+`active_db`, not in `retired_release`, and has no connections, then drop it:
 
 ```sh
 DB=corpus_vn_20261112_2
@@ -245,11 +249,34 @@ prune drops it after its seven days.
 
 ## Prewarm a corpus database
 
-Run this for `$DB` before Caddy starts: after a restore, and after every
-PostgreSQL restart (a digest deploy) for the active database. It reads every
-table, index and TOAST relation (3.6 GB for vn/20261112_2) into the 4 GiB buffer
-cache, then drops the extension so the release keeps no extra object. Record the
-printed time and the first search's latency.
+The updater prewarms a release when it activates it and the active database
+after a PostgreSQL restart. By hand, for `$DB` before Caddy starts, use the path
+that matches how the database was restored; the rule is in
+[trust in the dump](../design/corpus-release-activation.md#trust-in-the-dump).
+Either reads every table, index and TOAST relation (3.6 GB for vn/20261112_2)
+into the 4 GiB buffer cache. Record the printed time and the first search's
+latency.
+
+Restored by the updater: run as `activator`, never as `postgres`. A database
+activated before that rule has no `pg_prewarm`; the command then fails and the
+cache refills from traffic and the page cache.
+
+```sh
+podman exec -i trachuan-postgres sh -c \
+  'PGPASSWORD=$(cat /run/secrets/activator_db_password) \
+   PGOPTIONS="-c search_path=pg_catalog" \
+   exec psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U activator -d "$1"' sh "$DB" <<'SQL'
+\timing on
+SELECT pg_catalog.sum(public.pg_prewarm(c.oid::pg_catalog.regclass)) AS blocks
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't')
+  AND pg_catalog.has_table_privilege(c.oid, 'SELECT');
+SQL
+```
+
+After a [manual restore](#restore-a-corpus-manually) of a dump you trust, as
+`postgres`; the extension is dropped so the release keeps no extra object:
 
 ```sh
 podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \

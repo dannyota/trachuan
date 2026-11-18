@@ -48,9 +48,10 @@ class FrameworksValidateTest(StepsFixture, unittest.TestCase):
 
 
 class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
-    def test_smoke_runs_only_the_frameworks_release_check_without_prewarm(self):
+    def test_smoke_checks_the_catalog_verifies_the_target_and_runs_no_prewarm(self):
         self.steps.smoke(self.row, 'server-image')
-        self.assertEqual(self.names(), ['release-check'])
+        self.assertEqual(self.names(), ['schema', 'check', 'verify', 'release-check', 'verify'])
+        self.assertIn("'relation corpus_reader SELECT'", self.sql('check'))
         args, kwargs = self.call('release-check')
         self.assertEqual(args, ['podman', 'run', '--rm', '--network=host', '--read-only', '--cap-drop=ALL',
                                 '--security-opt=no-new-privileges', '--env-file', str(self.paths.host / 'server.env'),
@@ -58,6 +59,18 @@ class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
                                 'server-image', 'release-check', '--kind', 'frameworks', '--database', self.name])
         self.assertIs(kwargs['safe'], SAFE)
         self.assertEqual(kwargs['timeout'], 150)
+
+    def test_retained_database_passes_the_catalog_check_before_the_release_check(self):
+        row = dict(self.row, mode='retained')
+        self.steps.smoke(row, 'server-image')
+        self.assertEqual(self.names(), ['schema', 'check', 'release-check'])
+        self.assert_activator(self.call('check')[0], self.name)
+        self.assertIn("('extension','vector',NULL)", self.sql('check'))
+        self.calls.clear()
+        self.responses['check'] = b'setting\n'
+        with self.assertRaisesRegex(ValueError, '^frameworks database setting differs from image schema version$'):
+            self.steps.smoke(row, 'server-image')
+        self.assertNotIn('release-check', self.names())
 
     def test_smoke_requires_ok_status(self):
         for value in (b'{"status":"failed"}\n', b'[]\n'):

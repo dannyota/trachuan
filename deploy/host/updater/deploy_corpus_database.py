@@ -2,16 +2,18 @@ import json
 import re
 
 from . import deploy_corpus_sql as sql
+from . import deploy_release_catalog as catalog
+from . import deploy_release_target as target
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_lock import AdvisoryLock
 from .deploy_corpus_verify import toc
-from .deploy_frameworks_sql import plain
-from .deploy_host import SCRAM_ONLY
+from .deploy_host import activator_arguments, activator_client
+from .deploy_io import CommandError, interrupted
 
 
 class Database:
     def __init__(self, host, rules, kind=LAW):
-        self.host, self.rules, self.holder = host, rules, None
+        self.host, self.rules, self.holder, self.backend = host, rules, None, None
         self.kind, self.sql = kind, kind.sql
 
     def lock(self):
@@ -22,28 +24,72 @@ class Database:
             raise ValueError('activation advisory lock lost')
 
     def arguments(self, *args):
-        return ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
-                'set +x; set -eu; export PGPASSWORD PGREQUIREAUTH; PGREQUIREAUTH=scram-sha-256; '
-                'PGPASSWORD=$(cat /run/secrets/activator_db_password); '
-                '[ -n "$PGPASSWORD" ]; exec "$@"', 'sh', *args]
+        return activator_arguments(*args)
 
     def target(self, name, *shared):
         if name not in shared:
             self.sql.database(name)
         return name
 
-    def client(self, database):
-        return ('psql', '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'activator',
-                '-v', 'ON_ERROR_STOP=1', '-d', self.target(database, 'auth', 'postgres'))
+    def session(self, database, options=sql.SCHEMA_PATH):
+        return activator_client(self.target(database, 'auth', 'postgres'), options)
 
     def user(self, *args, **kwargs):
         self.check_lock()
-        return self.host.user(*self.arguments(*args), **kwargs)
+        return self.host.activator(*args, **kwargs)
 
-    def query(self, text, database='auth', options=None):
-        command = ('env', 'PGOPTIONS=' + options) if options else ()
-        return self.user(*command, *self.client(database),
-                         input=('SET standard_conforming_strings=on;\n' + text).encode()).decode().strip()
+    def query(self, text, database='auth', options=sql.SCHEMA_PATH):
+        self.check_lock()
+        return self.host.activator_psql(self.target(database, 'auth', 'postgres'), text, options)
+
+    def admin(self, database, statements, options=sql.CATALOG_PATH):
+        self.check_lock()
+        return self.host.psql(self.target(database), statements, options).decode().strip()
+
+    def targets(self):
+        return target.Targets(self.host.paths.state / (self.kind.key + '-targets'))
+
+    def forget_targets(self, operations):
+        self.targets().keep(operations)
+
+    def remember_target(self, row):
+        name = self.target(row['database_name'])
+        oid = self.query(target.target_oid(name))
+        self.targets().write(row['operation_id'], name, oid)
+        return oid
+
+    def target_oid(self, row):
+        name = self.target(row['database_name'])
+        if row['mode'] != 'new':
+            return None
+        stored = self.targets().read(row['operation_id'], name)
+        if stored:
+            return stored
+        self.clear_leftovers()
+        return self.remember_target(row)
+
+    def guarded(self, row, statements):
+        oid = self.target_oid(row)
+        return statements if oid is None else target.guard(oid, statements)
+
+    def identified(self, output):
+        if output == target.MISMATCH:
+            raise ValueError(target.REFUSED)
+        return output
+
+    def on_target(self, row, statements, options=sql.CATALOG_PATH):
+        return self.identified(self.query(self.guarded(row, statements), row['database_name'], options))
+
+    def target_admin(self, row, statements, options=sql.CATALOG_PATH):
+        return self.identified(self.admin(row['database_name'], self.guarded(row, statements), options))
+
+    def verify_target(self, row):
+        if self.target_oid(row) is not None:
+            self.on_target(row, '')
+
+    def client(self, program, *args):
+        return self.user('env', 'PGOPTIONS=' + sql.CATALOG_PATH, program, '--no-password', '-h', '127.0.0.1',
+                         '-U', 'activator', *args)
 
     def current(self, country):
         value = self.query(self.sql.current(country))
@@ -73,37 +119,68 @@ class Database:
 
     def projection(self, row):
         if row['manifest']['schema_version'] >= 8:
-            name = self.target(row['database_name'])
-            if self.query("SELECT to_regclass('public.document_summary') IS NOT NULL;", name) == 't':
-                if self.query('SELECT NOT EXISTS(SELECT FROM document_summary WHERE projection <> 1);', name) == 't':
+            if self.on_target(row, sql.SUMMARY_TABLE) == 't':
+                if self.on_target(row, sql.SUMMARY_PROJECTED) == 't':
                     return 1
         return 0
 
     def activate(self, row):
+        self.sql.activation_values(row)
+        self.verify_target(row)
         return self.recorded(self.query(self.kind.activation(self, row)), row, 'activated')
 
-    def protected(self, name):
+    def protected(self, name, operation=None):
         self.sql.database(name)
-        return self.query(self.sql.protected(name)) == 't'
+        return self.query(self.sql.protected(name, operation)) == 't'
 
     def exists(self, name):
         self.sql.database(name)
-        return self.query('SELECT EXISTS(SELECT FROM pg_database WHERE datname=' + sql.literal(name) + ');') == 't'
+        return self.query('SELECT EXISTS(SELECT FROM pg_catalog.pg_database WHERE datname=' + sql.literal(name) + ');') == 't'
 
     def connections(self, name):
         self.sql.database(name)
-        return self.query('SELECT EXISTS(SELECT FROM pg_stat_activity WHERE datname=' + sql.literal(name) + ');') == 't'
+        return self.query('SELECT EXISTS(SELECT FROM pg_catalog.pg_stat_activity WHERE datname=' + sql.literal(name) + ');') == 't'
+
+    def owned(self, name):
+        self.sql.database(name)
+        return self.query(sql.database_owner(name)) == 'activator'
+
+    def drop_owned(self, name, operation=None):
+        self.sql.database(name)
+        if self.protected(name, operation):
+            raise ValueError('refusing to drop protected database')
+        self.client('dropdb', '--if-exists', self.target(name))
 
     def drop(self, name):
         self.sql.database(name)
         if self.protected(name):
             raise ValueError('refusing to drop protected database')
-        self.host.psql('postgres', "SELECT format('ALTER DATABASE %I OWNER TO activator',datname) "
-            'FROM pg_database WHERE datname=' + sql.literal(name) +
-            " AND pg_get_userbyid(datdba)='postgres' \\gexec\n")
-        if self.protected(name):
-            raise ValueError('refusing to drop protected database')
-        self.user('dropdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--if-exists', self.target(name))
+        self.host.psql('postgres', "SELECT pg_catalog.format('ALTER DATABASE %I OWNER TO activator',datname) "
+            'FROM pg_catalog.pg_database WHERE datname=' + sql.literal(name) +
+            " AND pg_catalog.pg_get_userbyid(datdba)='postgres' \\gexec\n", sql.CATALOG_PATH)
+        self.drop_owned(name)
+
+    def other_superuser(self):
+        return self.query(sql.other_superuser()) == 't'
+
+    def clear_leftovers(self):
+        if self.backend is None:
+            raise ValueError('activation advisory lock lost')
+        lines = self.query(target.end_backends(self.backend)).splitlines()
+        if not lines or lines[-1] != 'f':
+            raise target.Leftover(target.BACKEND_LEFT)
+        if self.query(target.STRAYS) != 'f':
+            raise target.Leftover(target.DATABASE_LEFT)
+
+    def tidy(self):
+        try:
+            self.clear_leftovers()
+        except target.Leftover as error:
+            self.host.note('leftovers', 'leftover sweep deferred: ' + str(error))
+        except (CommandError, ValueError) as error:
+            if interrupted(error):
+                raise
+            self.host.note('leftovers', 'leftover sweep deferred: command failed')
 
     def expired(self):
         return json.loads(self.query(self.sql.expired()))
@@ -115,30 +192,35 @@ class Database:
         self.query(self.sql.forget(name))
 
     def check_extensions(self, manifest):
-        installed = json.loads(self.query("SELECT json_object_agg(name,default_version) "
-            "FROM pg_available_extensions WHERE name IN ('vector','ltree');", 'postgres'))
+        installed = json.loads(self.query('SELECT pg_catalog.json_object_agg(name,default_version) '
+            "FROM pg_catalog.pg_available_extensions WHERE name IN ('vector','ltree');", 'postgres', sql.CATALOG_PATH))
         if installed != manifest['extensions']:
             raise ValueError('PostgreSQL extension versions differ from corpus manifest')
 
-    def make(self, name):
-        if not self.exists(name):
-            self.user('createdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--template=template0',
-                      self.target(name))
-        owner = self.query('SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=' + sql.literal(name) + ';')
-        if owner != 'activator':
+    def make(self, row):
+        name = row['database_name']
+        exists = self.exists(name)
+        if exists and not self.owned(name):
             raise ValueError('activation target not owned by activator')
+        self.clear_leftovers()
+        if exists:
+            self.drop_owned(name, row['operation_id'])
+        self.client('createdb', '--template=template0', self.target(name))
+        if not self.owned(name):
+            raise ValueError('activation target not owned by activator')
+        self.remember_target(row)
 
     def create(self, row):
         name, manifest = row['database_name'], row['manifest']
         sql.database(name)
-        extensions = manifest['extensions']
-        if not isinstance(extensions, dict):
-            raise ValueError('invalid manifest extensions')
-        statements = ';'.join('CREATE EXTENSION IF NOT EXISTS ' + plain(ext) + ' VERSION ' + sql.literal(version)
-                              for ext, version in extensions.items()) + ';'
+        statements = sql.prepare(name, manifest['extensions'])
         self.check_extensions(manifest)
-        self.make(name)
-        self.host.psql(name, statements)
+        self.make(row)
+        outcome = self.target_admin(row, statements)
+        if outcome == 'superuser':
+            raise ValueError(sql.SUPERUSER_REFUSED)
+        if outcome != 'configured':
+            raise ValueError('corpus database not prepared')
 
     def inspect(self, row, dump, image=None):
         self.check_extensions(row['manifest'])
@@ -167,36 +249,38 @@ class Database:
     def toc(self, row, dump):
         return self.save_list(row, toc(self.listing(dump).decode(), self.rules['extensions']))
 
-    def load(self, name, dump, listing, options=''):
-        self.target(name)
+    def load(self, row, dump, listing):
+        name = self.target(row['database_name'])
+        self.verify_target(row)
         try:
             self.user('env', 'PGOPTIONS=-c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=2 '
                       '-c statement_timeout=0 -c lock_timeout=0 -c idle_in_transaction_session_timeout=0 '
-                      '-c transaction_timeout=0' + options,
-                      'pg_restore', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--dbname', name,
-                      '--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction',
-                      '--use-list', listing, input_file=dump, timeout=3600)
+                      '-c transaction_timeout=0 ' + sql.CATALOG_PATH,
+                      'pg_restore', '--no-password', '-h', '127.0.0.1', '-U', 'activator',
+                      '--dbname', name, '--no-owner', '--no-privileges', '--exit-on-error',
+                      '--single-transaction', '--use-list', listing, input_file=dump, timeout=3600)
         finally:
             self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', listing)
+        self.verify_target(row)
 
-    def grant(self, name):
-        sql.database(name)
-        self.host.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', 'bash',
-                       '/usr/local/bin/grant-corpus.sh', name)
+    def check_catalog(self, row, granted):
+        outcome = self.on_target(row, catalog.law(row['manifest']['extensions'], granted=granted,
+                                                  retained=row['mode'] == 'retained'))
+        if outcome != 'ok':
+            kind = outcome if outcome in catalog.KINDS else 'object'
+            raise ValueError('corpus database ' + kind + ' differs from what a release may hold')
 
     def restore(self, row, dump, image=None):
         name = row['database_name']
         sql.database(name)
-        restored = self.query("SELECT to_regclass('public.release') IS NOT NULL;", name) == 't'
-        if not restored:
-            self.load(name, dump, self.toc(row, dump))
-        self.grant(name)
+        fresh = self.on_target(row, sql.RESTORED) != 't'
+        if fresh:
+            self.load(row, dump, self.toc(row, dump))
+        self.check_catalog(row, not fresh)
+        self.on_target(row, sql.grants(name), sql.SCHEMA_PATH)
 
     def validate(self, row):
-        raw = self.query("SELECT json_build_object('country',country,'rel',rel,'schema_version',schema_version,"
-            "'recipes',json_build_object('dense',dense_recipe,'chunk',chunk_recipe,"
-            "'lexical',lexical_recipe,'retrieval',retrieval_recipe)) FROM release WHERE singleton;",
-            self.target(row['database_name']))
+        raw = self.on_target(row, sql.RELEASE_ROW)
         expected = {key: row['manifest'][key] for key in ('country', 'rel', 'schema_version', 'recipes')}
         if not raw or json.loads(raw) != expected:
             raise ValueError('restored release row differs from manifest')
@@ -218,5 +302,8 @@ class Database:
     def smoke(self, row, image):
         self.target(row['database_name'])
         self.check_lock()
-        self.host.psql(row['database_name'], sql.PREWARM)
+        self.check_catalog(row, True)
+        self.on_target(row, sql.PREWARM)
+        self.verify_target(row)
         self.describe(image, row['database_name'])
+        self.verify_target(row)

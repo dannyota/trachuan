@@ -2,6 +2,7 @@ import uuid
 
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_sql import JournalRefused
+from .deploy_release_target import Leftover
 
 
 COMPLETE = frozenset(('activated', 'reverted', 'aborted', 'pruned'))
@@ -27,7 +28,10 @@ class Activation:
         if active != self.kind.previous(manifest):
             raise ValueError('new ' + self.kind.label + ' previous does not equal active release')
         if self.db.exists(name):
-            raise ValueError('new ' + self.kind.label + ' target already exists')
+            if self.db.protected(name) or not self.db.owned(name):
+                raise ValueError('new ' + self.kind.label + ' target already exists')
+            if self.db.connections(name):
+                raise ValueError('new ' + self.kind.label + ' target has connections')
         return 'new', active
 
     def begin(self, hash_value, manifest, mode, expected):
@@ -42,11 +46,9 @@ class Activation:
         if latest['step'] in ('activated', 'reverted'):
             return
         self.db.append(row, 'aborted')
-        name = row['database_name']
-        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.exists(name)
-                and not self.db.connections(name)):
-            self.db.drop(name)
+        self.abort_cleanup(row)
         self.db.remove_list(row['operation_id'])
+        self.db.tidy()
 
     def guarded(self, row):
         name = row['database_name']
@@ -107,10 +109,11 @@ class Activation:
                 if not self.guarded(row):
                     raise ValueError(self.kind.label + ' activation guard changed')
                 row = self.db.activate(row)
+                self.db.tidy()
             if row['step'] != 'activated':
                 raise ValueError('unknown ' + self.kind.label + ' activation step')
             return row
-        except JournalRefused:
+        except (JournalRefused, Leftover):
             raise
         except Exception:
             self.abort(row)
@@ -118,9 +121,9 @@ class Activation:
 
     def abort_cleanup(self, row):
         name = row['database_name']
-        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.exists(name)
+        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.owned(name)
                 and not self.db.connections(name)):
-            self.db.drop(name)
+            self.db.drop_owned(name)
 
     def prune_one(self, row):
         name = row['database_name']
@@ -146,3 +149,4 @@ class Activation:
                        database_name=name, manifest_hash=None, dump_sha256=None,
                        expected_active_db=None, manifest=None)
             self.prune_one(self.db.append(row, 'pruning'))
+        self.db.forget_targets({r['operation_id'] for r in self.db.operations() if r['step'] not in COMPLETE})

@@ -38,15 +38,15 @@ class AdminScramTest(LawFixture, unittest.TestCase):
         self.host.postgres()
         self.assert_scram(lambda args: '/usr/local/bin/wait-postgres.sh' in args)
         self.assert_scram(lambda args: 'pgbackrest' in args)
-        self.assert_scram(lambda args: 'psql' in args)
+        self.assert_scram(lambda args: 'psql' in args and '/usr/local/bin/postgres-admin.sh' in args)
 
     def test_activator_provisioning(self):
         self.assertTrue(self.host.provision_activator())
-        self.assert_scram(lambda args: '/usr/local/bin/provision-activator.sh' in args and 'bash' in args)
+        self.assert_scram(lambda args: args[-2:] == ['bash', '-s'])
 
-    def test_corpus_grant(self):
-        self.db.grant(LAW_NAME)
-        self.assert_scram(lambda args: '/usr/local/bin/grant-corpus.sh' in args)
+    def test_target_preparation_session(self):
+        self.db.target_admin(self.row, 'SELECT 1;')
+        self.assert_scram(lambda args: '/usr/local/bin/postgres-admin.sh' in args)
 
 
 class ActivatorScramTest(LawFixture, unittest.TestCase):
@@ -65,9 +65,10 @@ class ActivatorScramTest(LawFixture, unittest.TestCase):
     def test_every_activator_client_runs_through_the_wrapper(self):
         expected = wrapper(self.db.arguments('env'))
         self.db.query('SELECT 1;')
-        self.db.make(LAW_NAME)
+        self.host.activator_psql(LAW_NAME, 'SELECT 1;')
+        self.db.make(self.row)
         self.db.drop(LAW_NAME)
-        self.db.load(LAW_NAME, '/synthetic/dump', '/run/pgbackrest/corpus-x.list')
+        self.db.load(self.row, '/synthetic/dump', '/run/pgbackrest/corpus-x.list')
         for program in ('psql', 'createdb', 'dropdb', 'pg_restore'):
             with self.subTest(program=program):
                 found = [args for args in self.calls if program in args and '-U' in args
@@ -82,7 +83,7 @@ class ActivatorScramTest(LawFixture, unittest.TestCase):
         selector.__enter__.return_value.select.return_value = [(None, None)]
         with mock.patch('updater.deploy_corpus_lock.subprocess.Popen', return_value=process) as start, \
                 mock.patch('updater.deploy_corpus_lock.selectors.DefaultSelector', return_value=selector), \
-                mock.patch('updater.deploy_corpus_lock.os.read', return_value=b't\n'):
+                mock.patch('updater.deploy_corpus_lock.os.read', return_value=b't|4242\n'):
             with AdvisoryLock(self.db):
                 pass
         args = start.call_args.args[0]
@@ -93,7 +94,7 @@ class ActivatorScramTest(LawFixture, unittest.TestCase):
 
 class FrameworksScramTest(StepsFixture, unittest.TestCase):
     def test_frameworks_admin_session(self):
-        self.steps.admin(self.name, 'SELECT 1;')
+        self.db.target_admin(self.row, 'SELECT 1;')
         self.assertIn(SCRAM, container_env(self.call('postgres')[0]))
 
 

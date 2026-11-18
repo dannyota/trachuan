@@ -11,6 +11,12 @@ SELECT 'CREATE ROLE activator LOGIN CREATEDB NOSUPERUSER NOCREATEROLE NOREPLICAT
 WHERE NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname OPERATOR(pg_catalog.=) 'activator') \gexec
 SELECT pg_catalog.format('ALTER ROLE activator PASSWORD %L', :'activator_password') \gexec
 ALTER ROLE activator LOGIN CREATEDB NOSUPERUSER NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE activator RESET ALL;
+SELECT pg_catalog.format('ALTER ROLE activator IN DATABASE %I RESET ALL', d.datname)
+FROM pg_catalog.pg_db_role_setting s
+JOIN pg_catalog.pg_database d ON d.oid OPERATOR(pg_catalog.=) s.setdatabase
+WHERE s.setrole OPERATOR(pg_catalog.=) 'activator'::pg_catalog.regrole
+AND d.datname OPERATOR(pg_catalog.!~) '^frameworks_[0-9]{8}(_[0-9]{1,2})?$' \gexec
 GRANT CONNECT ON DATABASE auth TO activator;
 GRANT USAGE ON SCHEMA public TO activator;
 SELECT pg_catalog.format('GRANT SELECT, INSERT, UPDATE, DELETE ON public.%I TO activator', name)

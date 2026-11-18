@@ -1,6 +1,7 @@
 import re
 
 from . import deploy_corpus_sql, deploy_frameworks_sql
+from .deploy_corpus_sql import CATALOG_PATH, PREWARM, PREWARM_SKIPPED, SCHEMA_PATH, database_owner
 from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
@@ -26,6 +27,18 @@ def pins(manifest):
     return ''.join(name.upper() + '_IMAGE=' + image + '\n' for name, image in sorted(images.items())).encode()
 
 
+def activator_arguments(*args):
+    return ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
+            'set +x; set -eu; export PGPASSWORD PGREQUIREAUTH; PGREQUIREAUTH=scram-sha-256; '
+            'PGPASSWORD=$(cat /run/secrets/activator_db_password); '
+            '[ -n "$PGPASSWORD" ]; exec "$@"', 'sh', *args]
+
+
+def activator_client(database, options=SCHEMA_PATH):
+    return ('env', 'PGOPTIONS=' + options, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1',
+            '-U', 'activator', '-v', 'ON_ERROR_STOP=1', '-d', client_database(database))
+
+
 class Host:
     def __init__(self, paths, runner=command, user_prefix=None):
         self.paths, self.runner = paths, runner
@@ -46,14 +59,27 @@ class Host:
     def warning(self, step, message):
         Result(self.paths.result, self.paths.log).append(dict(level='warning', step=step, message=message))
 
+    def note(self, step, message):
+        try:
+            self.warning(step, message)
+        except OSError:
+            pass
+
     def publish_user(self, path, data, mode=0o644):
         self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
-    def psql(self, database, sql):
-        return self.user('podman', 'exec', '-i', *SCRAM_ONLY, 'trachuan-postgres',
-                         '/usr/local/bin/postgres-admin.sh', 'psql', '-XAt',
+    def psql(self, database, sql, options=SCHEMA_PATH):
+        return self.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + options, *SCRAM_ONLY, 'trachuan-postgres',
+                         '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt',
                          '-h', '127.0.0.1', '-U', 'postgres', '-d', client_database(database),
                          '-v', 'ON_ERROR_STOP=1', input=sql.encode())
+
+    def activator(self, *args, **kwargs):
+        return self.user(*activator_arguments(*args), **kwargs)
+
+    def activator_psql(self, database, sql, options=SCHEMA_PATH):
+        return self.activator(*activator_client(database, options),
+                              input=('SET standard_conforming_strings=on;\n' + sql).encode()).decode().strip()
 
     def schema(self):
         raw = self.psql('auth', 'SELECT coalesce(max(version_id),0) FROM goose_db_version;').decode().strip()
@@ -108,17 +134,28 @@ class Host:
     def postgres(self):
         self.restart_postgres()
         self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
-        database = self.psql('auth', "SELECT active_db FROM corpus_release WHERE country = 'vn';").decode().strip()
+        database = self.psql('auth', "SELECT active_db FROM public.corpus_release WHERE country = 'vn';").decode().strip()
         deploy_corpus_sql.database(database)
-        self.psql(database, "BEGIN; CREATE EXTENSION pg_prewarm; "
-                  "SELECT sum(pg_prewarm(c.oid)) FROM pg_class c "
-                  "JOIN pg_namespace n ON n.oid = c.relnamespace "
-                  "WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't'); "
-                  "DROP EXTENSION pg_prewarm; COMMIT;")
+        self.prewarm_active(database)
+
+    def prewarm_active(self, database):
+        if not self.provision_activator():
+            return self.prewarm_skipped('activator not provisioned')
+        if self.psql('auth', database_owner(database)).decode().strip() != 'activator':
+            return self.prewarm_skipped('database not owned by activator')
+        if self.activator_psql(database, PREWARM, CATALOG_PATH) == PREWARM_SKIPPED:
+            self.prewarm_skipped('database has no pg_prewarm')
+
+    def prewarm_skipped(self, reason):
+        self.note('prewarm', 'active corpus prewarm skipped: ' + reason)
 
     def provision_activator(self):
+        try:
+            script = (self.paths.host / 'provision-activator.sh').read_bytes()
+        except FileNotFoundError:
+            return False
         available = True
-        for path in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
+        for path in ('/usr/local/bin/postgres-admin.sh', '/run/secrets/activator_db_password'):
             try:
                 self.user('podman', 'exec', 'trachuan-postgres', 'test', '-r', path)
             except CommandError as error:
@@ -127,8 +164,8 @@ class Host:
                 available = False
         if not available:
             return False
-        self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
-                  'bash', '/usr/local/bin/provision-activator.sh')
+        self.user('podman', 'exec', '-i', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+                  'bash', '-s', input=script)
         return True
 
     def migrate(self):

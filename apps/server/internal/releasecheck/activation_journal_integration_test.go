@@ -94,19 +94,21 @@ class Held:
 
 def database(kind, work, log):
     def runner(args, **options):
-        if args[:6] != ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c'] or args[7:9] != ['sh', 'psql']:
+        if args[:6] != ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c'] or args[7] != 'sh' or 'psql' not in args[8:]:
             raise RuntimeError('unexpected client command')
         client = list(args[8:])
         if client[client.index('-d') + 1] != 'auth':
             raise RuntimeError('unexpected client database')
-        client[0] = target['psql']
+        position = client.index('psql')
+        client[position] = target['psql']
         for flag, value in (('-h', target['host']), ('-U', target['user']), ('-d', target['database'])):
             client[client.index(flag) + 1] = value
-        client[1:1] = ['-p', str(target['port'])]
+        client[position + 1:position + 1] = ['-p', str(target['port'])]
         log.append(options['input'].decode())
         return command(client, **options)
     db = Database(Host(Paths(Path(work)), runner, user_prefix=[]), {'extensions': ['vector', 'ltree']}, kind)
     db.holder = Held()
+    db.verify_target = lambda row: None
     return db
 
 

@@ -9,7 +9,8 @@ from updater.deploy_corpus import Corpus
 from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_corpus_lock import AdvisoryLock
-from updater.deploy_host import Host
+from updater.deploy_host import Host, activator_client
+from updater.deploy_release_catalog import law as law_catalog
 from updater.deploy_store import Paths
 from updater.frameworks_steps_test import StepsFixture
 
@@ -37,12 +38,16 @@ class LawFixture(GuardAssertions):
         self.work = tempfile.TemporaryDirectory()
         self.addCleanup(self.work.cleanup)
         self.m = manifest()
-        self.calls = []
+        self.calls, self.scripts = [], []
         self.pointer = LAW_NAME.encode()
         self.host = Host(Paths(Path(self.work.name)), self.runner, user_prefix=[])
+        self.host.paths.host.mkdir(parents=True)
+        self.host.paths.host.joinpath('provision-activator.sh').write_bytes(b'true\n')
         self.db = Database(self.host, {'extensions': ['vector', 'ltree']})
         self.db.holder = mock.Mock()
         self.db.holder.poll.return_value = None
+        self.db.backend = 77
+        self.db.targets().write('e' * 32, LAW_NAME, '16400')
         self.row = dict(operation_id='e' * 32, country='vn', rel=self.m['rel'], mode='new', database_name=LAW_NAME,
                         manifest_hash='a' * 64, dump_sha256=self.m['dump']['sha256'],
                         expected_active_db='corpus_vn_20990101_1', manifest=self.m, step='checked')
@@ -50,19 +55,30 @@ class LawFixture(GuardAssertions):
     def runner(self, args, **kwargs):
         self.calls.append(args)
         text = (kwargs.get('input') or b'').decode()
+        self.scripts.append(text)
         if 'release-check' in args:
             return b'{}'
         if 'pg_available_extensions' in text:
             return json.dumps(self.m['extensions']).encode()
-        if 'FROM release WHERE singleton' in text:
+        if 'WITH found AS' in text:
+            return b'ok\n'
+        if 'release_superuser' in text:
+            return b'configured\n'
+        if 'pg_terminate_backend' in text:
+            return b'0\nf\n'
+        if 'DROP DATABASE %I' in text:
+            return b'f\n'
+        if 'AS target_oid' in text:
+            return b'16400\n'
+        if 'FROM public.release WHERE singleton' in text:
             return json.dumps({key: self.m[key] for key in ('country', 'rel', 'schema_version', 'recipes')}).encode()
-        if 'pg_get_userbyid(datdba) FROM pg_database' in text:
+        if 'pg_get_userbyid(datdba) FROM pg_catalog.pg_database' in text:
             return b'activator\n'
         if 'SELECT active_db' in text:
             return self.pointer
         if 'to_regclass' in text or 'document_summary' in text:
             return b't\n'
-        if 'retired_release' in text or 'EXISTS(SELECT FROM pg_database' in text:
+        if 'retired_release' in text or 'EXISTS(SELECT FROM pg_catalog.pg_database' in text:
             return b'f\n'
         return b''
 
@@ -75,9 +91,17 @@ class LawFixture(GuardAssertions):
                     restore=lambda: self.db.restore(row, '/synthetic/dump'))
 
     def name_paths(self, value):
-        paths = dict(make=lambda: self.db.make(value), drop=lambda: self.db.drop(value),
-                     load=lambda: self.db.load(value, '/synthetic/dump', '/run/pgbackrest/corpus-x.list'),
-                     grant=lambda: self.db.grant(value))
+        row = dict(self.row, database_name=value)
+        paths = dict(make=lambda: self.db.make(row), drop=lambda: self.db.drop(value),
+                     load=lambda: self.db.load(row, '/synthetic/dump', '/run/pgbackrest/corpus-x.list'),
+                     target_admin=lambda: self.db.target_admin(row, 'SELECT 1;'),
+                     admin=lambda: self.db.admin(value, 'SELECT 1;'),
+                     on_target=lambda: self.db.on_target(row, 'SELECT 1;'),
+                     on_retained=lambda: self.db.on_target(dict(row, mode='retained'), 'SELECT 1;'),
+                     verify_target=lambda: self.db.verify_target(row),
+                     remember_target=lambda: self.db.remember_target(row),
+                     check_catalog=lambda: self.db.check_catalog(row, False),
+                     owned=lambda: self.db.owned(value), drop_owned=lambda: self.db.drop_owned(value))
         if value is not None:
             paths['describe'] = lambda: self.db.describe('image', value)
         return paths
@@ -118,7 +142,8 @@ class LawGuardTest(LawFixture, unittest.TestCase):
             with self.subTest(path=name):
                 self.calls.clear()
                 action()
-                self.assertTrue(any(LAW_NAME in args for args in self.calls))
+                if name not in ('owned', 'remember_target'):
+                    self.assertTrue(any(LAW_NAME in args for args in self.calls))
 
     def test_query_accepts_only_its_shared_databases_and_the_release(self):
         for value in (*SHARED, LAW_NAME):
@@ -181,6 +206,33 @@ class HostGuardTest(LawFixture, unittest.TestCase):
                 self.assertEqual(self.calls[-1][self.calls[-1].index('-d') + 1], value)
 
 
+class SessionGuardTest(LawFixture, unittest.TestCase):
+    def test_activator_sessions_refuse_hostile_names_before_a_process(self):
+        for value in HOSTILE:
+            with self.subTest(value=value):
+                self.assert_refused(lambda: self.host.activator_psql(value, 'SELECT 1;'), value)
+                self.assert_refused(lambda: self.db.session(value), value)
+                self.assert_refused(lambda: activator_client(value), value)
+
+    def test_catalog_check_refuses_invalid_extension_values_before_a_process(self):
+        for value in (None, [], 'vector', {'vector': 1}, {'vector': None}, {'bad name': '1.0'}):
+            with self.subTest(value=value):
+                row = dict(self.row, manifest=dict(self.m, extensions=value))
+                self.assert_refused(lambda: self.db.check_catalog(row, False), None)
+                with self.assertRaises(ValueError):
+                    law_catalog(value)
+
+    def test_leftover_sweep_keeps_catalog_names_out_of_client_arguments(self):
+        with mock.patch.object(self.db, 'target', wraps=self.db.target) as guard:
+            self.db.clear_leftovers()
+        self.assertEqual({call.args[0] for call in guard.call_args_list}, {'auth'})
+        self.assertEqual(len(self.calls), 2)
+        for args in self.calls:
+            self.assertEqual(args[args.index('-d') + 1], 'auth')
+            self.assertFalse({'dropdb', 'createdb', 'pg_restore'} & set(args))
+        self.assertIn("pg_catalog.format('DROP DATABASE %I',s.datname)", self.scripts[-1])
+
+
 class LockGuardTest(LawFixture, unittest.TestCase):
     def test_lock_session_passes_the_guard_before_starting(self):
         self.db.target = mock.Mock(side_effect=ValueError('invalid corpus database name'))
@@ -208,11 +260,13 @@ class FrameworksGuardTest(GuardAssertions, StepsFixture, unittest.TestCase):
         row = dict(self.row, database_name=value)
         paths = dict(validate=lambda: self.steps.validate(row), smoke=lambda: self.steps.smoke(row, 'image'),
                      create=lambda: self.steps.create(row), restore=lambda: self.steps.restore(row, '/d', 'image'),
-                     session=lambda: self.steps.session('SELECT 1;', value),
-                     settings=lambda: self.steps.settings(value),
-                     admin=lambda: self.steps.admin(value, 'SELECT 1;'),
-                     make=lambda: self.db.make(value), drop=lambda: self.db.drop(value),
-                     load=lambda: self.db.load(value, '/d', '/run/pgbackrest/corpus-x.list'))
+                     session=lambda: self.steps.session('SELECT 1;', row),
+                     settings=lambda: self.steps.settings(row),
+                     admin=lambda: self.db.admin(value, 'SELECT 1;'),
+                     target_admin=lambda: self.db.target_admin(row, 'SELECT 1;'),
+                     verify_target=lambda: self.db.verify_target(row),
+                     make=lambda: self.db.make(row), drop=lambda: self.db.drop(value),
+                     load=lambda: self.db.load(row, '/d', '/run/pgbackrest/corpus-x.list'))
         if value is not None:
             paths['describe'] = lambda: self.db.describe('image', value)
         return paths
@@ -232,19 +286,19 @@ class FrameworksGuardTest(GuardAssertions, StepsFixture, unittest.TestCase):
         for value in CONNECTION + (LAW_NAME, 'auth'):
             with self.subTest(value=value):
                 self.calls.clear()
-                with mock.patch.object(self.db, 'user', return_value=value.encode()) as user, \
+                with mock.patch.object(self.db.host, 'activator_psql', return_value=value) as read, \
                         self.assertRaises(ValueError):
                     self.db.current('vn')
-                user.assert_called_once()
+                read.assert_called_once()
 
     def test_valid_name_reaches_each_client(self):
-        self.steps.settings(self.name)
-        self.steps.session("SELECT to_regclass('public.release');", self.name)
-        self.steps.admin(self.name, 'SELECT 1;')
+        self.steps.settings(self.row)
+        self.steps.session("SELECT to_regclass('public.release');", self.row)
+        self.db.target_admin(self.row, 'SELECT 1;')
         self.steps.validate(self.row)
         self.steps.smoke(self.row, 'image')
-        self.db.make(self.name)
-        self.db.load(self.name, '/d', '/run/pgbackrest/corpus-x.list')
+        self.db.make(self.row)
+        self.db.load(self.row, '/d', '/run/pgbackrest/corpus-x.list')
         for name in ('effective', 'restored', 'postgres', 'validate', 'release-check', 'createdb', 'pg_restore'):
             with self.subTest(client=name):
                 self.assertIn(self.name, self.call(name)[0])

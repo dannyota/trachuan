@@ -1,9 +1,9 @@
 import re
 
+from . import deploy_corpus_sql as law
 from . import deploy_frameworks_check as check
 from . import deploy_frameworks_sql as sql
 from .deploy_frameworks_schema import objects, toc
-from .deploy_host import SCRAM_ONLY
 from .deploy_io import decode
 from .deploy_verify import positive
 
@@ -40,20 +40,11 @@ class Steps:
         schema = self.schema(image, row['manifest']['schema_version'])
         return toc(text(self.db.listing(dump), 'dump TOC'), self.db.rules['extensions'], schema)
 
-    def admin(self, database, statements):
-        sql.database(database)
-        self.db.check_lock()
-        return self.db.host.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + sql.ADMIN_OPTIONS, *SCRAM_ONLY,
-                                 'trachuan-postgres',
-                                 '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
-                                 'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1',
-                                 input=statements.encode()).decode().strip()
+    def session(self, statements, row, path=sql.CATALOG_PATH):
+        return self.db.on_target(row, statements, path)
 
-    def session(self, statements, name, path=sql.CATALOG_PATH):
-        return self.db.query(statements, self.db.target(name), path)
-
-    def settings(self, name):
-        if self.session(sql.effective(), name) != sql.EFFECTIVE:
+    def settings(self, row):
+        if self.session(sql.effective(), row) != sql.EFFECTIVE:
             raise ValueError('frameworks log settings refused')
 
     def inspect(self, row, dump, image):
@@ -62,35 +53,42 @@ class Steps:
 
     def create(self, row):
         name, manifest = row['database_name'], row['manifest']
-        sql.database(name)
+        statements = sql.configure(name, manifest['extensions'])
         self.db.check_extensions(manifest)
-        self.db.make(name)
-        outcome = self.admin(name, sql.configure(name, manifest['extensions']))
+        self.db.make(row)
+        outcome = self.db.target_admin(row, statements, sql.ADMIN_OPTIONS)
+        if outcome == 'superuser':
+            raise ValueError(law.SUPERUSER_REFUSED)
         if outcome == 'granted':
             raise ValueError('frameworks log parameter SET granted to a role other than a superuser')
         if outcome != 'configured':
             raise ValueError('frameworks log settings not configured')
-        self.settings(name)
+        self.settings(row)
 
     def restore(self, row, dump, image):
         name = row['database_name']
         sql.database(name)
-        self.settings(name)
-        if self.session(sql.restored(), name) != 't':
-            self.db.load(name, dump, self.db.save_list(row, self.select(row, dump, image)), ' ' + sql.CATALOG_PATH)
+        self.settings(row)
+        fresh = self.session(sql.restored(), row) != 't'
+        if fresh:
+            self.db.load(row, dump, self.db.save_list(row, self.select(row, dump, image)))
+        self.session(sql.apply(self.schema(image, row['manifest']['schema_version'])), row, sql.SCHEMA_PATH)
+        self.check_catalog(row, image, not fresh)
+        self.session(sql.grants(name), row, sql.SCHEMA_PATH)
+
+    def check_catalog(self, row, image, granted):
         schema = self.schema(image, row['manifest']['schema_version'])
-        self.session(sql.apply(schema), name, sql.SCHEMA_PATH)
-        outcome = self.session(check.executable(schema, row['manifest']['extensions']), name)
+        statements = check.executable(schema, row['manifest']['extensions'], granted=granted,
+                                      retained=row['mode'] == 'retained')
+        outcome = self.session(statements, row)
         if outcome != 'ok':
             kind = outcome if outcome in check.KINDS else 'object'
             raise ValueError('frameworks database ' + kind + ' differs from image schema version')
-        self.session(sql.grants(name), name, sql.SCHEMA_PATH)
 
     def validate(self, row):
-        name = row['database_name']
-        sql.database(name)
-        self.settings(name)
-        raw = self.session(sql.release_row(), name)
+        sql.database(row['database_name'])
+        self.settings(row)
+        raw = self.session(sql.release_row(), row)
         expected = dict({key: row['manifest'][key] for key in ('rel', 'schema_version', 'recipes', 'counts')},
                         kind='frameworks')
         if not raw or decode(raw, 'frameworks release row') != expected:
@@ -100,6 +98,9 @@ class Steps:
         name = row['database_name']
         sql.database(name)
         self.db.check_lock()
+        self.check_catalog(row, image, True)
+        self.db.verify_target(row)
         report = self.db.describe(image, name, safe=SAFE)
+        self.db.verify_target(row)
         if not isinstance(report, dict) or report.get('status') != 'ok':
             raise ValueError('frameworks release-check did not report ok')

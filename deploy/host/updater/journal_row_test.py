@@ -61,6 +61,9 @@ class KindFixture:
                       {'extensions': ['vector', 'ltree']}, kind)
         db.holder = mock.Mock()
         db.holder.poll.return_value = None
+        db.backend = 77
+        row = next(make for _, candidate, _, make in KINDS if candidate is kind)()
+        db.targets().write(row['operation_id'], row['database_name'], '16400')
         return db
 
 

@@ -21,8 +21,8 @@ class FrameworksCheckTest(StepsFixture, unittest.TestCase):
         self.assert_activator(args, self.name)
         self.assertIn('ON_ERROR_STOP=1', args)
         sql = self.sql('check')
-        self.assertTrue(sql.startswith('SET standard_conforming_strings=on;\nBEGIN;\nDO $guard$'))
-        self.assertTrue(sql.endswith('ROLLBACK;\n'))
+        self.assertIn('\\if :release_target\nBEGIN;\nDO $guard$', sql)
+        self.assertIn('ROLLBACK;\n\\else\n', sql)
         order = ['CREATE TEMP TABLE frameworks_before', 'SET LOCAL search_path = public;\n' + executable_sql(),
                  'SET LOCAL search_path = pg_catalog;\n', 'CREATE TEMP TABLE frameworks_after']
         self.assertEqual([sql.index(text) for text in order], sorted(sql.index(text) for text in order))
@@ -43,11 +43,13 @@ class FrameworksCheckTest(StepsFixture, unittest.TestCase):
             self.assertIn("'" + kind + "'", check.SNAPSHOT)
         self.assertEqual(set(check.KINDS), {'view', 'materialized view', 'trigger', 'function', 'procedure',
                                             'aggregate', 'rule', 'policy', 'event trigger', 'operator', 'cast',
-                                            'schema', 'extension', 'type', 'domain', 'setting'})
+                                            'schema', 'extension', 'type', 'domain', 'setting', 'access'})
         for source in ('pg_catalog.pg_class', 'pg_catalog.pg_trigger', 'pg_catalog.pg_proc', 'pg_catalog.pg_rewrite',
                        'pg_catalog.pg_policy', 'pg_catalog.pg_event_trigger', 'pg_catalog.pg_operator',
                        'pg_catalog.pg_cast', 'pg_catalog.pg_namespace', 'pg_catalog.pg_extension',
-                       'pg_catalog.pg_type', 'pg_catalog.pg_db_role_setting', 'pg_catalog.pg_get_viewdef(',
+                       'pg_catalog.pg_type', 'pg_catalog.pg_db_role_setting', 'pg_catalog.pg_default_acl',
+                       'pg_catalog.aclexplode(c.relacl)', 'pg_catalog.aclexplode(a.attacl)',
+                       'pg_catalog.aclexplode(n.nspacl)', 'pg_catalog.pg_get_viewdef(',
                        'pg_catalog.pg_get_functiondef(', 'pg_catalog.pg_get_triggerdef(', "deptype='e'"):
             self.assertIn(source, sql)
         self.assertEqual(UNQUALIFIED.findall(sql.replace(executable_sql(), '')), [])
@@ -55,6 +57,26 @@ class FrameworksCheckTest(StepsFixture, unittest.TestCase):
             self.assertNotIn(unsafe, sql)
         self.assertIn('pg_temp.frameworks_before', sql)
         self.assertIn('pg_temp.frameworks_after', sql)
+
+    def test_activator_setting_rows_for_the_database_are_compared_by_value(self):
+        sql = check.executable(executable_sql(), self.m['extensions'])
+        self.assertIn("('setting','role activator','" + LOGS + "')", sql)
+        self.assertIn('e.definition IS NOT NULL AND a.definition IS DISTINCT FROM e.definition', sql)
+
+    def test_reader_grants_are_refused_before_the_owner_step_and_allowed_after_it(self):
+        strict = check.executable(executable_sql(), self.m['extensions'])
+        granted = check.executable(executable_sql(), self.m['extensions'], 'activator', 'corpus_reader', True)
+        self.assertNotIn("'relation corpus_reader SELECT'", strict)
+        self.assertNotIn("'database corpus_reader CONNECT'", strict)
+        for allowed in ("'relation corpus_reader SELECT'", "'schema corpus_reader USAGE'",
+                        "'database corpus_reader CONNECT'"):
+            self.assertIn(allowed, granted)
+
+    def test_retained_extensions_are_compared_by_name_schema_and_owner(self):
+        sql = check.executable(executable_sql(), self.m['extensions'], 'activator', 'corpus_reader', True, True)
+        self.assertIn("('extension','vector',NULL)", sql)
+        self.assertNotIn('0.8.1 public superuser', sql)
+        self.assertIn("a.kind='extension' AND a.definition NOT LIKE '% public superuser'", sql)
 
     def test_roles_and_extensions_must_be_plain_names(self):
         for extensions, roles in (({'vector; DROP': '1'}, ('activator', 'corpus_reader')),
@@ -81,8 +103,8 @@ class FrameworksCheckTest(StepsFixture, unittest.TestCase):
         self.steps.smoke(self.row, 'server-image')
         names = self.names()
         start = names.index('pg_restore')
-        self.assertEqual(names[start:], ['pg_restore', 'remove-list', 'apply', 'check', 'grants', 'effective',
-                                         'validate', 'release-check'])
+        self.assertEqual(names[start:], ['pg_restore', 'remove-list', 'verify', 'apply', 'check', 'grants', 'effective',
+                                         'validate', 'check', 'verify', 'release-check', 'verify'])
         for name, args, _ in self.calls[start:]:
             joined = ' '.join(args)
             self.assertNotIn('postgres-admin.sh', joined)

@@ -128,6 +128,7 @@ class FrameworksDatabaseTest(unittest.TestCase):
         self.assertIn("'frameworks')", self.sql())
         self.response = json.dumps(dict(frameworks_row(), step='activated', state='complete',
                                         message='frameworks activated', corpus_kind='frameworks')).encode()
+        db.targets().write(frameworks_row()['operation_id'], frameworks_row()['database_name'], '16400')
         db.activate(frameworks_row())
         self.assertIn('frameworks_release', self.sql())
         self.assertNotIn('corpus_release', self.sql())

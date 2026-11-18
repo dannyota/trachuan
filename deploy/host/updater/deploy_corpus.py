@@ -10,22 +10,14 @@ from .deploy_corpus_activate import Activation, COMPLETE
 from .deploy_corpus_database import Database
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_result import ReleaseResult
-from .deploy_io import atomic, canonical, CommandError, Busy
+from .deploy_corpus_sql import SUPERUSER_REFUSED
+from .deploy_release_target import Leftover
+from .deploy_io import atomic, canonical, CommandError, Busy, interrupted
 from .deploy_verify import match
 
 
 class ActivatorNotProvisioned(Exception):
     pass
-
-
-def interrupted(error):
-    seen = set()
-    while error is not None and id(error) not in seen:
-        if isinstance(error, InterruptedError):
-            return True
-        seen.add(id(error))
-        error = error.__cause__ or error.__context__
-    return False
 
 
 class Corpus:
@@ -117,6 +109,10 @@ class Corpus:
         return True
 
     def check(self, image):
+        self.step = 'superuser'
+        if self.db.other_superuser():
+            self.result.write('waiting', self.step, SUPERUSER_REFUSED, self.hash, self.manifest, self.mode)
+            return False
         self.step = 'compatibility'
         if not self.kind.compatible(self.manifest, self.db.describe(image)):
             self.result.write('waiting', self.step, self.kind.waiting, self.hash, self.manifest, self.mode)
@@ -170,7 +166,7 @@ class Corpus:
         previous = json.loads(marker.read_bytes()) if marker.exists() else None
         with self.db.lock():
             interrupted = any(r['step'] == 'pruning' or (r['step'] == 'aborted'
-                and self.db.exists(r['database_name']) and not self.db.protected(r['database_name']))
+                and self.db.owned(r['database_name']) and not self.db.protected(r['database_name']))
                 for r in self.db.operations())
             if previous != day or interrupted:
                 self.step = 'prune'
@@ -217,6 +213,10 @@ class Corpus:
             if mode == 'activate':
                 self.prepare_activation()
             with self.db.lock():
+                if mode == 'activate':
+                    self.step = 'leftovers'
+                    self.db.clear_leftovers()
+                    self.step = 'manifest'
                 self.mode, _ = self.engine.choose(self.manifest)
                 image = self.image()
                 if not self.check(image):
@@ -231,6 +231,9 @@ class Corpus:
                 return self.finish(self.engine.run(self.hash, self.manifest, dump, image))
         except ActivatorNotProvisioned:
             self.result.write('waiting', 'provision', 'activator not provisioned', self.hash, self.manifest, self.mode)
+            return True
+        except Leftover as error:
+            self.result.write('waiting', self.step, str(error), self.hash, self.manifest, self.mode)
             return True
         except Busy:
             self.result.write('skipped', self.step, 'activation advisory lock busy; retry later', self.hash, self.manifest, self.mode)

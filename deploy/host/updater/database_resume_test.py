@@ -29,6 +29,8 @@ class ResumeGuardTest(unittest.TestCase):
                            {'extensions': ['vector', 'ltree']})
         self.db.holder = mock.Mock()
         self.db.holder.poll.return_value = None
+        self.db.backend = 77
+        self.db.targets().write('e' * 32, LAW_NAME, '16400')
         self.engine = Activation(self.db)
         self.row = dict(operation_id='e' * 32, country='vn', rel=self.m['rel'], mode='new', database_name=LAW_NAME,
                         manifest_hash='a' * 64, dump_sha256=self.m['dump']['sha256'],
@@ -42,7 +44,9 @@ class ResumeGuardTest(unittest.TestCase):
             return b'{}'
         if 'INSERT INTO release_journal' in text:
             return json.dumps(self.returning).encode()
-        if 'FROM release WHERE singleton' in text:
+        if 'WITH found AS' in text:
+            return b'ok\n'
+        if 'FROM public.release WHERE singleton' in text:
             return json.dumps({key: self.m[key] for key in ('country', 'rel', 'schema_version', 'recipes')}).encode()
         if 'DISTINCT ON' in text and 'row_to_json' not in text and 'json_agg' in text:
             return b'[]'
@@ -50,7 +54,7 @@ class ResumeGuardTest(unittest.TestCase):
             return self.retired
         if 'SELECT active_db' in text:
             return ACTIVE.encode()
-        if 'EXISTS(SELECT FROM pg_database' in text:
+        if 'EXISTS(SELECT FROM pg_catalog.pg_database' in text:
             return b't\n'
         return b'f\n'
 

@@ -4,6 +4,7 @@ import unittest
 
 from updater.corpus_verify_test import manifest
 from updater import deploy_corpus_activate as a
+from updater import deploy_release_target as target
 
 
 class Crash(BaseException):
@@ -23,6 +24,12 @@ class Database:
         self.created = 0
         self.lists_removed = []
         self.lists_discarded = 0
+        self.foreign = set()
+        self.superuser = False
+        self.leftover = None
+        self.sweeps = []
+        self.tidied = 0
+        self.kept_targets = None
 
     def lock(self):
         return nullcontext()
@@ -61,8 +68,28 @@ class Database:
     def exists(self, name):
         return name in self.databases
 
+    def owned(self, name):
+        return name in self.databases and name not in self.foreign
+
     def connections(self, name):
         return False
+
+    def drop_owned(self, name):
+        self.drop(name)
+
+    def other_superuser(self):
+        return self.superuser
+
+    def clear_leftovers(self):
+        self.sweeps.append(len(self.rows))
+        if self.leftover:
+            raise target.Leftover(self.leftover)
+
+    def tidy(self):
+        self.tidied += 1
+
+    def forget_targets(self, operations):
+        self.kept_targets = set(operations)
 
     def drop(self, name):
         if self.protected(name):
@@ -166,6 +193,108 @@ class CorpusActivationTest(unittest.TestCase):
         self.activate()
         self.assertEqual(self.db.created, 1)
         self.assertEqual(self.db.dropped, [])
+
+    def test_unprotected_existing_target_reaches_the_create_step(self):
+        self.db.databases.add(self.m['database'])
+        self.assertEqual(self.engine.choose(self.m), ('new', self.db.active))
+        self.activate()
+        self.assertEqual(self.db.created, 1)
+        self.assertEqual(self.db.active, self.m['database'])
+
+    def test_existing_target_of_another_open_operation_is_refused(self):
+        self.db.databases.add(self.m['database'])
+        other = self.engine.begin('f' * 64, self.m, 'new', self.db.active)
+        self.assertEqual(self.db.operations()[0]['operation_id'], other['operation_id'])
+        with self.assertRaisesRegex(ValueError, 'target already exists'):
+            self.engine.choose(self.m)
+
+    def test_every_finished_operation_sweeps_leftovers(self):
+        self.activate()
+        self.assertEqual(self.db.tidied, 1)
+        self.setUp()
+        self.db.retired[self.m['database']] = dict(dump_sha256=self.m['dump']['sha256'], live=True)
+        self.db.databases.add(self.m['database'])
+        self.assertEqual(self.activate()['mode'], 'retained')
+        self.assertEqual(self.db.tidied, 1)
+
+    def test_every_aborted_operation_sweeps_leftovers(self):
+        self.db.bad_release = True
+        with self.assertRaises(ValueError):
+            self.activate()
+        self.assertEqual(self.db.tidied, 1)
+        self.setUp()
+        row = self.engine.begin(self.hash, self.m, 'new', 'corpus_vn_20990103_1')
+        self.assertEqual(self.engine.resume(row, '/synthetic/dump', 'server-image')['step'], 'aborted')
+        self.assertEqual(self.db.tidied, 1)
+
+    def test_leftover_during_the_create_step_keeps_the_operation_open(self):
+        create = self.db.create
+        def refuse(row):
+            self.db.create = create
+            raise target.Leftover('leftover backend')
+        self.db.create = refuse
+        with self.assertRaisesRegex(target.Leftover, '^leftover backend$'):
+            self.activate()
+        self.assertEqual(self.db.operations()[0]['step'], 'creating')
+        self.assertEqual((self.db.dropped, self.db.lists_removed, self.db.tidied), ([], [], 0))
+        self.assertEqual(self.activate()['step'], 'activated')
+
+    def test_existing_target_with_connections_is_refused_before_any_journal(self):
+        self.db.databases.add(self.m['database'])
+        self.db.connections = lambda name: True
+        with self.assertRaisesRegex(ValueError, '^new corpus target has connections$'):
+            self.activate()
+        self.assertFalse(self.db.rows)
+        self.assertFalse(self.db.dropped)
+
+    def test_prune_keeps_only_the_target_records_of_open_operations(self):
+        row = self.engine.begin(self.hash, self.m, 'new', self.db.active)
+        self.engine.prune()
+        self.assertEqual(self.db.kept_targets, {row['operation_id']})
+        self.db.append(row, 'aborted')
+        self.engine.prune()
+        self.assertEqual(self.db.kept_targets, set())
+
+    def test_target_activator_does_not_own_is_refused_before_any_journal(self):
+        self.db.databases.add(self.m['database'])
+        self.db.foreign.add(self.m['database'])
+        with self.assertRaisesRegex(ValueError, 'target already exists'):
+            self.activate()
+        self.assertFalse(self.db.rows)
+        self.assertFalse(self.db.dropped)
+
+    def test_failed_create_keeps_a_target_activator_does_not_own(self):
+        def create(row):
+            self.db.databases.add(row['database_name'])
+            self.db.foreign.add(row['database_name'])
+            raise ValueError('activation target not owned by activator')
+        self.db.create = create
+        with self.assertRaisesRegex(ValueError, 'not owned by activator'):
+            self.activate()
+        self.assertEqual(self.db.operations()[0]['step'], 'aborted')
+        self.assertEqual(self.db.dropped, [])
+        self.assertTrue(self.db.exists(self.m['database']))
+
+    def test_cleanup_and_prune_keep_an_aborted_target_activator_does_not_own(self):
+        row = self.engine.begin(self.hash, self.m, 'new', self.db.active)
+        self.db.databases.add(self.m['database'])
+        self.db.foreign.add(self.m['database'])
+        self.engine.abort(row)
+        self.engine.abort_cleanup(self.db.operations()[0])
+        self.engine.prune()
+        self.assertEqual(self.db.dropped, [])
+        self.assertTrue(self.db.exists(self.m['database']))
+
+    def test_resume_past_the_create_step_keeps_the_database(self):
+        for step in ('created', 'restoring', 'restored', 'validated', 'checked'):
+            with self.subTest(step=step):
+                self.setUp()
+                self.db.after = step
+                with self.assertRaises(Crash):
+                    self.activate()
+                self.activate()
+                self.assertEqual(self.db.created, 1)
+                self.assertEqual(self.db.dropped, [])
 
     def test_changed_guards_abort_after_every_open_step_without_dropping_protected(self):
         for step in ('started', 'creating', 'created', 'restoring', 'restored', 'validated', 'checked'):

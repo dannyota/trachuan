@@ -209,6 +209,16 @@ def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None,
     return output
 
 
+def interrupted(error):
+    seen = set()
+    while error is not None and id(error) not in seen:
+        if isinstance(error, InterruptedError):
+            return True
+        seen.add(id(error))
+        error = error.__cause__ or error.__context__
+    return False
+
+
 class Result:
     def __init__(self, path, log, clock=now, state=None):
         self.path, self.log, self.clock = Path(path), Path(log), clock

@@ -24,11 +24,13 @@ class CorpusDatabaseTest(unittest.TestCase):
         self.db = d.Database(Host(self.paths, runner, user_prefix=[]), {'extensions':['vector','ltree']})
         self.db.holder = mock.Mock()
         self.db.holder.poll.return_value = None
+        self.db.backend = 77
         self.m = manifest()
         self.row = dict(operation_id='e'*32, country='vn', rel=self.m['rel'], mode='new',
                         database_name=self.m['database'], manifest_hash='a'*64,
                         dump_sha256=self.m['dump']['sha256'], expected_active_db='corpus_vn_20990101_1',
                         manifest=self.m, step='checked')
+        self.db.targets().write('e' * 32, self.m['database'], '16400')
 
     def test_unprivileged_sql_loads_password_only_inside_container(self):
         self.response = b'corpus_vn_20990101_1'
@@ -99,7 +101,8 @@ class CorpusDatabaseTest(unittest.TestCase):
 
     def test_restore_uses_transaction_toc_and_manifest_extension_versions(self):
         self.response = b'f\n'
-        with mock.patch.object(self.db, 'toc', return_value='/run/pgbackrest/test.list'):
+        with mock.patch.object(self.db, 'toc', return_value='/run/pgbackrest/test.list'), \
+             mock.patch.object(self.db, 'check_catalog'):
             self.db.restore(self.row, '/synthetic/dump')
         args, kwargs = next((args, kwargs) for args, kwargs in self.calls if 'pg_restore' in args)
         for value in ('--single-transaction', '--no-owner', '--no-privileges', '--exit-on-error', '--use-list'):
