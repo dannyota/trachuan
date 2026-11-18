@@ -232,11 +232,23 @@ the build input hash. A record has a closed schema and no free text:
 | `target`              | document or provision identity, or a normalized number for a missing document                                                                                                                                                                                                                                     |
 | `claim`               | a code from a fixed list, with the acting identity where it has one: `repealed_by`, `amended_by`, `replaced_by`, `suspended_by`, `wrong_number`, `missing_document`, `ambiguous_anchor`, `empty_text`, `status_conflict`, `missing_source_url`, and `reported` for an accepted report with no more specific claim |
 
-At most 500 records change per pull request. Records carry no account, question
-or client data. A record never applies knowledge; it only opens a finding. The
-export batches of error reports keep their guarantees (fixed membership,
-accepted reports only, deduplication); `corpus findings import` converts a
-batch's files into records for a pull request and writes nothing else.
+The file is exactly its canonical encoding, so it holds no comments. A key is
+`<cc>:vbpl:` or `<cc>:chinhphu:` and an id; an anchor token holds only letters,
+digits, `-` and `.`; a number target has the server's reported-number shape,
+`<1-4 digits>/<4 digits>/` and 1 to 4 segments split on `/` and `-`, each at
+most 32 bytes of letters, digits, `&`, `.`, `_` and single spaces. At most 500
+records change per pull request. One import adds the first 500 new records in
+`origin_id` order and reports how many remain, and running it again continues.
+Records carry no account, question or client data. A record never applies
+knowledge; it only opens a finding. The export batches of error reports keep
+their guarantees (fixed membership, accepted reports only, deduplication);
+`corpus findings import` converts a batch's files into records for a pull
+request and writes nothing else. For `issue_report`, `origin_id` is the report
+group's id. A `wrong_text` group gives `reported`, `wrong_validity` gives
+`status_conflict`, `broken_citation` gives `wrong_number` on the citing
+provision, and `missing_document` gives `missing_document` on the normalized
+number. A target whose anchor is ambiguous or not a plain anchor becomes its
+document, since nothing may be pinned to an ambiguous provision.
 
 ## Release evidence
 

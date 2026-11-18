@@ -111,7 +111,7 @@ func TestHash_ChangesWithEveryDetectorField(t *testing.T) {
 }
 
 func TestHash_PinsCurrentRegistry(t *testing.T) {
-	const want = "c677cfa8b80b58b6c46ae0487d9b6c4ac94f3ec48efd8bf57cd95bc5d31023bd"
+	const want = "53c5f4b2ba02ce3ffa7c98ec15b4efa4ba9878047f8af85d9ed41bdfdd639534"
 	if got := Hash(); got != want {
 		t.Fatalf("registry hash = %s, want %s; a registry change must update this pin on purpose", got, want)
 	}
