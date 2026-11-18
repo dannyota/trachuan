@@ -28,14 +28,14 @@ it('fills a suggestion without submitting and sends signed-in searches through t
   await wrapper.get('form').trigger('submit')
   expect(useSearchDraftStore().draft).toEqual({ query: 'xác thực sinh trắc học khi chuyển tiền', inForceOnly: false })
   expect(navigate).toHaveBeenCalledWith('/vn/search')
-  expect(wrapper.text()).not.toContain('Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi của bạn vào ổ đĩa hay nhật ký.')
+  expect(wrapper.text()).not.toContain('Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi vào ổ đĩa hay nhật ký.')
 })
 
 it.each(['unknown', 'signed-out'] as const)('sends %s visitors to login without carrying their question', async (status) => {
   useSessionStore().status = status
   const wrapper = mount(HomeHero)
   await wrapper.get('#home-query').setValue('private question')
-  expect(wrapper.text()).toContain('Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi của bạn vào ổ đĩa hay nhật ký.')
+  expect(wrapper.text()).toContain('Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi vào ổ đĩa hay nhật ký.')
   await wrapper.get('form').trigger('submit')
   expect(useSearchDraftStore().draft).toBeNull()
   expect(navigate).toHaveBeenCalledWith('/login?next=%2Fvn%2Fsearch', { external: true })
