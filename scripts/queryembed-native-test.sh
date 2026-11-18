@@ -12,14 +12,32 @@ echo 'network forbidden in installer tests' >&2
 exit 99
 EOF
 chmod +x "$scratch/bin/curl"
+real_unzip=$(command -v unzip)
+cat > "$scratch/bin/unzip" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >> "\$UNZIP_LOG"
+exec "$real_unzip" "\$@"
+EOF
+chmod +x "$scratch/bin/unzip"
 export PATH="$scratch/bin:$PATH"
 printf 'native fixture\n' > "$scratch/payload/library"
 tar -czf "$scratch/fixture.tgz" -C "$scratch/payload" library
-if command -v shasum >/dev/null; then
-  sha256=$(shasum -a 256 "$scratch/fixture.tgz" | awk '{print $1}')
-else
-  sha256=$(sha256sum "$scratch/fixture.tgz" | awk '{print $1}')
-fi
+checksum() {
+  if command -v shasum >/dev/null; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    sha256sum "$1" | awk '{print $1}'
+  fi
+}
+sha256=$(checksum "$scratch/fixture.tgz")
+mkdir -p "$scratch/zip/runtimes/native"
+printf 'zip fixture\n' > "$scratch/zip/runtimes/native/library"
+(cd "$scratch/zip" && zip -q -r "$scratch/fixture.nupkg" runtimes)
+zip_sha256=$(checksum "$scratch/fixture.nupkg")
+mkdir -p "$scratch/empty/runtimes/other"
+printf 'other\n' > "$scratch/empty/runtimes/other/file"
+(cd "$scratch/empty" && zip -q -r "$scratch/nomember.nupkg" runtimes)
+nomember_sha256=$(checksum "$scratch/nomember.nupkg")
 
 failures=0
 for platform in darwin-arm64 linux-arm64; do
@@ -79,6 +97,52 @@ for platform in darwin-arm64 linux-arm64; do
     elif [[ "$status" == 0 ]] || [[ "$before" != "$(find "$repo" "$outside" -print | sort)" ]] ||
       [[ "$output" != *symlink* && "$output" != *directory* ]]; then
       echo "FAIL $platform/$scenario: expected rejection before writes (status $status): $output" >&2
+      failures=$((failures + 1))
+    fi
+  done
+done
+for platform in darwin-arm64 linux-arm64; do
+  for scenario in cached corrupt nomember glob; do
+    repo="$scratch/$platform-zip-$scenario/repo"
+    mkdir -p "$repo/scripts" "$repo/apps/queryembed" "$repo/work/native/cache"
+    cp "$source_repo/scripts/queryembed-native.sh" "$repo/scripts/"
+    zip_member=runtimes/native/library
+    zip_pin=$zip_sha256
+    zip_file=$scratch/fixture.nupkg
+    case "$scenario" in
+      nomember) zip_pin=$nomember_sha256; zip_file=$scratch/nomember.nupkg ;;
+      glob) zip_member='runtimes/native/*' ;;
+    esac
+    jq -n --arg platform "$platform" --arg tgz "$sha256" --arg zip "$zip_pin" --arg member "$zip_member" '
+      {version: 1, assets: [
+        {platform: $platform, url: "https://invalid.example/first.tgz", sha256: $tgz,
+         member: "library", install: "first.a"},
+        {platform: $platform, url: "https://invalid.example/second.nupkg", sha256: $zip,
+         member: $member, install: "second.a"}]}' > "$repo/apps/queryembed/native.lock"
+    cp "$scratch/fixture.tgz" "$repo/work/native/cache/first.tgz"
+    cp "$zip_file" "$repo/work/native/cache/second.nupkg"
+    [[ "$scenario" != corrupt ]] || printf 'x' >> "$repo/work/native/cache/second.nupkg"
+    export UNZIP_LOG="$scratch/$platform-zip-$scenario.log"
+    : > "$UNZIP_LOG"
+    status=0
+    output=$(bash "$repo/scripts/queryembed-native.sh" "$platform" 2>&1) || status=$?
+    destination="$repo/work/native/$platform"
+    if [[ "$scenario" == cached ]]; then
+      if [[ "$status" != 0 ]] || ! cmp -s "$scratch/payload/library" "$destination/first.a" ||
+        ! cmp -s "$scratch/zip/runtimes/native/library" "$destination/second.a" ||
+        ! grep -q 'second.nupkg' "$UNZIP_LOG"; then
+        echo "FAIL $platform/zip-$scenario: zip asset did not install through unzip: $output" >&2
+        failures=$((failures + 1))
+      fi
+    elif [[ "$status" == 0 || -e "$destination/second.a" ]] ||
+      [[ -n "$(find "$destination" -name '.install.*' -print 2>/dev/null)" ]]; then
+      echo "FAIL $platform/zip-$scenario: bad zip asset was accepted or left files: $output" >&2
+      failures=$((failures + 1))
+    elif [[ "$scenario" == nomember && ! -s "$UNZIP_LOG" ]]; then
+      echo "FAIL $platform/zip-$scenario: unzip was not reached" >&2
+      failures=$((failures + 1))
+    elif [[ "$scenario" == glob && ( -s "$UNZIP_LOG" || "$output" != *glob* ) ]]; then
+      echo "FAIL $platform/zip-$scenario: glob member not rejected before extraction: $output" >&2
       failures=$((failures + 1))
     fi
   done

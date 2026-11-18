@@ -3,14 +3,13 @@ FROM docker.io/library/golang:1.27.3-trixie@sha256:af1bfc2614ebb1dbd31af514b7874
 WORKDIR /src
 ARG TARGETARCH
 RUN test "$TARGETARCH" = arm64 \
-    && apt-get update && apt-get install -y --no-install-recommends jq \
+    && apt-get update && apt-get install -y --no-install-recommends jq unzip \
     && rm -rf /var/lib/apt/lists/*
 COPY go.mod go.sum ./
 RUN go mod download
 COPY apps/queryembed/ ./apps/queryembed/
 COPY internal/embedding/ ./internal/embedding/
 COPY scripts/queryembed-native.sh ./scripts/queryembed-native.sh
-# The installer verifies both downloaded archives against native.lock before extraction.
 RUN bash scripts/queryembed-native.sh linux-arm64
 COPY deploy/images/healthcheck/ ./deploy/images/healthcheck/
 RUN CGO_ENABLED=1 CGO_LDFLAGS=-L/src/work/native/linux-arm64 \
