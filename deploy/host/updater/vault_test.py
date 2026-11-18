@@ -9,6 +9,9 @@ from updater import deploy_vault as vault
 
 
 class VaultTest(unittest.TestCase):
+    def test_frameworks_key_is_in_fetch_allowlist(self):
+        self.assertIn('server_frameworks_key', vault.names())
+
     def sdk(self):
         sdk = mock.Mock()
         sdk.secrets.SecretsClient.return_value.get_secret_bundle_by_name.return_value.data = SimpleNamespace(

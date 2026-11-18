@@ -11,25 +11,35 @@ from .deploy_io import CommandError, Result
 from .deploy_secrets_state import raw_pending, SecretsState
 
 
+def declared(text):
+    section, found = None, []
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith('['):
+            section = line
+        if section == '[Container]' and line.startswith('Secret='):
+            found.append(line.split('=', 1)[1].split(',', 1)[0].strip())
+    return found
+
+
 def consumers(directory, secrets):
     found = set()
     required = ('postgres', 'migrate', 'queryembed', 'server', 'web', 'caddy')
     if any(not (directory / ('trachuan-' + name + '.container')).is_file() for name in required):
         raise ValueError('rendered Quadlet unit missing')
     for path in sorted(directory.glob('trachuan-*.container')):
-        section = None
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if line.startswith('['):
-                section = line
-            if section == '[Container]' and line.startswith('Secret='):
-                name = line.split('=', 1)[1].split(',', 1)[0].strip()
-                if name in secrets:
-                    service = path.name[len('trachuan-'):-len('.container')]
-                    if service not in ('postgres', 'migrate', 'queryembed', 'server', 'web', 'caddy'):
-                        raise ValueError('unsupported secret consumer')
-                    found.add(service)
+        if any(name in secrets for name in declared(path.read_text())):
+            service = path.name[len('trachuan-'):-len('.container')]
+            if service not in ('postgres', 'migrate', 'queryembed', 'server', 'web', 'caddy'):
+                raise ValueError('unsupported secret consumer')
+            found.add(service)
     return found
+
+
+def named(files):
+    return sorted({name for path, data in files.items()
+                   if path.startswith('quadlet/') and path.endswith('.container') and path.count('/') == 1
+                   for name in declared(data.decode('utf-8'))})
 
 
 def derived(name, value):
@@ -79,6 +89,9 @@ class Secrets:
             if error.returncode != 1:
                 raise
             return False
+
+    def missing(self, files):
+        return next((name for name in named(files) if not self.exists(name)), None)
 
     def equal(self, name, value):
         raw = self.host.user('podman', 'secret', 'inspect', '--showsecret', name,

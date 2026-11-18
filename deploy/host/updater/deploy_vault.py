@@ -8,8 +8,8 @@ import sys
 
 def names():
     return ('google_client_secret', 'smtp_username', 'smtp_password', 'account_keys',
-            'postgres_password', 'auth_db_password', 'corpus_reader_password',
-            'activator_db_password', 'backup_s3_key', 'backup_s3_key_secret')
+            'server_frameworks_key', 'postgres_password', 'auth_db_password',
+            'corpus_reader_password', 'activator_db_password', 'backup_s3_key', 'backup_s3_key_secret')
 
 
 def retired():

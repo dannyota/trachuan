@@ -18,5 +18,7 @@ FROM unnest(ARRAY['corpus_release','release_journal','retired_release']) AS name
 WHERE to_regclass('public.' || name) IS NOT NULL \gexec
 SELECT 'GRANT USAGE, SELECT ON SEQUENCE release_journal_id_seq TO activator'
 WHERE to_regclass('public.release_journal_id_seq') IS NOT NULL \gexec
+SELECT 'GRANT SELECT, INSERT, UPDATE ON frameworks_release TO activator'
+WHERE to_regclass('public.frameworks_release') IS NOT NULL \gexec
 SQL
 unset ACTIVATOR_DB_PASSWORD

@@ -6,6 +6,12 @@ from updater.deploy_io import CommandError
 
 
 class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
+    def test_frameworks_pointer_grant_is_guarded_and_excludes_delete(self):
+        script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
+        self.assertIn("SELECT 'GRANT SELECT, INSERT, UPDATE ON frameworks_release TO activator'\n"
+                      "WHERE to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
+        self.assertNotIn("'retired_release','frameworks_release'", script)
+
     def test_provision_checks_both_running_container_mounts(self):
         self.calls.clear()
         self.assertTrue(self.host.provision_activator())
