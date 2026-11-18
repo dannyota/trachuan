@@ -75,12 +75,12 @@ The rule changes what `status: pass` means for MRR@8, so the report version
 becomes 2 and the scorer version moves. A tolerated pass is never written in a
 version 1 report.
 
-The gating report of a release comes from
-`corpus eval <cc> <rel> --previous <report>`, which scores an existing, verified
-build with the binary's own evaluation code. Re-evaluating an unchanged build
-with a newer evaluation version this way is allowed and needs no new run; the
-report records the versions it used. The frozen recipes of pipeline stages are
-not affected: a changed stage recipe still needs a new run ([index](index.md)).
+The gating report of a release is its run's `eval` report
+([selected report](release-evidence.md#selected-report)). Scoring an unchanged
+build with a newer evaluation version through `corpus eval` is a diagnostic; to
+gate a release on it takes a new run and `rel`, which reuses unchanged
+artifacts. The report records the versions it used, and a changed stage recipe
+needs a new run ([index](index.md)).
 
 ## Validators
 

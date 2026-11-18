@@ -80,13 +80,13 @@ of the evidence item's frozen inputs:
 
 - **Predecessor.** The release named by `previous_diff.previous` of the selected
   report, frozen in the evidence item; it is separate from the run's ingest
-  baseline. A run started with `--no-previous-report` has no predecessor. A run
-  that froze a previous report but whose selected report names no previous
-  release, because the comparison was incompatible, fails the stage. The named
-  release's run row decides the rest. A run without an `evidence` item predates
-  evidence: its identity is recorded and its findings are the empty set. An item
-  that is not done, or whose artifact is missing or corrupt, fails the stage,
-  and so does a named release with no run row.
+  baseline. A run started with `--no-previous-report` has none. The named
+  release's run row decides the rest. A snapshot without a
+  [decision](release-evidence.md#selected-report) predates evidence: its
+  identity is recorded and its findings are the empty set. A snapshot with one
+  must be `evaluated` or `released`, with a done, verified evidence artifact
+  whose bound report SHA-256 equals the frozen previous report. Anything else
+  fails the stage, including a named release with no run row.
 - **Occurrence.** Each finding carries `first_rel`. It is inherited only from a
   finding that fired or was carried in the predecessor with the same fingerprint
   and semantics number; otherwise it is this release. So a finding that changes

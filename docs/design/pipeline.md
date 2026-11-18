@@ -184,11 +184,14 @@ The index baseline appends `chunk`, `embed`, `build`, `eval` to the existing
 registry and frozen run snapshot. `classify` and `release` remain future stages;
 the baseline does not register placeholders for them. Build computes sparse
 vectors because BM25 needs corpus-wide statistics; there is no lexical stage.
-After a completed `evidence` the run is `evaluated`, even when measured quality
-fails; a run created before the previous-report rule has no such stage and is
-`evaluated` after `eval`. Status also shows `quality_pass` and
-`release_eligible`, never just "passed". Existing terminal/generation rules
-still fence every stage commit.
+`CloseStage` decides from the frozen snapshot whether the run is `evaluated`:
+after `evidence` for a run with a
+[decision](release-evidence.md#selected-report), after `eval` for an older one,
+even when measured quality fails. The workflow reads that answer behind a
+Temporal version gate, so executions in flight replay unchanged. Extending a
+snapshot without a decision never appends `evidence`. Status also shows
+`quality_pass` and `release_eligible`, never just "passed". Existing
+terminal/generation rules still fence every stage commit.
 
 Build artifacts contain the exact dump that later release work may upload; eval
 emits a sidecar bound to its hash. Signing, manifest production and host

@@ -4,6 +4,9 @@ Decision: [ADR 0006](../adr/0006-single-host-oci-podman.md) (History
 2026-11-14). The MacBook uploads an evaluated build; GitHub checks and signs it.
 A host timer activates it. Code follows [pull deployment](pull-deployment.md).
 
+The **production release** is the one the verified `<cc>-production` manifest
+names. A rollback meant to last is signed again, so the tag follows it.
+
 ## Upload
 
 `scripts/corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>` runs
@@ -14,8 +17,8 @@ on the MacBook after the run is `evaluated` and uploads to bucket
 - `MANIFEST.sha256`: the build artifact manifest
   ([pipeline](pipeline.md#items-artifacts-and-gaps)).
 - `report.json`: the [selected report](release-evidence.md#selected-report) of
-  the run, compared with the active report. Version 2 keeps the full retrieval
-  recipe.
+  the run, compared with the production release's report. Version 2 keeps the
+  full retrieval recipe.
 - `release.json`: the dump's `release` row as JSON
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
 - `build.json`: the build record, listed in `MANIFEST.sha256`; schema 8 and
@@ -56,8 +59,10 @@ through the same S3 configuration, and applies the checks of
 must equal `old_product`; all cohorts must exist, including empty ones without
 comparisons. A prefix that already holds objects is never overwritten; a rebuilt
 corpus gets a new `rel`. The Python validator owns the comparison contract, and
-a Go test checks it against evaluator output, including the non-gating flags.
-Success dispatches `corpus-release.yml`; dry-run only checks local inputs.
+a Go test checks it against evaluator output, including the non-gating flags. It
+also applies the
+[selected report checks](release-evidence.md#upload-and-signing). Success
+dispatches `corpus-release.yml`; dry-run only checks local inputs.
 
 The uploader holds an exclusive nonblocking `flock` on
 `${HOME}/.cache/trachuan/corpus-upload.lock` through validation and dispatch.
@@ -98,8 +103,10 @@ credential; it reads one bucket of public legal text and cannot write
    `non_regression` gate set in each product cohort with cases and the top-level
    comparison, with `gating:true` and status `pass` (`not_run` fails), and its
    `recipes` to equal the recipes in `release.json`.
-4. Repeats the previous-report checks of upload, writes canonical JSON and signs
-   it with `cosign sign-blob --bundle`, keyless, like the image manifest.
+4. Repeats the previous-report checks of upload and applies the
+   [selected report checks](release-evidence.md#upload-and-signing), writes
+   canonical JSON and signs it with `cosign sign-blob --bundle`, keyless, like
+   the image manifest.
 5. Pushes `manifest.json` and `manifest.sigstore.json` to
    `ghcr.io/dannyota/trachuan-corpus-release`, tagged `<cc>-<rel>` and
    `<cc>-production`.

@@ -29,43 +29,75 @@ binds, and never changes, the build artifact and the evaluation report.
 ## Selected report
 
 A run decides what it is compared with when it is created. `corpus start` of a
-new run requires exactly one of `--previous-report <report.json>`, the uploaded
-version 2 report of the release active in production, or `--no-previous-report`.
+new run requires exactly one of:
+
+- `--previous-report <report.json>`: the uploaded report of the production
+  release ([corpus release](corpus-release.md)). Start decodes it, requires
+  report version 2 with its retrieval recipe, status complete, this run's
+  country and a `rel` below this run's, and copies the bytes into the artifact
+  store.
+- `--no-previous-report`: the run is compared with nothing and cannot publish.
+
 Neither or both refuses the start, so a forgotten flag cannot look like a
-baseline. The snapshot freezes the decision: the file's absolute path and
-SHA-256, or `none`. A later start of the run may repeat the same decision or
-omit it; a different one is refused.
+baseline. Both are unrelated to `--previous-manifest`, the ingest baseline. The
+snapshot freezes the **decision**: the file's SHA-256 and store path, or `none`.
+Two decisions are the same when their SHA-256 are equal. Until the run's `eval`
+item is first planned a start may replace the decision, and the run message
+records it; after that a different decision is refused.
 
-The `eval` stage reads the frozen file, fails when its SHA-256 differs, and
-compares with it. That hash is already in the stage's input hash, so another
-previous report cannot reuse an evaluation; no stage recipe changes, and the
-server checks none of the eval or evidence recipes. The `report.json` of the
-run's `eval` item is the **selected report**: `evidence` reads it and it is the
-file a release uploads. `corpus eval` stays a diagnostic. `--until eval` pauses
-the run after `eval`; only `evidence` makes it `evaluated`.
+The `eval` stage reads the stored file, fails when its SHA-256 differs, and puts
+the frozen SHA-256 in its input hash, so another previous report cannot reuse an
+evaluation. Its item is done only when the report matches the decision:
+`previous_diff.previous.report_sha256` equals the frozen SHA-256, or, for
+`none`, `previous_diff` names no previous release. An incompatible comparison
+fails the item. The `report.json` of that item is the **selected report**:
+`evidence` reads it and it is the file a release uploads. `corpus eval` stays a
+diagnostic and its report cannot publish. This change alters no recipe from
+`discover` to `eval`; the server checks only the schema, query, lexical and
+retrieval recipes.
 
-`corpus release-row` adds `eval_report_sha256` and `previous_report_sha256` (or
-`none`) to `run`. The uploader requires the report to hash to
-`eval_report_sha256`, `previous_diff.previous.report_sha256` to equal
-`previous_report_sha256`, and that previous release to be the one the verified
-`<cc>-production` manifest names at upload. So when production moves after the
-run started, the run cannot publish and the release needs a new run and `rel`. A
-`none` run cannot publish, since upload requires a `previous_diff`.
+The `evidence` stage ships with this rule. For a run with a decision it is the
+last stage: only its completion makes the run `evaluated`, `--until eval` pauses
+the run, and `corpus release-row` reports `complete` only with its item done.
 
-A run whose snapshot holds no decision was created before this rule. It has no
-`evidence` stage, becomes `evaluated` after `eval`, and uploads a report from
-`corpus eval --previous` under the older checks; release-row writes neither
-field. The last such release is vn/20261118_1. This path ends with the gate
-below, which requires the sidecars.
+### Upload and signing
+
+`corpus release-row` adds `eval_report_sha256` and `previous_report_sha256` (64
+hexadecimal characters, or `none`) to `run`. The uploader and signing both
+require the report to hash to `eval_report_sha256` and
+`previous_diff.previous.report_sha256` to equal `previous_report_sha256`.
+
+Upload also requires a settled production: the report's previous `rel` and
+SHA-256 equal `rel` and `report.sha256` of the verified `<cc>-production`
+manifest, and `release` of `GET /api/v1/public/status` is that same `rel`. A
+release still activating, waiting on recipes, failed or rolled back by hand
+therefore blocks the upload, and the run needs a new run and `rel` if production
+has moved on. The first signing of a `rel`, when no `<cc>-<rel>` tag exists,
+repeats the manifest comparison just before the tag moves, inside the workflow's
+concurrency group, so two uploads that froze one previous cannot both publish. A
+later signing of that `rel` is exempt, which keeps retry and rollback working.
+
+### Runs before this rule
+
+A snapshot without a decision is valid only at or below the cutoff
+`vn/20261118_1`, one constant. Such a run has no `evidence` stage and becomes
+`evaluated` after `eval`; a restart never appends `evidence` to it and a
+decision flag on it is refused. It uploads a report from
+`corpus eval --previous` under the older checks, and release-row writes neither
+field. Above the cutoff, planning, release-row, upload and signing refuse a
+missing decision. Upload accepts the older shape only for exactly the cutoff;
+signing accepts it at or below the cutoff, so older releases can be signed
+again. The sidecar gate below applies the same cutoff. The first run with a
+decision starts after the cutoff release is published and active.
 
 ## `findings.json`
 
 Schema version; bindings (`rel`, the dump's SHA-256, the build artifact hash,
-the report's SHA-256, the detector registry hash, the predecessor's `rel` and
-the SHA-256 of its `findings.json`, or `none` when it predates evidence); per
-detector `complete: true` and the number of subjects observed and not
-observable; every finding with key, fingerprint, semantics number, `first_rel`,
-status and `carried`; and the keys that are new, gone and carried.
+the report's SHA-256, the detector registry hash, the predecessor's `rel`, or
+`none` without one, and the SHA-256 of its `findings.json`, or `none` when it
+has none); per detector `complete: true` and the number of subjects observed and
+not observable; every finding with key, fingerprint, semantics number,
+`first_rel`, status and `carried`; and the keys that are new, gone and carried.
 
 ## `identity.jsonl`
 
@@ -156,15 +188,14 @@ SHA-256 of all three.
 
 ## Gate
 
-| Condition                                                                                                                       | Result                                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                     | unchanged                                                                                                                                    |
-| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff`    | refuse                                                                                                                                       |
-| the report is not the run's `eval` report, or its previous report is not the frozen one or not the production release at upload | refuse                                                                                                                                       |
-| a detector not complete                                                                                                         | refuse                                                                                                                                       |
-| an `open` finding of a `blocking` detector, fired or carried                                                                    | refuse                                                                                                                                       |
-| `open` findings of `review` and `info` detectors                                                                                | allowed, counted                                                                                                                             |
-| first release with evidence                                                                                                     | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
+| Condition                                                                                                                    | Result                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                  | unchanged                                                                                                                                    |
+| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff` | refuse                                                                                                                                       |
+| a detector not complete                                                                                                      | refuse                                                                                                                                       |
+| an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                       |
+| `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                             |
+| first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
 
 ## Downstream use
 
