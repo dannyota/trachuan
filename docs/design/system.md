@@ -68,12 +68,13 @@ activates it ([corpus release](corpus-release.md)).
 | `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                                     | read auth/workshop; connect to host |
 
 `auth` belongs to `auth_owner`, the role the internet-facing server connects as,
-so a compromised server can plant views, triggers and functions there. A
-superuser session therefore never reads or writes an `auth` relation and never
-calls anything outside `pg_catalog` in that database: with `search_path` pinned
-it issues only catalog reads and statements that run no user code (`GRANT`,
-`ALTER ROLE`). The host reads `auth` data by connecting as `auth_owner`, so
-planted code runs with the rights the server already has.
+so a compromised server can plant views, triggers and functions there and set
+defaults for every session that enters the database. After bootstrap no
+superuser session connects to `auth`: role and password statements run from
+database `postgres`, and the host reads, writes and grants in `auth` by
+connecting as `auth_owner`, with statement and lock timeouts, so planted code
+runs with the rights the server already has. A value read from `auth` is
+untrusted input and is validated before use, above all a database name.
 
 The server never writes corpus data. The pipeline never connects to the host.
 The proposed local builder needs owner approval for CREATEDB; its actual scope
