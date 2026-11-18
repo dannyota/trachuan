@@ -156,14 +156,14 @@ reader's layout.
 | `embedding_input_too_long`, `embedding_input_bytes_exceeded` | Một phần nội dung quá dài để đưa vào tìm kiếm | Part of the text is too long to search |
 | any other kind                                               | the kind code as served                       | the kind code as served                |
 
-| State                                            | vi                                               | en                                                        |
-| ------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------- |
-| item `unit_too_large`                            | Một phần của mục này quá lớn để hiển thị.        | Part of this item is too large to show.                   |
-| item `invalid_item`                              | Không đọc được mục này.                          | This item could not be read.                              |
-| reload after `invalid_next` or `release_expired` | Dữ liệu đã được cập nhật; trang hiện lại từ đầu. | The data was updated; the page starts again from the top. |
-| `cursor_expired` (search and gaps)               | the existing `cursor_expired` message            | the existing `cursor_expired` message                     |
-| `invalid_handle`, `not_found`                    | the fixed 404                                    | the fixed 404                                             |
-| `unavailable`, `rate_limited`                    | the existing messages of those codes             | the existing messages of those codes                      |
+| State                                                                   | vi                                               | en                                                        |
+| ----------------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------- |
+| item `unit_too_large`                                                   | Một phần của mục này quá lớn để hiển thị.        | Part of this item is too large to show.                   |
+| item `invalid_item`                                                     | Không đọc được mục này.                          | This item could not be read.                              |
+| read page reload after `invalid_next` or `release_expired`              | Dữ liệu đã được cập nhật; trang hiện lại từ đầu. | The data was updated; the page starts again from the top. |
+| `cursor_expired` (search and gaps), once the automatic restart succeeds | Danh sách đã được tải lại từ đầu.                | The list was reloaded from the top.                       |
+| `invalid_handle`, `not_found`                                           | the fixed 404                                    | the fixed 404                                             |
+| `unavailable`, `rate_limited`                                           | the existing messages of those codes             | the existing messages of those codes                      |
 
 Names, publishers, versions, citations, our titles, kinds without a label,
 statuses without a label, source names and gap details are data: shown as

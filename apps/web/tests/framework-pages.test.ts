@@ -9,6 +9,7 @@ import Control from '../app/pages/frameworks/[code]/[version]/control.vue'
 import FrameworkRead from '../app/components/FrameworkRead.vue'
 import FrameworkGaps from '../app/components/FrameworkGaps.vue'
 import FrameworkUnits from '../app/components/FrameworkUnits.vue'
+import { frameworkMessages } from '../i18n/frameworks'
 
 const alpha = 'fw:fw-alpha:2.1'
 const beta = 'fw:fw-beta:1.0'
@@ -109,7 +110,8 @@ it('continues a search and restarts its submitted query when the cursor expires'
   await wrapper.get('input').setValue('different query')
   await wrapper.get('button[type="button"]').trigger('click')
   await flushPromises()
-  expect(wrapper.text()).toContain('The results changed. Please search again.')
+  expect(wrapper.text()).toContain('The list was reloaded from the top.')
+  expect(wrapper.text()).not.toContain('The results changed. Please search again.')
   expect(wrapper.text()).toContain('fresh')
   expect(wrapper.text()).not.toContain('first')
   expect(post).toHaveBeenCalledTimes(3)
@@ -143,4 +145,67 @@ it('shows a search error when the request throws', async () => {
   await flushPromises()
   expect(wrapper.get('[role="alert"]').text()).toBe('Please try again later.')
   expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
+})
+
+const searchHit = { handle: `${alpha}#A`, citation: 'A', kind: 'control', mappings: 0, text_withheld: true, lookup: true }
+const searchResult = (citation: string, cursor?: string) => ({ response: { status: 200 }, data: { release: '20990101', abstain: false, hits: [{ ...searchHit, citation }], next_cursor: cursor } })
+const expired = { response: { status: 409 }, error: { error: { code: 'cursor_expired' } } }
+const reloaded = 'The list was reloaded from the top.'
+async function searchToExpiry(replies: unknown[]) {
+  const { wrapper, post } = setup('mixed', Search, false, false, replies)
+  await flushPromises()
+  await wrapper.get('input').setValue('query')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  await wrapper.get('button[type="button"]').trigger('click')
+  await flushPromises()
+  return { wrapper, post }
+}
+
+it('uses the exact Vietnamese restart text', () => {
+  expect(frameworkMessages('vi').restarted).toBe('Danh sách đã được tải lại từ đầu.')
+})
+
+it('shows no restart notice when the search restart fails', async () => {
+  const { wrapper } = await searchToExpiry([searchResult('first', 'cursor-a'), expired, { response: { status: 503 }, error: { error: { code: 'unavailable' } } }])
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloaded)
+})
+
+it('clears the restart notice after a later search page loads', async () => {
+  const { wrapper } = await searchToExpiry([searchResult('first', 'cursor-a'), expired, searchResult('fresh', 'cursor-b'), searchResult('later')])
+  expect(wrapper.text()).toContain(reloaded)
+  await wrapper.get('button[type="button"]').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain('later')
+  expect(wrapper.text()).not.toContain(reloaded)
+})
+
+it('clears the restart notice on a new search submit', async () => {
+  const { wrapper } = await searchToExpiry([searchResult('first', 'cursor-a'), expired, searchResult('fresh'), searchResult('newer')])
+  expect(wrapper.text()).toContain(reloaded)
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(wrapper.text()).toContain('newer')
+  expect(wrapper.text()).not.toContain(reloaded)
+})
+
+const failed = { response: { status: 503 }, error: { error: { code: 'unavailable' } } }
+
+it('clears the restart notice when a new submit fails', async () => {
+  const { wrapper } = await searchToExpiry([searchResult('first', 'cursor-a'), expired, searchResult('fresh'), failed])
+  expect(wrapper.text()).toContain(reloaded)
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloaded)
+})
+
+it('drops the restart notice when a second restart fails', async () => {
+  const { wrapper } = await searchToExpiry([searchResult('first', 'cursor-a'), expired, searchResult('fresh', 'cursor-b'), expired, failed])
+  expect(wrapper.text()).toContain(reloaded)
+  await wrapper.get('button[type="button"]').trigger('click')
+  await flushPromises()
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloaded)
 })
