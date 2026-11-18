@@ -4,7 +4,7 @@ import { messagesFor, type Language } from '../../i18n'
 import { pagesMessages } from '../../i18n/pages'
 import { formatDate, formatNumber, formatRelease, gapSummary } from '../content'
 
-const props = withDefaults(defineProps<{ status: components['schemas']['CorpusStatus'] | null, showGaps?: boolean, showRelease?: boolean, sourceSentence?: boolean }>(), { showRelease: true })
+const props = withDefaults(defineProps<{ status: (components['schemas']['CorpusStatus'] & { features?: Partial<components['schemas']['PublicStatus']['features']> }) | null, showGaps?: boolean, showRelease?: boolean, sourceSentence?: boolean }>(), { showRelease: true })
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const labels = computed(() => pagesMessages(language.value))
