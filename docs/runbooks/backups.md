@@ -149,9 +149,10 @@ and revokes every live framework entitlement with reason `restore`, with one
 audit event per entitlement, in one committed transaction. Running it again is
 safe: epochs advance again, with no duplicate revocation events. The operator
 must allow entitlements again from the event history. Start `trachuan-server`
-and `trachuan-web`, [prewarm](release-restore.md#prewarm-a-corpus-database) the
-active corpus database, check `curl --fail http://127.0.0.1:8080/readyz`, and
-only then start Caddy.
+and `trachuan-web`,
+[prewarm](corpus-restore-manual.md#prewarm-a-corpus-database) the active corpus
+database, check `curl --fail http://127.0.0.1:8080/readyz`, and only then start
+Caddy.
 
 Before the one-hour RTO is claimed, rehearse this procedure once into a scratch
 directory and port on the host (never the live data directory), time each step,

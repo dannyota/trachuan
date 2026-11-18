@@ -156,8 +156,8 @@ transaction increment every `auth_epoch`, revoke all sessions and tokens
 ([auth](auth.md)) and revoke every live framework entitlement with reason
 `restore` ([framework access](frameworks-access.md#classes-and-entitlements));
 start server and web; prewarm the active corpus database
-([runbook](../runbooks/release-restore.md#prewarm-a-corpus-database)); pass
-readiness; then start Caddy. Before the one-hour RTO is claimed, a timed
+([runbook](../runbooks/corpus-restore-manual.md#prewarm-a-corpus-database));
+pass readiness; then start Caddy. Before the one-hour RTO is claimed, a timed
 whole-cluster rehearsal of this procedure restores into a scratch directory and
 port on the host and its time is recorded.
 

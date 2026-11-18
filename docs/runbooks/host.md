@@ -229,7 +229,8 @@ DB=$(bash /srv/trachuan/host/auth-psql.sh active-db)
 ```
 
 The restart emptied the buffer cache:
-[prewarm](release-restore.md#prewarm-a-corpus-database) `$DB`, then start Caddy:
+[prewarm](corpus-restore-manual.md#prewarm-a-corpus-database) `$DB`, then start
+Caddy:
 
 ```sh
 systemctl --user start trachuan-caddy
