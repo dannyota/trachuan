@@ -73,6 +73,19 @@ it.each(['vi', 'en'] as const)('classifies and groups partial trees and retained
     { key: 'structure', cases: 5 },
   ])
 })
+it.each([
+  ['vi', 'Kết quả kiểm tra quan hệ chưa được đưa vào', 'Một số kết quả kiểm tra quan hệ giữa các văn bản chưa được đưa vào bản phát hành này.'],
+  ['en', 'Relation check results not included', 'Some check results on relations between documents are not included in this release.'],
+] as const)('classifies and groups knowledge_stale in %s', (lang, name, sentence) => {
+  expect(gapCategory('knowledge_stale', lang)).toEqual({ key: 'knowledge', name, sentence })
+  const result = gapSummary({ gaps: { knowledge_stale: 7 } }, lang)
+  const label = lang === 'vi' ? '7 trường hợp' : '7 cases'
+  expect(result).toEqual([{ key: 'knowledge', name, sentence, cases: 7, casesLabel: label, casesSentence: `${sentence.replace(/\.$/, '')} (${label}).` }])
+})
+it('uses the singular case label in English for a count of one', () => {
+  expect(gapSummary({ gaps: { knowledge_stale: 1 } }, 'en')[0]).toMatchObject({ casesLabel: '1 case', casesSentence: 'Some check results on relations between documents are not included in this release (1 case).' })
+  expect(gapSummary({ gaps: { knowledge_stale: 1 } }, 'vi')[0]!.casesLabel).toBe('1 trường hợp')
+})
 it('labels provenance and source withdrawal', () => {
   expect(textSourceLabel('source_tree', true, 'https://vbpl.vn/example', 'vi')).toBe('Nội dung: đầy đủ, từ cấu trúc văn bản của vbpl.vn')
   expect(textSourceLabel('html_transcription', false, 'https://chinhphu.vn/x', 'vi')).toContain('có thể chưa đầy đủ, từ bản HTML của chinhphu.vn')
