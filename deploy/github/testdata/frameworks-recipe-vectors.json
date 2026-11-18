@@ -1,11 +1,340 @@
-{"vectors":[
-{"name":"step_snapshot","sha256":"2351125382fc815dca3278dd1db2c241bca501bb0fff7b721f707af6dc654aa1","normalized":"{\"name\":\"snapshot\",\"parameters\":{\"gap_kinds\":{\"chunk_omission\":{\"blocking\":\"never\",\"class\":\"text\"},\"embedding_input_bytes_exceeded\":{\"blocking\":\"never\",\"class\":\"text\"},\"embedding_input_too_long\":{\"blocking\":\"never\",\"class\":\"text\"},\"mapping_dropped\":{\"blocking\":\"never\",\"class\":\"public\"},\"mapping_unresolved\":{\"blocking\":\"never\",\"class\":\"public\"},\"ocr_blocked\":{\"blocking\":\"always\",\"class\":\"text\"},\"ocr_flagged\":{\"blocking\":\"never\",\"class\":\"text\"},\"text_incomplete\":{\"blocking\":\"never\",\"class\":\"text\"},\"title_missing\":{\"blocking\":\"licensed\",\"class\":\"public\"}},\"previous_report\":\"trachuan/previous-report.json\",\"public_floors\":\"sources/frameworks-floors.yaml\"},\"version\":2}","input":{"name":"snapshot","version":2,"parameters":{"gap_kinds":{"chunk_omission":{"class":"text","blocking":"never"},"embedding_input_bytes_exceeded":{"class":"text","blocking":"never"},"embedding_input_too_long":{"class":"text","blocking":"never"},"mapping_dropped":{"class":"public","blocking":"never"},"mapping_unresolved":{"class":"public","blocking":"never"},"ocr_blocked":{"class":"text","blocking":"always"},"ocr_flagged":{"class":"text","blocking":"never"},"text_incomplete":{"class":"text","blocking":"never"},"title_missing":{"class":"public","blocking":"licensed"}},"previous_report":"trachuan/previous-report.json","public_floors":"sources/frameworks-floors.yaml"}}},
-{"name":"step_parse","sha256":"224767047db84e0c977ea5777671cfe0c464bf329e6dc1370be7e9a5cfee5620","normalized":"{\"name\":\"parse\",\"parameters\":{\"schema\":\"controls/1\"},\"version\":1}","input":{"name":"parse","version":1,"parameters":{"schema":"controls/1"}}},
-{"name":"step_relate","sha256":"5fa85e25e8c7e3d87aa5c74d2a66c20cc6a51b6d78129d6bc9c9d59991fbb083","normalized":"{\"name\":\"relate\",\"parameters\":{\"business_key_forms\":{\"citation\":\"^[!-~]+( [!-~]+)*$\",\"citation_max_bytes\":64,\"citation_min_bytes\":1,\"code\":\"^[a-z][a-z0-9]*(-[a-z0-9]+)*$\",\"version\":\"^[0-9a-z]+([.+-][0-9a-z]+)*$\"},\"gap_counts\":\"kind-version-subject/1\",\"mapping_scope\":\"cross-version/2\",\"schema\":\"edges/1\"},\"version\":4}","input":{"name":"relate","version":4,"parameters":{"business_key_forms":{"citation":"^[!-~]+( [!-~]+)*$","citation_max_bytes":64,"citation_min_bytes":1,"code":"^[a-z][a-z0-9]*(-[a-z0-9]+)*$","version":"^[0-9a-z]+([.+-][0-9a-z]+)*$"},"gap_counts":"kind-version-subject/1","mapping_scope":"cross-version/2","schema":"edges/1"}}},
-{"name":"step_chunk","sha256":"96c08559e1dfa16cbbdb19a5bfdb6210461ec584aea84d6caabe1b9b0dc070b3","normalized":"{\"name\":\"chunk\",\"parameters\":{\"limit\":512,\"prefix_format_version\":1,\"schema\":\"chunks/1\"},\"version\":1}","input":{"name":"chunk","version":1,"parameters":{"limit":512,"prefix_format_version":1,"schema":"chunks/1"}}},
-{"name":"step_embed","sha256":"c3ae26c86b6112b5f3b1f7bc8f16dd2f00a2513d156b27c2d5497ae356da5deb","normalized":"{\"name\":\"embed\",\"parameters\":{\"embedding_recipe_hash\":\"13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec\",\"law_stage_recipe_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"},\"version\":1}","input":{"name":"embed","version":1,"parameters":{"embedding_recipe_hash":"13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec","law_stage_recipe_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}},
-{"name":"step_build","sha256":"4b593458da3e768eeaf5235cb1f3b4350a9b8230b57176fd2e82ffbe77f15585","normalized":"{\"name\":\"build\",\"parameters\":{\"calibration\":\"public-free-only-open/2\",\"dense_recipe\":{\"dimensions\":1024,\"document\":{\"backend\":\"torch-mps\",\"dimensions\":1024,\"input\":\"raw\",\"language\":\"python 3.14.10\",\"model\":\"AITeamVN/Vietnamese_Embedding_v2\",\"normalization\":\"l2-float32\",\"pooling\":\"cls\",\"precision\":\"fp16\",\"resolved_revision\":\"18b44161e041bf1d3a333ab5144b5b7b93f914d2\",\"revision\":\"18b44161e041\",\"runtime\":\"document\",\"runtime_library\":\"torch 2.15.0\",\"special_tokens\":true,\"token_cap\":2048,\"tokenizer_library\":\"transformers 5.22.2\",\"tokenizer_revision\":\"18b44161e041bf1d3a333ab5144b5b7b93f914d2\",\"tokenizer_sha256\":\"c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386\",\"truncation\":false,\"weights_sha256\":\"e883eceded394613be5d7f86e4a735fb2d46f8eaa6b8bc350730f96f22ff12ec\"},\"document_hash\":\"13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec\",\"model\":\"AITeamVN/Vietnamese_Embedding_v2\",\"query\":{\"backend\":\"onnxruntime-cpu\",\"dimensions\":1024,\"input\":\"raw\",\"language\":\"go 1.27.3\",\"model\":\"AITeamVN/Vietnamese_Embedding_v2\",\"normalization\":\"l2-float32\",\"pooling\":\"cls\",\"precision\":\"int8\",\"resolved_revision\":\"18b44161e041bf1d3a333ab5144b5b7b93f914d2\",\"revision\":\"18b44161e041\",\"runtime\":\"query\",\"runtime_library\":\"onnxruntime 1.31.1\",\"special_tokens\":true,\"token_cap\":256,\"tokenizer_library\":\"daulet/tokenizers 1.27.0\",\"tokenizer_revision\":\"18b44161e041bf1d3a333ab5144b5b7b93f914d2\",\"tokenizer_sha256\":\"c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386\",\"truncation\":false,\"weights_sha256\":\"dfd5136959a5ce87cd2874782dd4bca05e1cb3287efc2037d5460ac16ec4cfd8\"},\"query_hash\":\"63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c\",\"version\":1},\"gap_kinds\":{\"chunk_omission\":{\"blocking\":\"never\",\"class\":\"text\"},\"embedding_input_bytes_exceeded\":{\"blocking\":\"never\",\"class\":\"text\"},\"embedding_input_too_long\":{\"blocking\":\"never\",\"class\":\"text\"},\"mapping_dropped\":{\"blocking\":\"never\",\"class\":\"public\"},\"mapping_unresolved\":{\"blocking\":\"never\",\"class\":\"public\"},\"ocr_blocked\":{\"blocking\":\"always\",\"class\":\"text\"},\"ocr_flagged\":{\"blocking\":\"never\",\"class\":\"text\"},\"text_incomplete\":{\"blocking\":\"never\",\"class\":\"text\"},\"title_missing\":{\"blocking\":\"licensed\",\"class\":\"public\"}},\"lexical_recipe\":{\"algorithm\":\"bm25-vn-fold/1\",\"b\":0.75,\"collision\":\"sum-document\",\"dimensions\":1048576,\"hash\":\"fnv1a32\",\"input\":\"content-space-prefix\",\"k1\":1.2,\"normalization\":\"lower-nfd-mn-dd/1\",\"query\":\"hashed-presence\",\"tokenizer\":\"unicode-letter-digit/1\",\"version\":1},\"lexical_runtime\":{\"go\":\"go1.27.4\",\"golang.org/x/text\":\"v0.43.0\"},\"loader_version\":1,\"query_recipe_hash\":\"63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c\",\"retrieval_recipe\":{\"abstention\":{\"statistic\":\"first-hit-best-permitted-cosine\",\"status\":\"bootstrap-from-law\",\"threshold\":0.5297041131124263},\"dense_depth\":50,\"lexical_depth\":50,\"rrf\":{\"dense_weight\":1,\"k\":60,\"lexical_weight\":0.5,\"routed_lexical_weight\":1},\"source\":{\"calibration_sha256\":\"9264612fa2d933e3f0b1ee451e7707598192f9c66ed52224d48a9a327ca65113\",\"recipe_version\":3,\"release\":\"vn/20261115_3\"},\"status\":\"placeholder\",\"version\":2},\"schema_sha256\":\"bbd3003521f495fb771f5c1ed47bdbb7052bcd896eeb8d3b5cfe52316f7e0ddf\",\"schema_version\":1},\"version\":2}","input":{"name":"build","version":2,"parameters":{"calibration":"public-free-only-open/2","dense_recipe":{"version":1,"model":"AITeamVN/Vietnamese_Embedding_v2","dimensions":1024,"document":{"model":"AITeamVN/Vietnamese_Embedding_v2","revision":"18b44161e041","resolved_revision":"18b44161e041bf1d3a333ab5144b5b7b93f914d2","tokenizer_revision":"18b44161e041bf1d3a333ab5144b5b7b93f914d2","tokenizer_sha256":"c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386","weights_sha256":"e883eceded394613be5d7f86e4a735fb2d46f8eaa6b8bc350730f96f22ff12ec","dimensions":1024,"pooling":"cls","normalization":"l2-float32","input":"raw","runtime":"document","backend":"torch-mps","precision":"fp16","token_cap":2048,"special_tokens":true,"truncation":false,"language":"python 3.14.10","tokenizer_library":"transformers 5.22.2","runtime_library":"torch 2.15.0"},"document_hash":"13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec","query":{"model":"AITeamVN/Vietnamese_Embedding_v2","revision":"18b44161e041","resolved_revision":"18b44161e041bf1d3a333ab5144b5b7b93f914d2","tokenizer_revision":"18b44161e041bf1d3a333ab5144b5b7b93f914d2","tokenizer_sha256":"c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386","weights_sha256":"dfd5136959a5ce87cd2874782dd4bca05e1cb3287efc2037d5460ac16ec4cfd8","dimensions":1024,"pooling":"cls","normalization":"l2-float32","input":"raw","runtime":"query","backend":"onnxruntime-cpu","precision":"int8","token_cap":256,"special_tokens":true,"truncation":false,"language":"go 1.27.3","tokenizer_library":"daulet/tokenizers 1.27.0","runtime_library":"onnxruntime 1.31.1"},"query_hash":"63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c"},"gap_kinds":{"chunk_omission":{"class":"text","blocking":"never"},"embedding_input_bytes_exceeded":{"class":"text","blocking":"never"},"embedding_input_too_long":{"class":"text","blocking":"never"},"mapping_dropped":{"class":"public","blocking":"never"},"mapping_unresolved":{"class":"public","blocking":"never"},"ocr_blocked":{"class":"text","blocking":"always"},"ocr_flagged":{"class":"text","blocking":"never"},"text_incomplete":{"class":"text","blocking":"never"},"title_missing":{"class":"public","blocking":"licensed"}},"lexical_recipe":{"version":1,"algorithm":"bm25-vn-fold/1","input":"content-space-prefix","normalization":"lower-nfd-mn-dd/1","tokenizer":"unicode-letter-digit/1","hash":"fnv1a32","dimensions":1048576,"k1":1.2,"b":0.75,"query":"hashed-presence","collision":"sum-document"},"lexical_runtime":{"go":"go1.27.4","golang.org/x/text":"v0.43.0"},"loader_version":1,"query_recipe_hash":"63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c","retrieval_recipe":{"abstention":{"statistic":"first-hit-best-permitted-cosine","status":"bootstrap-from-law","threshold":0.5297041131124263},"dense_depth":50,"lexical_depth":50,"rrf":{"k":60,"dense_weight":1,"lexical_weight":0.5,"routed_lexical_weight":1},"source":{"calibration_sha256":"9264612fa2d933e3f0b1ee451e7707598192f9c66ed52224d48a9a327ca65113","recipe_version":3,"release":"vn/20261115_3"},"status":"placeholder","version":2},"schema_sha256":"bbd3003521f495fb771f5c1ed47bdbb7052bcd896eeb8d3b5cfe52316f7e0ddf","schema_version":1}}},
-{"name":"step_evaluate","sha256":"67f939f1d2217486a953b55343c023864b8f2e90b5525295bbda4994e8065eff","normalized":"{\"name\":\"evaluate\",\"parameters\":{\"floors\":1,\"invariant\":5,\"limit\":8,\"metrics\":1,\"previous_report\":\"paired-cases/2\"},\"version\":1}","input":{"name":"evaluate","version":1,"parameters":{"floors":1,"invariant":5,"limit":8,"metrics":1,"previous_report":"paired-cases/2"}}},
-{"name":"encoding_edges","sha256":"fa1bd664b5496f14e10e7bf49f6184eb16e3ac45a28564d7559ba938589f938e","normalized":"{\"\":7,\"\\u003ckey\\u003e\":5,\"Z\":1,\"a\":2,\"at_micro\":0.000001,\"below_e21\":999999999999999900000,\"below_micro\":9.999e-7,\"controls\":\"\\b\\f\\n\\r\\t\\u0000\\u0001\\u001f\",\"e20\":100000000000000000000,\"e21\":1e+21,\"e22_digits\":1.2345e+22,\"e_minus_10\":1.5e-10,\"e_minus_7\":1e-7,\"e_minus_neg\":-2.5e-9,\"emoji\":\"😀\",\"empty_array\":[],\"empty_object\":{},\"false\":false,\"html\":\"\\u003ca href='x'\\u003e\\u0026amp;\\u003c/a\\u003e\",\"int\":512,\"invalid_utf8\":\"a�b\",\"k1\":1.2,\"large_int\":9007199254740992,\"max_float\":1.7976931348623157e+308,\"max_int\":9223372036854776000,\"min_float\":5e-324,\"negative\":-2.5,\"nested\":{\"a\":[],\"z\":[1,\"two\",3.5,null,true,false,{}]},\"null\":null,\"quote\":\"\\\"back\\\\slash/\",\"replacement\":\"�\",\"separators\":\"a\\u2028b\\u2029c\",\"tenth\":0.1,\"third\":0.3333333333333333,\"three_quarters\":0.75,\"true\":true,\"vietnamese\":\"Điều 1 – Nghị định số 13/2023/NĐ-CP\",\"zero\":0,\"é\":3,\"￿key\":6,\"😀key\":4}","input":{"":7,"\u003ckey\u003e":5,"Z":1,"a":2,"at_micro":0.000001,"below_e21":999999999999999900000,"below_micro":9.999e-7,"controls":"\b\f\n\r\t\u0000\u0001\u001f","e20":100000000000000000000,"e21":1e+21,"e22_digits":1.2345e+22,"e_minus_10":1.5e-10,"e_minus_7":1e-7,"e_minus_neg":-2.5e-9,"emoji":"😀","empty_array":[],"empty_object":{},"false":false,"html":"\u003ca href='x'\u003e\u0026amp;\u003c/a\u003e","int":512,"invalid_utf8":"a�b","k1":1.2,"large_int":9007199254740993,"max_float":1.7976931348623157e+308,"max_int":9223372036854775807,"min_float":5e-324,"negative":-2.5,"nested":{"a":[],"z":[1,"two",3.5,null,true,false,{}]},"null":null,"quote":"\"back\\slash/","replacement":"�","separators":"a\u2028b\u2029c","tenth":0.1,"third":0.3333333333333333,"three_quarters":0.75,"true":true,"vietnamese":"Điều 1 – Nghị định số 13/2023/NĐ-CP","zero":0,"é":3,"￿key":6,"😀key":4}},
-{"name":"negative_zero","sha256":"9c42950cfdae8b61c50c4abc09ce4eaf0ddf4b607f8324d8f1f07e8fd2c93b20","normalized":"{\"value\":-0}","input":{"value":-0}}
-]}
+{
+  "vectors": [
+    {
+      "name": "step_snapshot",
+      "sha256": "2351125382fc815dca3278dd1db2c241bca501bb0fff7b721f707af6dc654aa1",
+      "normalized_base64": "eyJuYW1lIjoic25hcHNob3QiLCJwYXJhbWV0ZXJzIjp7ImdhcF9raW5kcyI6eyJjaHVua19vbWlzc2lvbiI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sImVtYmVkZGluZ19pbnB1dF9ieXRlc19leGNlZWRlZCI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sImVtYmVkZGluZ19pbnB1dF90b29fbG9uZyI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sIm1hcHBpbmdfZHJvcHBlZCI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJwdWJsaWMifSwibWFwcGluZ191bnJlc29sdmVkIjp7ImJsb2NraW5nIjoibmV2ZXIiLCJjbGFzcyI6InB1YmxpYyJ9LCJvY3JfYmxvY2tlZCI6eyJibG9ja2luZyI6ImFsd2F5cyIsImNsYXNzIjoidGV4dCJ9LCJvY3JfZmxhZ2dlZCI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sInRleHRfaW5jb21wbGV0ZSI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sInRpdGxlX21pc3NpbmciOnsiYmxvY2tpbmciOiJsaWNlbnNlZCIsImNsYXNzIjoicHVibGljIn19LCJwcmV2aW91c19yZXBvcnQiOiJ0cmFjaHVhbi9wcmV2aW91cy1yZXBvcnQuanNvbiIsInB1YmxpY19mbG9vcnMiOiJzb3VyY2VzL2ZyYW1ld29ya3MtZmxvb3JzLnlhbWwifSwidmVyc2lvbiI6Mn0=",
+      "value": {
+        "name": "snapshot",
+        "version": 2,
+        "parameters": {
+          "gap_kinds": {
+            "chunk_omission": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "embedding_input_bytes_exceeded": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "embedding_input_too_long": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "mapping_dropped": {
+              "class": "public",
+              "blocking": "never"
+            },
+            "mapping_unresolved": {
+              "class": "public",
+              "blocking": "never"
+            },
+            "ocr_blocked": {
+              "class": "text",
+              "blocking": "always"
+            },
+            "ocr_flagged": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "text_incomplete": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "title_missing": {
+              "class": "public",
+              "blocking": "licensed"
+            }
+          },
+          "previous_report": "trachuan/previous-report.json",
+          "public_floors": "sources/frameworks-floors.yaml"
+        }
+      }
+    },
+    {
+      "name": "step_parse",
+      "sha256": "224767047db84e0c977ea5777671cfe0c464bf329e6dc1370be7e9a5cfee5620",
+      "normalized_base64": "eyJuYW1lIjoicGFyc2UiLCJwYXJhbWV0ZXJzIjp7InNjaGVtYSI6ImNvbnRyb2xzLzEifSwidmVyc2lvbiI6MX0=",
+      "value": {
+        "name": "parse",
+        "version": 1,
+        "parameters": {
+          "schema": "controls/1"
+        }
+      }
+    },
+    {
+      "name": "step_relate",
+      "sha256": "5fa85e25e8c7e3d87aa5c74d2a66c20cc6a51b6d78129d6bc9c9d59991fbb083",
+      "normalized_base64": "eyJuYW1lIjoicmVsYXRlIiwicGFyYW1ldGVycyI6eyJidXNpbmVzc19rZXlfZm9ybXMiOnsiY2l0YXRpb24iOiJeWyEtfl0rKCBbIS1+XSspKiQiLCJjaXRhdGlvbl9tYXhfYnl0ZXMiOjY0LCJjaXRhdGlvbl9taW5fYnl0ZXMiOjEsImNvZGUiOiJeW2Etel1bYS16MC05XSooLVthLXowLTldKykqJCIsInZlcnNpb24iOiJeWzAtOWEtel0rKFsuKy1dWzAtOWEtel0rKSokIn0sImdhcF9jb3VudHMiOiJraW5kLXZlcnNpb24tc3ViamVjdC8xIiwibWFwcGluZ19zY29wZSI6ImNyb3NzLXZlcnNpb24vMiIsInNjaGVtYSI6ImVkZ2VzLzEifSwidmVyc2lvbiI6NH0=",
+      "value": {
+        "name": "relate",
+        "version": 4,
+        "parameters": {
+          "business_key_forms": {
+            "citation": "^[!-~]+( [!-~]+)*$",
+            "citation_max_bytes": 64,
+            "citation_min_bytes": 1,
+            "code": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+            "version": "^[0-9a-z]+([.+-][0-9a-z]+)*$"
+          },
+          "gap_counts": "kind-version-subject/1",
+          "mapping_scope": "cross-version/2",
+          "schema": "edges/1"
+        }
+      }
+    },
+    {
+      "name": "step_chunk",
+      "sha256": "96c08559e1dfa16cbbdb19a5bfdb6210461ec584aea84d6caabe1b9b0dc070b3",
+      "normalized_base64": "eyJuYW1lIjoiY2h1bmsiLCJwYXJhbWV0ZXJzIjp7ImxpbWl0Ijo1MTIsInByZWZpeF9mb3JtYXRfdmVyc2lvbiI6MSwic2NoZW1hIjoiY2h1bmtzLzEifSwidmVyc2lvbiI6MX0=",
+      "value": {
+        "name": "chunk",
+        "version": 1,
+        "parameters": {
+          "limit": 512,
+          "prefix_format_version": 1,
+          "schema": "chunks/1"
+        }
+      }
+    },
+    {
+      "name": "step_embed",
+      "sha256": "c3ae26c86b6112b5f3b1f7bc8f16dd2f00a2513d156b27c2d5497ae356da5deb",
+      "normalized_base64": "eyJuYW1lIjoiZW1iZWQiLCJwYXJhbWV0ZXJzIjp7ImVtYmVkZGluZ19yZWNpcGVfaGFzaCI6IjEzYTgzMmQ1YjA3NmE0ZWNhYzc3ZWE3M2MzNWM1ZmFlOGZlNzM1YzdhYTI3NjNjNmI3NGRmZWY2NWQxNGQ1ZWMiLCJsYXdfc3RhZ2VfcmVjaXBlX2hhc2giOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIn0sInZlcnNpb24iOjF9",
+      "value": {
+        "name": "embed",
+        "version": 1,
+        "parameters": {
+          "embedding_recipe_hash": "13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec",
+          "law_stage_recipe_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "name": "step_build",
+      "sha256": "4b593458da3e768eeaf5235cb1f3b4350a9b8230b57176fd2e82ffbe77f15585",
+      "normalized_base64": "eyJuYW1lIjoiYnVpbGQiLCJwYXJhbWV0ZXJzIjp7ImNhbGlicmF0aW9uIjoicHVibGljLWZyZWUtb25seS1vcGVuLzIiLCJkZW5zZV9yZWNpcGUiOnsiZGltZW5zaW9ucyI6MTAyNCwiZG9jdW1lbnQiOnsiYmFja2VuZCI6InRvcmNoLW1wcyIsImRpbWVuc2lvbnMiOjEwMjQsImlucHV0IjoicmF3IiwibGFuZ3VhZ2UiOiJweXRob24gMy4xNC4xMCIsIm1vZGVsIjoiQUlUZWFtVk4vVmlldG5hbWVzZV9FbWJlZGRpbmdfdjIiLCJub3JtYWxpemF0aW9uIjoibDItZmxvYXQzMiIsInBvb2xpbmciOiJjbHMiLCJwcmVjaXNpb24iOiJmcDE2IiwicmVzb2x2ZWRfcmV2aXNpb24iOiIxOGI0NDE2MWUwNDFiZjFkM2EzMzNhYjUxNDRiNWI3YjkzZjkxNGQyIiwicmV2aXNpb24iOiIxOGI0NDE2MWUwNDEiLCJydW50aW1lIjoiZG9jdW1lbnQiLCJydW50aW1lX2xpYnJhcnkiOiJ0b3JjaCAyLjE1LjAiLCJzcGVjaWFsX3Rva2VucyI6dHJ1ZSwidG9rZW5fY2FwIjoyMDQ4LCJ0b2tlbml6ZXJfbGlicmFyeSI6InRyYW5zZm9ybWVycyA1LjIyLjIiLCJ0b2tlbml6ZXJfcmV2aXNpb24iOiIxOGI0NDE2MWUwNDFiZjFkM2EzMzNhYjUxNDRiNWI3YjkzZjkxNGQyIiwidG9rZW5pemVyX3NoYTI1NiI6ImM1NThiZGYxZGJiNjM3NmQxMWM3YTdjZWUxMjljYzEyNzkyYTIwNGU4Y2U2MmQwZjZkYzQzZGQ0MWY1M2MzODYiLCJ0cnVuY2F0aW9uIjpmYWxzZSwid2VpZ2h0c19zaGEyNTYiOiJlODgzZWNlZGVkMzk0NjEzYmU1ZDdmODZlNGE3MzVmYjJkNDZmOGVhYTZiOGJjMzUwNzMwZjk2ZjIyZmYxMmVjIn0sImRvY3VtZW50X2hhc2giOiIxM2E4MzJkNWIwNzZhNGVjYWM3N2VhNzNjMzVjNWZhZThmZTczNWM3YWEyNzYzYzZiNzRkZmVmNjVkMTRkNWVjIiwibW9kZWwiOiJBSVRlYW1WTi9WaWV0bmFtZXNlX0VtYmVkZGluZ192MiIsInF1ZXJ5Ijp7ImJhY2tlbmQiOiJvbm54cnVudGltZS1jcHUiLCJkaW1lbnNpb25zIjoxMDI0LCJpbnB1dCI6InJhdyIsImxhbmd1YWdlIjoiZ28gMS4yNy4zIiwibW9kZWwiOiJBSVRlYW1WTi9WaWV0bmFtZXNlX0VtYmVkZGluZ192MiIsIm5vcm1hbGl6YXRpb24iOiJsMi1mbG9hdDMyIiwicG9vbGluZyI6ImNscyIsInByZWNpc2lvbiI6ImludDgiLCJyZXNvbHZlZF9yZXZpc2lvbiI6IjE4YjQ0MTYxZTA0MWJmMWQzYTMzM2FiNTE0NGI1YjdiOTNmOTE0ZDIiLCJyZXZpc2lvbiI6IjE4YjQ0MTYxZTA0MSIsInJ1bnRpbWUiOiJxdWVyeSIsInJ1bnRpbWVfbGlicmFyeSI6Im9ubnhydW50aW1lIDEuMzEuMSIsInNwZWNpYWxfdG9rZW5zIjp0cnVlLCJ0b2tlbl9jYXAiOjI1NiwidG9rZW5pemVyX2xpYnJhcnkiOiJkYXVsZXQvdG9rZW5pemVycyAxLjI3LjAiLCJ0b2tlbml6ZXJfcmV2aXNpb24iOiIxOGI0NDE2MWUwNDFiZjFkM2EzMzNhYjUxNDRiNWI3YjkzZjkxNGQyIiwidG9rZW5pemVyX3NoYTI1NiI6ImM1NThiZGYxZGJiNjM3NmQxMWM3YTdjZWUxMjljYzEyNzkyYTIwNGU4Y2U2MmQwZjZkYzQzZGQ0MWY1M2MzODYiLCJ0cnVuY2F0aW9uIjpmYWxzZSwid2VpZ2h0c19zaGEyNTYiOiJkZmQ1MTM2OTU5YTVjZTg3Y2QyODc0NzgyZGQ0YmNhMDVlMWNiMzI4N2VmYzIwMzdkNTQ2MGFjMTZlYzRjZmQ4In0sInF1ZXJ5X2hhc2giOiI2M2FjMzVhZjYxNTE5NmNlZGE2N2ZkYTA1ZmI1YWJkYmZkMzAxMjhlZjcyNzU4OTlmNGNmNjIxZmNhZWQzMzNjIiwidmVyc2lvbiI6MX0sImdhcF9raW5kcyI6eyJjaHVua19vbWlzc2lvbiI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sImVtYmVkZGluZ19pbnB1dF9ieXRlc19leGNlZWRlZCI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sImVtYmVkZGluZ19pbnB1dF90b29fbG9uZyI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sIm1hcHBpbmdfZHJvcHBlZCI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJwdWJsaWMifSwibWFwcGluZ191bnJlc29sdmVkIjp7ImJsb2NraW5nIjoibmV2ZXIiLCJjbGFzcyI6InB1YmxpYyJ9LCJvY3JfYmxvY2tlZCI6eyJibG9ja2luZyI6ImFsd2F5cyIsImNsYXNzIjoidGV4dCJ9LCJvY3JfZmxhZ2dlZCI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sInRleHRfaW5jb21wbGV0ZSI6eyJibG9ja2luZyI6Im5ldmVyIiwiY2xhc3MiOiJ0ZXh0In0sInRpdGxlX21pc3NpbmciOnsiYmxvY2tpbmciOiJsaWNlbnNlZCIsImNsYXNzIjoicHVibGljIn19LCJsZXhpY2FsX3JlY2lwZSI6eyJhbGdvcml0aG0iOiJibTI1LXZuLWZvbGQvMSIsImIiOjAuNzUsImNvbGxpc2lvbiI6InN1bS1kb2N1bWVudCIsImRpbWVuc2lvbnMiOjEwNDg1NzYsImhhc2giOiJmbnYxYTMyIiwiaW5wdXQiOiJjb250ZW50LXNwYWNlLXByZWZpeCIsImsxIjoxLjIsIm5vcm1hbGl6YXRpb24iOiJsb3dlci1uZmQtbW4tZGQvMSIsInF1ZXJ5IjoiaGFzaGVkLXByZXNlbmNlIiwidG9rZW5pemVyIjoidW5pY29kZS1sZXR0ZXItZGlnaXQvMSIsInZlcnNpb24iOjF9LCJsZXhpY2FsX3J1bnRpbWUiOnsiZ28iOiJnbzEuMjcuNCIsImdvbGFuZy5vcmcveC90ZXh0IjoidjAuNDMuMCJ9LCJsb2FkZXJfdmVyc2lvbiI6MSwicXVlcnlfcmVjaXBlX2hhc2giOiI2M2FjMzVhZjYxNTE5NmNlZGE2N2ZkYTA1ZmI1YWJkYmZkMzAxMjhlZjcyNzU4OTlmNGNmNjIxZmNhZWQzMzNjIiwicmV0cmlldmFsX3JlY2lwZSI6eyJhYnN0ZW50aW9uIjp7InN0YXRpc3RpYyI6ImZpcnN0LWhpdC1iZXN0LXBlcm1pdHRlZC1jb3NpbmUiLCJzdGF0dXMiOiJib290c3RyYXAtZnJvbS1sYXciLCJ0aHJlc2hvbGQiOjAuNTI5NzA0MTEzMTEyNDI2M30sImRlbnNlX2RlcHRoIjo1MCwibGV4aWNhbF9kZXB0aCI6NTAsInJyZiI6eyJkZW5zZV93ZWlnaHQiOjEsImsiOjYwLCJsZXhpY2FsX3dlaWdodCI6MC41LCJyb3V0ZWRfbGV4aWNhbF93ZWlnaHQiOjF9LCJzb3VyY2UiOnsiY2FsaWJyYXRpb25fc2hhMjU2IjoiOTI2NDYxMmZhMmQ5MzNlM2YwYjFlZTQ1MWU3NzA3NTk4MTkyZjljNjZlZDUyMjI0ZDQ4YTlhMzI3Y2E2NTExMyIsInJlY2lwZV92ZXJzaW9uIjozLCJyZWxlYXNlIjoidm4vMjAyNjExMTVfMyJ9LCJzdGF0dXMiOiJwbGFjZWhvbGRlciIsInZlcnNpb24iOjJ9LCJzY2hlbWFfc2hhMjU2IjoiYmJkMzAwMzUyMWY0OTVmYjc3MWY1YzFlZDQ3YmRiYjcwNTJiY2Q4OTZlZWI4ZDNiNWNmZTUyMzE2ZjdlMGRkZiIsInNjaGVtYV92ZXJzaW9uIjoxfSwidmVyc2lvbiI6Mn0=",
+      "value": {
+        "name": "build",
+        "version": 2,
+        "parameters": {
+          "calibration": "public-free-only-open/2",
+          "dense_recipe": {
+            "version": 1,
+            "model": "AITeamVN/Vietnamese_Embedding_v2",
+            "dimensions": 1024,
+            "document": {
+              "model": "AITeamVN/Vietnamese_Embedding_v2",
+              "revision": "18b44161e041",
+              "resolved_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
+              "tokenizer_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
+              "tokenizer_sha256": "c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386",
+              "weights_sha256": "e883eceded394613be5d7f86e4a735fb2d46f8eaa6b8bc350730f96f22ff12ec",
+              "dimensions": 1024,
+              "pooling": "cls",
+              "normalization": "l2-float32",
+              "input": "raw",
+              "runtime": "document",
+              "backend": "torch-mps",
+              "precision": "fp16",
+              "token_cap": 2048,
+              "special_tokens": true,
+              "truncation": false,
+              "language": "python 3.14.10",
+              "tokenizer_library": "transformers 5.22.2",
+              "runtime_library": "torch 2.15.0"
+            },
+            "document_hash": "13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec",
+            "query": {
+              "model": "AITeamVN/Vietnamese_Embedding_v2",
+              "revision": "18b44161e041",
+              "resolved_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
+              "tokenizer_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
+              "tokenizer_sha256": "c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386",
+              "weights_sha256": "dfd5136959a5ce87cd2874782dd4bca05e1cb3287efc2037d5460ac16ec4cfd8",
+              "dimensions": 1024,
+              "pooling": "cls",
+              "normalization": "l2-float32",
+              "input": "raw",
+              "runtime": "query",
+              "backend": "onnxruntime-cpu",
+              "precision": "int8",
+              "token_cap": 256,
+              "special_tokens": true,
+              "truncation": false,
+              "language": "go 1.27.3",
+              "tokenizer_library": "daulet/tokenizers 1.27.0",
+              "runtime_library": "onnxruntime 1.31.1"
+            },
+            "query_hash": "63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c"
+          },
+          "gap_kinds": {
+            "chunk_omission": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "embedding_input_bytes_exceeded": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "embedding_input_too_long": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "mapping_dropped": {
+              "class": "public",
+              "blocking": "never"
+            },
+            "mapping_unresolved": {
+              "class": "public",
+              "blocking": "never"
+            },
+            "ocr_blocked": {
+              "class": "text",
+              "blocking": "always"
+            },
+            "ocr_flagged": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "text_incomplete": {
+              "class": "text",
+              "blocking": "never"
+            },
+            "title_missing": {
+              "class": "public",
+              "blocking": "licensed"
+            }
+          },
+          "lexical_recipe": {
+            "version": 1,
+            "algorithm": "bm25-vn-fold/1",
+            "input": "content-space-prefix",
+            "normalization": "lower-nfd-mn-dd/1",
+            "tokenizer": "unicode-letter-digit/1",
+            "hash": "fnv1a32",
+            "dimensions": 1048576,
+            "k1": 1.2,
+            "b": 0.75,
+            "query": "hashed-presence",
+            "collision": "sum-document"
+          },
+          "lexical_runtime": {
+            "go": "go1.27.4",
+            "golang.org/x/text": "v0.43.0"
+          },
+          "loader_version": 1,
+          "query_recipe_hash": "63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c",
+          "retrieval_recipe": {
+            "abstention": {
+              "statistic": "first-hit-best-permitted-cosine",
+              "status": "bootstrap-from-law",
+              "threshold": 0.5297041131124263
+            },
+            "dense_depth": 50,
+            "lexical_depth": 50,
+            "rrf": {
+              "k": 60,
+              "dense_weight": 1,
+              "lexical_weight": 0.5,
+              "routed_lexical_weight": 1
+            },
+            "source": {
+              "calibration_sha256": "9264612fa2d933e3f0b1ee451e7707598192f9c66ed52224d48a9a327ca65113",
+              "recipe_version": 3,
+              "release": "vn/20261115_3"
+            },
+            "status": "placeholder",
+            "version": 2
+          },
+          "schema_sha256": "bbd3003521f495fb771f5c1ed47bdbb7052bcd896eeb8d3b5cfe52316f7e0ddf",
+          "schema_version": 1
+        }
+      }
+    },
+    {
+      "name": "step_evaluate",
+      "sha256": "67f939f1d2217486a953b55343c023864b8f2e90b5525295bbda4994e8065eff",
+      "normalized_base64": "eyJuYW1lIjoiZXZhbHVhdGUiLCJwYXJhbWV0ZXJzIjp7ImZsb29ycyI6MSwiaW52YXJpYW50Ijo1LCJsaW1pdCI6OCwibWV0cmljcyI6MSwicHJldmlvdXNfcmVwb3J0IjoicGFpcmVkLWNhc2VzLzIifSwidmVyc2lvbiI6MX0=",
+      "value": {
+        "name": "evaluate",
+        "version": 1,
+        "parameters": {
+          "floors": 1,
+          "invariant": 5,
+          "limit": 8,
+          "metrics": 1,
+          "previous_report": "paired-cases/2"
+        }
+      }
+    },
+    {
+      "name": "encoding_edges",
+      "sha256": "fa1bd664b5496f14e10e7bf49f6184eb16e3ac45a28564d7559ba938589f938e",
+      "normalized_base64": "eyIiOjcsIlx1MDAzY2tleVx1MDAzZSI6NSwiWiI6MSwiYSI6MiwiYXRfbWljcm8iOjAuMDAwMDAxLCJiZWxvd19lMjEiOjk5OTk5OTk5OTk5OTk5OTkwMDAwMCwiYmVsb3dfbWljcm8iOjkuOTk5ZS03LCJjb250cm9scyI6IlxiXGZcblxyXHRcdTAwMDBcdTAwMDFcdTAwMWZ/IiwiZTIwIjoxMDAwMDAwMDAwMDAwMDAwMDAwMDAsImUyMSI6MWUrMjEsImUyMl9kaWdpdHMiOjEuMjM0NWUrMjIsImVfbWludXNfMTAiOjEuNWUtMTAsImVfbWludXNfNyI6MWUtNywiZV9taW51c19uZWciOi0yLjVlLTksImVtb2ppIjoi8J+YgCIsImVtcHR5X2FycmF5IjpbXSwiZW1wdHlfb2JqZWN0Ijp7fSwiZmFsc2UiOmZhbHNlLCJodG1sIjoiXHUwMDNjYSBocmVmPSd4J1x1MDAzZVx1MDAyNmFtcDtcdTAwM2MvYVx1MDAzZSIsImludCI6NTEyLCJpbnZhbGlkX3V0ZjgiOiJh77+9YiIsImsxIjoxLjIsImxhcmdlX2ludCI6OTAwNzE5OTI1NDc0MDk5MiwibWF4X2Zsb2F0IjoxLjc5NzY5MzEzNDg2MjMxNTdlKzMwOCwibWF4X2ludCI6OTIyMzM3MjAzNjg1NDc3NjAwMCwibWluX2Zsb2F0Ijo1ZS0zMjQsIm5lZ2F0aXZlIjotMi41LCJuZXN0ZWQiOnsiYSI6W10sInoiOlsxLCJ0d28iLDMuNSxudWxsLHRydWUsZmFsc2Use31dfSwibnVsbCI6bnVsbCwicXVvdGUiOiJcImJhY2tcXHNsYXNoLyIsInJlcGxhY2VtZW50Ijoi77+9Iiwic2VwYXJhdG9ycyI6ImFcdTIwMjhiXHUyMDI5YyIsInRlbnRoIjowLjEsInRoaXJkIjowLjMzMzMzMzMzMzMzMzMzMzMsInRocmVlX3F1YXJ0ZXJzIjowLjc1LCJ0cnVlIjp0cnVlLCJ2aWV0bmFtZXNlIjoixJBp4buBdSAxIOKAkyBOZ2jhu4sgxJHhu4tuaCBz4buRIDEzLzIwMjMvTsSQLUNQIiwiemVybyI6MCwiw6kiOjMsIu+/v2tleSI6Niwi8J+YgGtleSI6NH0=",
+      "value": {
+        "": 7,
+        "\u003ckey\u003e": 5,
+        "Z": 1,
+        "a": 2,
+        "at_micro": 0.000001,
+        "below_e21": 999999999999999900000,
+        "below_micro": 9.999e-7,
+        "controls": "\b\f\n\r\t\u0000\u0001\u001f",
+        "e20": 100000000000000000000,
+        "e21": 1e+21,
+        "e22_digits": 1.2345e+22,
+        "e_minus_10": 1.5e-10,
+        "e_minus_7": 1e-7,
+        "e_minus_neg": -2.5e-9,
+        "emoji": "😀",
+        "empty_array": [],
+        "empty_object": {},
+        "false": false,
+        "html": "\u003ca href='x'\u003e\u0026amp;\u003c/a\u003e",
+        "int": 512,
+        "invalid_utf8": "a�b",
+        "k1": 1.2,
+        "large_int": 9007199254740993,
+        "max_float": 1.7976931348623157e+308,
+        "max_int": 9223372036854775807,
+        "min_float": 5e-324,
+        "negative": -2.5,
+        "nested": {
+          "a": [],
+          "z": [
+            1,
+            "two",
+            3.5,
+            null,
+            true,
+            false,
+            {}
+          ]
+        },
+        "null": null,
+        "quote": "\"back\\slash/",
+        "replacement": "�",
+        "separators": "a\u2028b\u2029c",
+        "tenth": 0.1,
+        "third": 0.3333333333333333,
+        "three_quarters": 0.75,
+        "true": true,
+        "vietnamese": "Điều 1 – Nghị định số 13/2023/NĐ-CP",
+        "zero": 0,
+        "é": 3,
+        "￿key": 6,
+        "😀key": 4
+      }
+    },
+    {
+      "name": "negative_zero",
+      "sha256": "9c42950cfdae8b61c50c4abc09ce4eaf0ddf4b607f8324d8f1f07e8fd2c93b20",
+      "normalized_base64": "eyJ2YWx1ZSI6LTB9",
+      "value": {
+        "value": -0
+      }
+    }
+  ]
+}

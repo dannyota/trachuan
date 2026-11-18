@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from frameworks_test_support import PREVIOUS, REL, STEPS, digest, rebind_build, state, write_objects
+from frameworks_test_support import PREVIOUS, REL, STEPS, digest, object_bytes, rebind_build, state, write_objects
 
 
 class FrameworksReleaseChecksTest(unittest.TestCase):
@@ -24,6 +24,7 @@ class FrameworksReleaseChecksTest(unittest.TestCase):
         self.assertEqual(facts.row['version_count'], 3)
         self.assertIs(type(facts.row['control_count']), int)
         self.assertIsNone(facts.report['previous'])
+        self.assertEqual(facts.files, {name: (digest(data), len(data)) for name, data in object_bytes(self.value).items()})
 
     def refuse(self, change):
         value = state()

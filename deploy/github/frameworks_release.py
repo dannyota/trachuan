@@ -7,6 +7,7 @@ from manifest import require_match
 
 BUCKET = 'trachuan-frameworks-releases'
 RELEASE = r'[0-9]{8}(?:_[0-9]{1,2})?'
+HASH = r'[0-9a-f]{64}'
 LIMITS = {'frameworks.dump': 16 * 1024**3, 'build.json': 16 * 1024**2, 'evaluate.json': 16 * 1024**2,
           'report.json': 16 * 1024**2, 'release.json': 16 * 1024**2}
 ROW_STEPS = ('snapshot', 'parse', 'relate', 'chunk', 'embed')
@@ -19,10 +20,15 @@ class Facts(NamedTuple):
     dump_size: int
     report_sha256: str
     build_sha256: str
+    files: dict
 
 
 def release_id(rel):
     require_match(RELEASE, rel, 'frameworks release')
+
+
+def report_id(value):
+    require_match(HASH, value, 'report SHA-256')
 
 
 def object_key(rel, name):
@@ -51,7 +57,7 @@ def check_previous(previous):
     if not isinstance(previous, dict) or set(previous) != {'rel', 'report_sha256'}:
         raise ValueError('invalid previous reference')
     release_id(previous['rel'])
-    require_match(r'[0-9a-f]{64}', previous['report_sha256'], 'previous report hash')
+    require_match(HASH, previous['report_sha256'], 'previous report hash')
 
 
 def check_recipes(report, row_numbers, build_numbers, evaluate_numbers):
@@ -62,7 +68,7 @@ def check_recipes(report, row_numbers, build_numbers, evaluate_numbers):
     sources['build'] = build_numbers.get('recipe')
     sources['evaluate'] = evaluate_numbers.get('recipe')
     for name, recipe in sources.items():
-        require_match(r'[0-9a-f]{64}', hashes.get(name), name + ' recipe hash')
+        require_match(HASH, hashes.get(name), name + ' recipe hash')
         if recipe_sha256(recipe) != hashes[name]:
             raise ValueError(name + ' recipe differs from report')
 
@@ -73,8 +79,8 @@ def validate_release(rel, paths):
         raise ValueError('invalid frameworks object set')
     report_bytes, report, _ = read_json(paths, 'report.json')
     build_bytes, build, build_numbers = read_json(paths, 'build.json')
-    _, _, evaluate_numbers = read_json(paths, 'evaluate.json')
-    _, row, row_numbers = read_json(paths, 'release.json')
+    evaluate_bytes, _, evaluate_numbers = read_json(paths, 'evaluate.json')
+    row_bytes, row, row_numbers = read_json(paths, 'release.json')
     if report.get('quality_pass') is not True:
         raise ValueError('report quality_pass must be true')
     dump_size = object_size(paths['frameworks.dump'], 'frameworks.dump')
@@ -95,4 +101,8 @@ def validate_release(rel, paths):
     if 'previous' not in report:
         raise ValueError('report previous reference missing')
     check_previous(report['previous'])
-    return Facts(row, report, dump_sha256, dump_size, hashlib.sha256(report_bytes).hexdigest(), build_sha256)
+    files = {name: (hashlib.sha256(data).hexdigest(), len(data))
+             for name, data in (('build.json', build_bytes), ('evaluate.json', evaluate_bytes),
+                                ('report.json', report_bytes), ('release.json', row_bytes))}
+    files['frameworks.dump'] = (dump_sha256, dump_size)
+    return Facts(row, report, dump_sha256, dump_size, files['report.json'][0], build_sha256, files)

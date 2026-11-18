@@ -6,6 +6,7 @@ from pathlib import Path
 REL = '20990102'
 PREVIOUS = '20990101'
 SENTINEL = 'LICENSED-SENTINEL-TEXT'
+VECTORS = Path(__file__).with_name('testdata') / 'frameworks-recipe-vectors.json'
 COMMIT = 'a' * 40
 OBJECTS = {'frameworks.dump': 'build/frameworks.dump', 'build.json': 'build/build.json',
            'evaluate.json': 'evaluate/manifest.json', 'report.json': 'evaluate/report.json',
@@ -17,6 +18,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import resource
 import shutil
 import signal
 import sys
@@ -61,6 +63,7 @@ def tags():
 
 with open(os.environ['FAKE_LOG'], 'a') as stream:
     stream.write(json.dumps(dict(name=name, args=args, tmpdir=temporary, tmp_mode=mode, cwd=os.getcwd(),
+                                 core=list(resource.getrlimit(resource.RLIMIT_CORE)),
                                  checksum=os.getenv('AWS_REQUEST_CHECKSUM_CALCULATION'), config_path=config,
                                  config=Path(config).read_text() if config and Path(config).exists() else '')) + '\n')
 if os.getenv('FAKE_TERMINATE_ON') in args:
@@ -77,6 +80,10 @@ if name == 'aws':
     filename = key.rsplit('/', 1)[-1]
     path = remote / option('--bucket') / key if key else None
     if 'list-objects-v2' in args:
+        changed = os.getenv('FAKE_CHANGE_FILE')
+        if changed:
+            data = Path(changed).read_bytes()
+            Path(changed).write_bytes(data + b' ' if os.getenv('FAKE_CHANGE_GROW') else data[:-1] + bytes([data[-1] ^ 1]))
         root = remote / option('--bucket') / option('--prefix')
         print(sum(item.is_file() for item in root.rglob('*')) if root.exists() else 0)
     elif 'head-object' in args:
@@ -189,12 +196,24 @@ def step(name, **parameters):
     return dict(name=name, version=1, parameters=parameters)
 
 
+def vector_values():
+    return {item['name']: item['value'] for item in json.loads(VECTORS.read_text())['vectors']}
+
+
+def release_recipes():
+    values = vector_values()
+    parameters = values['step_build']['parameters']
+    retrieval = parameters['retrieval_recipe']
+    retrieval['status'] = 'measured'
+    retrieval['abstention'].update(status='measured', threshold=0.5, calibration_sha256='c' * 64)
+    return dict(dense=parameters['dense_recipe'], chunk=values['step_chunk'], lexical=parameters['lexical_recipe'],
+                retrieval=retrieval)
+
+
 def state(rel=REL):
-    row = dict(kind='frameworks', rel=rel, schema_version=1,
-               dense_recipe=dict(version=1, model='synthetic', dimensions=4, query_hash='e' * 64, document_hash='f' * 64),
-               chunk_recipe=step('chunk', limit=512, schema='chunks/1', prefix_format_version=1),
-               lexical_recipe=dict(version=1, k1=1.2, b=0.75),
-               retrieval_recipe=dict(version=2, status='measured', abstention=dict(threshold=0.5)),
+    recipes = release_recipes()
+    row = dict(kind='frameworks', rel=rel, schema_version=1, dense_recipe=recipes['dense'], chunk_recipe=recipes['chunk'],
+               lexical_recipe=recipes['lexical'], retrieval_recipe=recipes['retrieval'],
                snapshot_recipe=step('snapshot', public_floors='sources/frameworks-floors.yaml'),
                parse_recipe=step('parse', schema='controls/1'),
                relate_recipe=step('relate', schema='edges/1', forms=['<a>&b']),
@@ -226,6 +245,10 @@ def bind(value):
 def rebind_build(value):
     value['report']['build_manifest_sha256'] = digest(encoded(value['build']))
     return value
+
+
+def report_hash(value):
+    return digest(encoded(value['report']))
 
 
 def object_bytes(value):

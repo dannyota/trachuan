@@ -35,7 +35,7 @@ print(json.dumps({'hashes':hashes,'refused':refused}))
 
 type frameworksRecipeVector struct {
 	SHA256 string          `json:"sha256"`
-	Input  json.RawMessage `json:"input"`
+	Input  json.RawMessage `json:"value"`
 }
 
 type frameworksRecipeRequest struct {

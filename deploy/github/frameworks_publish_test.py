@@ -10,8 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from frameworks_test_support import (COMMIT, PREVIOUS, REL, SENTINEL, calls, canonical, digest, install_fakes,
-                                     manifest_object, object_bytes, publish_tag, state, write_objects)
+from frameworks_test_support import (COMMIT, PREVIOUS, REL, SENTINEL, bind, calls, canonical, digest, install_fakes,
+                                     manifest_object, object_bytes, publish_tag, report_hash, state, write_objects)
 
 MAIN = 'refs/heads/main'
 REPOSITORY = 'ghcr.io/dannyota/trachuan-corpus-release'
@@ -36,11 +36,14 @@ class FrameworksPublishTest(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def run_release(self, sequence=5, ref=MAIN, commit=COMMIT):
+    def run_release(self, sequence=5, ref=MAIN, commit=COMMIT, report_sha256=None):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
-            self.module.release(REL, self.directory, ref, commit, sequence)
+            self.module.release(REL, report_sha256 or report_hash(self.value), self.directory, ref, commit, sequence)
         return output.getvalue()
+
+    def command(self):
+        return ['python3', str(Path(__file__).with_name('frameworks_publish.py')), REL, report_hash(self.value), str(self.directory)]
 
     def pushed(self, tag):
         return json.loads((self.registry / tag / 'manifest.json').read_bytes())
@@ -107,6 +110,23 @@ class FrameworksPublishTest(unittest.TestCase):
         self.assertEqual(calls(self.log), [])
         self.assertFalse((self.directory / 'sign').exists())
 
+    def test_report_must_have_the_dispatched_hash(self):
+        for report_sha256 in ('0' * 64, 'short'):
+            with self.subTest(report_sha256=report_sha256), self.assertRaises(ValueError):
+                self.run_release(report_sha256=report_sha256)
+        self.assertEqual(calls(self.log), [])
+        self.assertFalse((self.directory / 'sign').exists())
+
+    def test_forged_consistent_set_is_refused_by_the_dispatched_hash(self):
+        dispatched = report_hash(self.value)
+        forged = state()
+        forged['dump'] = b'forged dump'
+        bind(forged)
+        write_objects(self.directory / 'objects', forged)
+        with self.assertRaises(ValueError):
+            self.run_release(report_sha256=dispatched)
+        self.assertEqual(calls(self.log), [])
+
     def test_wrong_ref_or_commit_prevents_signing(self):
         with self.assertRaises(ValueError):
             self.run_release(ref='refs/heads/other')
@@ -128,7 +148,7 @@ class FrameworksPublishTest(unittest.TestCase):
         self.assertFalse(any(call['args'][0] in ('push', 'tag') for call in calls(self.log)))
 
     def test_log_holds_no_signature_or_release_content(self):
-        result = subprocess.run(['python3', str(Path(__file__).with_name('frameworks_publish.py')), REL, str(self.directory)],
+        result = subprocess.run(self.command(),
                                 env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5',
                                                       PYTHONDONTWRITEBYTECODE='1'),
                                 capture_output=True, text=True)
@@ -140,7 +160,7 @@ class FrameworksPublishTest(unittest.TestCase):
     def test_cli_failure_prints_a_fixed_message_without_a_traceback(self):
         self.value['report']['quality_pass'] = SENTINEL
         write_objects(self.directory / 'objects', self.value)
-        result = subprocess.run(['python3', str(Path(__file__).with_name('frameworks_publish.py')), REL, str(self.directory)],
+        result = subprocess.run(self.command(),
                                 env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5',
                                                       PYTHONDONTWRITEBYTECODE='1'),
                                 capture_output=True, text=True)

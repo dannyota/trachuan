@@ -8,17 +8,20 @@ from frameworks_cli import guarded
 from frameworks_manifest import document, read_manifest
 from frameworks_previous import require_signed
 from frameworks_registry import PRODUCTION, WORKFLOW, production
-from frameworks_release import LIMITS, validate_release
+from frameworks_release import LIMITS, report_id, validate_release
 from publish import push
 from signing import sign
 
 MAIN = 'refs/heads/main'
 
 
-def prepare(rel, directory, ref, commit, sequence):
+def prepare(rel, report_sha256, directory, ref, commit, sequence):
     if ref != MAIN:
         raise ValueError('dispatch frameworks release from main')
+    report_id(report_sha256)
     facts = validate_release(rel, {name: directory / 'objects' / name for name in LIMITS})
+    if facts.report_sha256 != report_sha256:
+        raise ValueError('report differs from the dispatched SHA-256')
     data = document(commit, sequence, rel, facts)
     require_signed(facts.report, directory / 'previous')
     output = directory / 'sign'
@@ -44,18 +47,19 @@ def publish(directory, current_directory, ref, commit):
         print(f"Production sequence {current['sequence']} is not below release sequence {obj['sequence']}; leaving production unchanged")
 
 
-def release(rel, directory, ref, commit, sequence):
-    output = prepare(rel, directory, ref, commit, sequence)
+def release(rel, report_sha256, directory, ref, commit, sequence):
+    output = prepare(rel, report_sha256, directory, ref, commit, sequence)
     publish(output, directory / 'production', ref, commit)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('rel')
+    parser.add_argument('report_sha256')
     parser.add_argument('directory', type=Path)
     args = parser.parse_args()
-    guarded(lambda: release(args.rel, args.directory, os.environ['GITHUB_REF'], os.environ['GITHUB_SHA'],
-                            int(os.environ['GITHUB_RUN_NUMBER'])))
+    guarded(lambda: release(args.rel, args.report_sha256, args.directory, os.environ['GITHUB_REF'],
+                            os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER'])))
 
 
 if __name__ == '__main__':

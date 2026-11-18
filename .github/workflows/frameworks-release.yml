@@ -7,6 +7,10 @@ on:
         description: Frameworks release YYYYMMDD or YYYYMMDD_N
         required: true
         type: string
+      report_sha256:
+        description: SHA-256 of the report.json to sign
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -27,12 +31,14 @@ jobs:
       id-token: write
     env:
       REL: ${{ inputs.rel }}
+      REPORT_SHA256: ${{ inputs.report_sha256 }}
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Require main and valid release identity
         run: |
           [[ $GITHUB_REF == refs/heads/main ]]
           [[ $REL =~ ^[0-9]{8}(_[0-9]{1,2})?$ ]]
+          [[ $REPORT_SHA256 =~ ^[0-9a-f]{64}$ ]]
           mkdir -m 700 "$RUNNER_TEMP/trachuan-frameworks-release"
           mkdir -m 700 "$RUNNER_TEMP/trachuan-frameworks-release/tmp"
           echo "RELEASE_DIR=$RUNNER_TEMP/trachuan-frameworks-release" >> "$GITHUB_ENV"
@@ -55,7 +61,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FRAMEWORKS_READ_KEY_SECRET }}
           OCI_S3_ENDPOINT: ${{ vars.OCI_S3_ENDPOINT }}
           AWS_REQUEST_CHECKSUM_CALCULATION: when_required
-        run: python3 deploy/github/frameworks_storage.py "$REL" "$RELEASE_DIR/objects"
+        run: python3 deploy/github/frameworks_storage.py "$REL" "$REPORT_SHA256" "$RELEASE_DIR/objects"
       - name: Install signing and registry tools
         run: bash deploy/github/install-tools.sh
       - name: Validate, sign, verify and publish frameworks release
@@ -65,7 +71,7 @@ jobs:
         run: |
           printf '%s' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin
           trap 'oras logout ghcr.io' EXIT
-          python3 deploy/github/frameworks_publish.py "$REL" "$RELEASE_DIR"
+          python3 deploy/github/frameworks_publish.py "$REL" "$REPORT_SHA256" "$RELEASE_DIR"
       - name: Delete downloaded frameworks objects
         if: always()
         run: rm -rf -- "$RUNNER_TEMP/trachuan-frameworks-release"

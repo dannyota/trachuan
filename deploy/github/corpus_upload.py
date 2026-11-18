@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -18,22 +19,41 @@ def etag(result):
     return value
 
 
-def upload_file(path, key, client, part_size=64 * 1024**2, bucket='trachuan-releases'):
+def require_validated(digest, size, expected, key):
+    if digest != expected[0] or size != expected[1]:
+        raise ValueError('local file changed after validation: ' + key.rsplit('/', 1)[1])
+
+
+def upload_file(path, key, client, part_size=64 * 1024**2, bucket='trachuan-releases', expected=None):
     size = path.stat().st_size
     positive(size, 'upload size')
     common = ['--bucket', bucket, '--key', key]
+    if expected is not None and size != expected[1]:
+        raise ValueError('local file changed after validation: ' + key.rsplit('/', 1)[1])
+
+    def put(body):
+        return dict(ContentLength=size, ETag=etag(client(['put-object', *common, '--body', str(body),
+                                                          '--content-length', str(size)])))
+
     if size <= part_size:
-        result = client(['put-object', *common, '--body', str(path), '--content-length', str(size)])
-        return dict(ContentLength=size, ETag=etag(result))
+        if expected is None:
+            return put(path)
+        data = path.read_bytes()
+        require_validated(hashlib.sha256(data).hexdigest(), len(data), expected, key)
+        with tempfile.TemporaryDirectory() as temporary:
+            body = Path(temporary) / 'body'
+            body.write_bytes(data)
+            return put(body)
     upload_id = client(['create-multipart-upload', *common]).get('UploadId')
     if not isinstance(upload_id, str) or not upload_id:
         raise ValueError('multipart upload did not return an upload id')
     multipart = [*common, '--upload-id', upload_id]
-    parts, transferred = [], 0
+    parts, transferred, stream = [], 0, hashlib.sha256()
     try:
         with tempfile.TemporaryDirectory() as temporary, path.open('rb') as source:
             body = Path(temporary) / 'part'
             while chunk := source.read(part_size):
+                stream.update(chunk)
                 body.write_bytes(chunk)
                 number = len(parts) + 1
                 result = client(['upload-part', *multipart, '--part-number', str(number),
@@ -42,6 +62,8 @@ def upload_file(path, key, client, part_size=64 * 1024**2, bucket='trachuan-rele
                 transferred += len(chunk)
         if transferred != size:
             raise ValueError('local upload size changed')
+        if expected is not None:
+            require_validated(stream.hexdigest(), transferred, expected, key)
         result = client(['complete-multipart-upload', *multipart,
                          '--multipart-upload', json.dumps(dict(Parts=parts))])
         return dict(ContentLength=size, ETag=etag(result))

@@ -1,10 +1,10 @@
+from frameworks_recipe_shapes import check_recipe_shapes
 from frameworks_recipes import decode
-from frameworks_release import RELEASE, object_key, release_id
+from frameworks_release import HASH, RELEASE, object_key, release_id
 from manifest import canonical, positive, require_match
 
 FIELDS = {'kind', 'version', 'corpus_kind', 'repository', 'commit', 'rel', 'database', 'sequence', 'previous',
           'dump', 'report', 'build_artifact_sha256', 'schema_version', 'extensions', 'recipes', 'counts'}
-HASH = r'[0-9a-f]{64}'
 
 
 def validate_manifest(obj):
@@ -72,4 +72,6 @@ def document(commit, sequence, rel, facts):
                extensions=row.get('extensions'),
                recipes={name: row.get(name + '_recipe') for name in ('dense', 'chunk', 'lexical', 'retrieval')},
                counts=dict(versions=row.get('version_count'), controls=row.get('control_count')))
-    return canonical(validate_manifest(obj))
+    validate_manifest(obj)
+    check_recipe_shapes(obj['recipes'])
+    return canonical(obj)

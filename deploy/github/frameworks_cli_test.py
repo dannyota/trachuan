@@ -2,9 +2,12 @@ import contextlib
 import importlib
 import io
 import os
+from pathlib import Path
 import signal
 import subprocess
+import sys
 import unittest
+from unittest.mock import patch
 
 SECRET = 'LICENSED-SENTINEL-TEXT'
 
@@ -14,6 +17,9 @@ class FrameworksCliTest(unittest.TestCase):
         self.module = importlib.import_module('frameworks_cli')
         saved = {number: signal.getsignal(number) for number in self.module.SIGNALS}
         self.addCleanup(lambda: [signal.signal(number, handler) for number, handler in saved.items()])
+        patcher = patch('frameworks_cli.resource.setrlimit')
+        self.setrlimit = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def failure(self, error):
         def function():
@@ -37,20 +43,37 @@ class FrameworksCliTest(unittest.TestCase):
         self.assertEqual(self.failure(error), 'command failed: aws exit 3')
 
     def test_termination_unwinds_through_cleanup_once(self):
-        steps = []
+        self.assertEqual(set(self.module.SIGNALS), {signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGTERM})
+        for number in self.module.SIGNALS:
+            steps = []
 
-        def function():
-            try:
-                os.kill(os.getpid(), signal.SIGTERM)
-                signal.pause()
-            finally:
-                os.kill(os.getpid(), signal.SIGTERM)
-                steps.append('cleaned')
+            def function():
+                try:
+                    os.kill(os.getpid(), number)
+                    signal.pause()
+                finally:
+                    os.kill(os.getpid(), number)
+                    steps.append('cleaned')
 
-        with self.assertRaises(SystemExit) as caught:
-            self.module.guarded(function)
-        self.assertEqual(caught.exception.code, 128 + signal.SIGTERM)
-        self.assertEqual(steps, ['cleaned'])
+            with self.subTest(number=number), self.assertRaises(SystemExit) as caught:
+                self.module.guarded(function)
+            self.assertEqual(caught.exception.code, 128 + number)
+            self.assertEqual(steps, ['cleaned'])
+
+    def test_core_dumps_are_disabled_before_the_work_starts(self):
+        order = []
+        self.setrlimit.side_effect = lambda *args: order.append('limit')
+        self.module.guarded(lambda: order.append('work'))
+        self.assertEqual(order, ['limit', 'work'])
+        self.setrlimit.assert_called_once_with(self.module.resource.RLIMIT_CORE, (0, 0))
+
+    def test_core_limit_reaches_the_process_and_its_children(self):
+        script = ('import resource,subprocess,sys;from frameworks_cli import guarded;'
+                  'guarded(lambda: print(resource.getrlimit(resource.RLIMIT_CORE), subprocess.check_output('
+                  '[sys.executable,"-I","-c","import resource;print(resource.getrlimit(resource.RLIMIT_CORE))"],text=True).strip()))')
+        result = subprocess.run([sys.executable, '-B', '-c', script], cwd=Path(__file__).parent, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), '(0, 0) (0, 0)')
 
 
 if __name__ == '__main__':

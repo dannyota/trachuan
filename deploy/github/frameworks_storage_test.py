@@ -9,7 +9,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from frameworks_test_support import OBJECTS, REL, SENTINEL, calls, digest, install_fakes, object_bytes, state
+from frameworks_test_support import OBJECTS, REL, SENTINEL, calls, digest, install_fakes, object_bytes, report_hash, state
 
 BUCKET = 'trachuan-frameworks-releases'
 
@@ -25,16 +25,18 @@ class FrameworksStorageTest(unittest.TestCase):
         self.remote = self.path / 'remote'
         self.stored = self.remote / BUCKET / 'frameworks' / REL
         self.stored.mkdir(parents=True)
-        self.objects = object_bytes(state())
+        self.value = state()
+        self.objects = object_bytes(self.value)
+        self.report_sha256 = report_hash(self.value)
         for name, data in self.objects.items():
             (self.stored / name).write_bytes(data)
         self.env = dict(PATH=str(self.path / 'bin') + os.pathsep + os.environ['PATH'], FAKE_LOG=str(self.log),
                         FAKE_REMOTE=str(self.remote), OCI_S3_ENDPOINT='https://synthetic.example',
                         PYTHONDONTWRITEBYTECODE='1')
 
-    def download(self, target='objects', **extra):
+    def download(self, target='objects', report_sha256=None, **extra):
         with patch.dict(os.environ, self.env | extra, clear=True):
-            self.module.download(REL, self.path / target)
+            self.module.download(REL, report_sha256 or self.report_sha256, self.path / target)
 
     def test_downloads_the_five_objects_with_head_range_and_etag_checks(self):
         output = io.StringIO()
@@ -64,6 +66,13 @@ class FrameworksStorageTest(unittest.TestCase):
                 self.assertEqual(args[args.index('--if-match') + 1], '"' + digest(self.objects[name]) + '"')
         self.assertIn('aws-cli/2.40.0', output.getvalue())
         self.assertNotIn(SENTINEL, output.getvalue())
+
+    def test_forged_report_stops_before_the_dump_is_fetched(self):
+        with self.assertRaises(ValueError):
+            self.download('forged', report_sha256='0' * 64)
+        fetched = [call['args'][call['args'].index('--key') + 1] for call in calls(self.log) if 'get-object' in call['args']]
+        self.assertEqual(fetched, [f'frameworks/{REL}/report.json'])
+        self.assertFalse((self.path / 'forged/frameworks.dump').exists())
 
     def test_refuses_limits_before_any_download(self):
         limits = {'frameworks.dump': 16 * 1024**3, 'build.json': 16 * 1024**2, 'evaluate.json': 16 * 1024**2,
@@ -102,7 +111,10 @@ class FrameworksStorageTest(unittest.TestCase):
                 self.download('tool', FAKE_AWS_VERSION=version)
             self.assertFalse((self.path / 'tool').exists())
         with patch.dict(os.environ, self.env, clear=True), self.assertRaises(ValueError):
-            self.module.download('../x', self.path / 'unused')
+            self.module.download('../x', self.report_sha256, self.path / 'unused')
+        with patch.dict(os.environ, self.env, clear=True), self.assertRaises(ValueError):
+            self.module.download(REL, 'short', self.path / 'unused')
+        self.assertFalse((self.path / 'unused').exists())
         with self.assertRaises(ValueError):
             self.download('endpoint', OCI_S3_ENDPOINT='http://synthetic.example')
 

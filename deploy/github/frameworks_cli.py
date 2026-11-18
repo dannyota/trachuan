@@ -1,9 +1,10 @@
 from pathlib import Path
+import resource
 import signal
 import subprocess
 import sys
 
-SIGNALS = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM)
+SIGNALS = (signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGTERM)
 
 
 def terminate(number, frame):
@@ -18,6 +19,7 @@ def fail(message):
 
 
 def guarded(function):
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     for item in SIGNALS:
         signal.signal(item, terminate)
     try:

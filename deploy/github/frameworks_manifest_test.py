@@ -104,7 +104,10 @@ class FrameworksManifestTest(unittest.TestCase):
         changes = [lambda v: v['row'].update(version_count=0), lambda v: v['row'].update(control_count=0),
                    lambda v: v['row']['extensions'].pop('ltree'), lambda v: v['row'].update(schema_version=0),
                    lambda v: v['row']['dense_recipe'].pop('query_hash'),
-                   lambda v: v['row']['retrieval_recipe'].pop('version')]
+                   lambda v: v['row']['retrieval_recipe'].pop('version'),
+                   lambda v: v['row']['lexical_recipe'].update(note='text'),
+                   lambda v: v['row']['dense_recipe']['query'].update(note='text'),
+                   lambda v: v['row']['retrieval_recipe'].update(status='placeholder')]
         for index, change in enumerate(changes):
             value = state()
             change(value)

@@ -20,13 +20,18 @@ CONFIG = (f'[profile {PROFILE}]\nregion = ap-singapore-1\ns3 =\n'
           '    addressing_style = path\n    signature_version = s3v4\n')
 
 
-def print_plan(rel):
+def dispatch_command(rel, report_sha256):
+    return ['gh', 'workflow', 'run', 'frameworks-release.yml', '--ref', 'main',
+            '-f', f'rel={rel}', '-f', f'report_sha256={report_sha256}']
+
+
+def print_plan(rel, report_sha256):
     prefix = f's3://{BUCKET}/frameworks/{rel}/'
     print('Verify frameworks-production signed manifest and previous report SHA-256 before upload')
     print(f'Check empty prefix {prefix} with profile {PROFILE}')
     for name in SOURCES:
         print(f'Upload and verify size and ETag: {prefix}{name}')
-    print(f'gh workflow run frameworks-release.yml --ref main -f rel={rel}')
+    print(' '.join(dispatch_command(rel, report_sha256)))
 
 
 def confine(directory):
@@ -70,10 +75,11 @@ def upload(rel, base, paths, facts, endpoint):
 
         require_empty_prefix(command, rel)
         require_active(facts.report, directory / 'previous', client)
-        receipts = {object_key(rel, name): upload_file(path, object_key(rel, name), client, bucket=BUCKET)
+        receipts = {object_key(rel, name): upload_file(path, object_key(rel, name), client, bucket=BUCKET,
+                                                       expected=facts.files[name])
                     for name, path in paths.items()}
         verify_receipts(receipts, client, bucket=BUCKET)
-        subprocess.run(['gh', 'workflow', 'run', 'frameworks-release.yml', '--ref', 'main', '-f', f'rel={rel}'], check=True)
+        subprocess.run(dispatch_command(rel, facts.report_sha256), check=True)
 
 
 def run(rel, dry_run):
@@ -84,7 +90,7 @@ def run(rel, dry_run):
     facts = validate_release(rel, paths)
     document('0' * 40, 1, rel, facts)
     if dry_run:
-        print_plan(rel)
+        print_plan(rel, facts.report_sha256)
     else:
         upload(rel, base, paths, facts, endpoint)
 

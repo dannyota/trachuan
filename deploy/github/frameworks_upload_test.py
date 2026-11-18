@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 from frameworks_test_support import (OBJECTS, PREVIOUS, REL, SENTINEL, STEPS, bind, calls, digest, encoded, install_fakes,
-                                     manifest_object, object_bytes, publish_tag, rebind_build, state, write_run)
+                                     manifest_object, object_bytes, publish_tag, rebind_build, report_hash, state, write_run)
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'scripts/corpus-upload.sh'
@@ -92,7 +92,8 @@ class FrameworksUploadTest(UploadCase):
         self.assertEqual((len(puts), len(heads)), (5, 5))
         self.assertLess(max(puts), min(heads))
         self.assertEqual(log[-1]['name'], 'gh')
-        self.assertEqual(log[-1]['args'], ['workflow', 'run', 'frameworks-release.yml', '--ref', 'main', '-f', f'rel={REL}'])
+        self.assertEqual(log[-1]['args'], ['workflow', 'run', 'frameworks-release.yml', '--ref', 'main', '-f', f'rel={REL}',
+                                           '-f', f'report_sha256={report_hash(self.value)}'])
         self.assertEqual([call['args'] for call in log if call['name'] == 'oras'],
                          [['resolve', 'ghcr.io/dannyota/trachuan-corpus-release:frameworks-production']])
         self.assertFalse(any(call['name'] == 'cosign' for call in log))
@@ -141,7 +142,8 @@ class FrameworksUploadTest(UploadCase):
         self.assert_clean()
         for name in OBJECTS:
             self.assertIn(f's3://{BUCKET}/frameworks/{REL}/{name}', result.stdout)
-        self.assertIn(f'gh workflow run frameworks-release.yml --ref main -f rel={REL}', result.stdout)
+        self.assertIn(f'gh workflow run frameworks-release.yml --ref main -f rel={REL} -f report_sha256={report_hash(self.value)}',
+                      result.stdout)
         self.assertNotIn(SENTINEL, result.stdout)
         self.value['report']['quality_pass'] = False
         self.save()
@@ -155,7 +157,8 @@ class FrameworksUploadTest(UploadCase):
                    lambda v: v['report'].update(rel='20990103'), lambda v: v['row'].update(rel='20990103'),
                    lambda v: v['report']['recipe_hashes'].update(build='0' * 64),
                    lambda v: v['report']['recipe_hashes'].update(evaluate='0' * 64),
-                   lambda v: v['row']['extensions'].pop('ltree')]
+                   lambda v: v['row']['extensions'].pop('ltree'),
+                   lambda v: v['row']['retrieval_recipe'].update(note=SENTINEL)]
         changes += [(lambda name: lambda v: v['report']['recipe_hashes'].update({name: '0' * 64}))(name) for name in STEPS]
         for index, change in enumerate(changes):
             with self.subTest(index=index):
@@ -225,6 +228,17 @@ class FrameworksUploadTest(UploadCase):
                 self.log.unlink(missing_ok=True)
                 self.assert_refused(self.upload(**extra))
 
+    def test_file_replaced_after_validation_is_not_uploaded_or_dispatched(self):
+        for name, relative in OBJECTS.items():
+            for grow in ('', '1'):
+                with self.subTest(name=name, grow=grow):
+                    self.save()
+                    shutil.rmtree(self.remote)
+                    self.remote.mkdir()
+                    self.log.unlink(missing_ok=True)
+                    self.assert_refused(self.upload(FAKE_CHANGE_FILE=str(self.base / relative), FAKE_CHANGE_GROW=grow))
+                    self.assertFalse(self.stored(name).exists())
+
     def test_dispatch_failure_is_reported_once_and_cleans_up(self):
         result = self.upload(FAKE_FAIL_DISPATCH='1')
         self.assertNotEqual(result.returncode, 0)
@@ -265,12 +279,16 @@ class FrameworksConfinementTest(UploadCase):
         for call in log:
             self.assertEqual(call['tmpdir'], upload, call['args'])
             self.assertEqual(call['tmp_mode'], '0o700', call['args'])
+            self.assertEqual(call['core'][0], 0, call['args'])
         config = {call['config_path'] for call in log if call['name'] == 'aws'}
         self.assertEqual({Path(path).parent for path in config}, {Path(upload)})
         for call in log:
             if call['name'] == 'cosign':
                 self.assertTrue(all(arg.startswith(upload) for arg in call['args'] if '/' in arg and arg.startswith('/')))
         self.assertTrue(next(c for c in log if 'get-object' in c['args'])['args'][-1].startswith(upload + '/'))
+        bodies = [c['args'][c['args'].index('--body') + 1] for c in log if 'put-object' in c['args']]
+        self.assertEqual(len(bodies), 5)
+        self.assertTrue(all(body.startswith(upload + '/') for body in bodies))
         self.assert_clean()
 
     def test_multipart_parts_stay_under_the_private_directory(self):
