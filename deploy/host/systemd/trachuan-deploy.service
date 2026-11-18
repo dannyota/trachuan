@@ -16,6 +16,7 @@ ProtectKernelLogs=yes
 RestrictRealtime=yes
 LockPersonality=yes
 LimitCORE=0
+MemorySwapMax=0
 TimeoutStartSec=60min
 TimeoutStopSec=30
 KillMode=control-group

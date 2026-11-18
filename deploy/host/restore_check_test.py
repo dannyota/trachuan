@@ -38,7 +38,7 @@ if args[0]=='wait':
         result, calls = self.run_check('')
         self.assertEqual(result.returncode, 0, result.stderr)
         run = next(call for call in calls if call[0] == 'run')
-        for option in ['--network=pasta:--ipv4-only,--dns-forward,1.1.1.1,--dns-host,1.1.1.1,--no-map-gw,--map-guest-addr,none,--map-host-loopback,none,-t,none,-u,none,-T,none,-U,none', '--dns=1.1.1.1', '--no-hosts', '--memory=2g', '--cpus=1', '--user=999:999', '--read-only', '--cap-drop=ALL']:
+        for option in ['--network=pasta:--ipv4-only,--dns-forward,1.1.1.1,--dns-host,1.1.1.1,--no-map-gw,--map-guest-addr,none,--map-host-loopback,none,-t,none,-u,none,-T,none,-U,none', '--dns=1.1.1.1', '--no-hosts', '--memory=2g', '--memory-swap=2g', '--cpus=1', '--user=999:999', '--read-only', '--cap-drop=ALL']:
             self.assertIn(option, run)
         mounts = [run[index + 1] for index, arg in enumerate(run) if arg == '--mount']
         self.assertEqual(mounts, [

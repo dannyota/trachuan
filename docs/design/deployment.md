@@ -101,6 +101,16 @@ recovery and activation until resolved. Changing a database role password is an
 owner runbook step (`ALTER ROLE`, then the Vault version); the updater alters
 only the `activator` role it provisions.
 
+The host has a swap file and pipes core dumps to `systemd-coredump`, so a
+process that holds a secret in memory could write it to disk. Every unit that
+holds one sets `LimitCORE=0`, and container processes inherit that zero limit.
+The server, migrate, updater and metrics units also set `MemorySwapMax=0`, and
+the auth restore check container runs with `--memory-swap` equal to its
+`--memory`, because `podman run` from a service does not run in that service's
+cgroup. PostgreSQL keeps its swap: its data and role verifiers are already on
+disk, so keeping its pages out of swap protects little, and blocking swap would
+turn host memory pressure into an OOM kill of the database.
+
 Dynamic group `trachuan-host` (this instance only) gets `read secret-bundles`
 where
 [`target.secret.name`](https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/keypolicyreference.htm)

@@ -56,6 +56,22 @@ class InstallerTest(unittest.TestCase):
             self.assertIn(path.name, script)
         self.assertIn('/var/log/trachuan/watch/watch.log', (HOST/'logrotate-trachuan').read_text())
 
+    def test_secret_holding_units_forbid_swap_and_cores(self):
+        cases = {
+            'systemd/trachuan-metrics.service': dict(LimitCORE='0', MemorySwapMax='0', MemoryMax='256M'),
+            'systemd/trachuan-deploy.service': dict(LimitCORE='0', MemorySwapMax='0'),
+            'quadlet/trachuan-server.container': dict(LimitCORE='0', MemorySwapMax='0'),
+            'quadlet/trachuan-migrate.container': dict(LimitCORE='0', MemorySwapMax='0'),
+        }
+        for path, expected in cases.items():
+            unit = configparser.ConfigParser(interpolation=None, strict=False)
+            unit.read(HOST / path)
+            for key, value in expected.items():
+                self.assertEqual(unit['Service'][key], value, f'{path} {key}')
+        postgres = configparser.ConfigParser(interpolation=None, strict=False)
+        postgres.read(HOST / 'quadlet/trachuan-postgres.container')
+        self.assertNotIn('MemorySwapMax', postgres['Service'])
+
     def test_watch_cloud_backstop_names_secrets_and_collects_logs(self):
         oci = HOST.parent / 'oci'
         policy = (oci/'iam.tf').read_text()
