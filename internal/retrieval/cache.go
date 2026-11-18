@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -196,8 +195,7 @@ func (e *Engine) saveSequence(ctx context.Context, c cursor, seq readSequence) f
 }
 
 func (e *Engine) statusDocument(doc *DocumentEntry, source Document) {
-	now := e.options.Now().In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60))
-	validity, _ := stamp(source, Arms{Date: Date{Year: now.Year(), Month: now.Month(), Day: now.Day()}})
+	validity, _ := stamp(source, Arms{Date: e.statusDate()})
 	doc.Status = Status{Class: validity.StatusClass, Basis: validity.Basis, StatusBasis: validity.StatusBasis, Current: validity.Current}
 }
 

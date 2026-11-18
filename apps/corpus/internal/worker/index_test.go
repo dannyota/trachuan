@@ -103,6 +103,9 @@ func TestLoadSourceInputs_WiresKnowledgeWithoutDatabase(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(dir, "sources", "vn-knowledge.yaml"), []byte(tc.content), 0o600); err != nil {
 				t.Fatal(err)
 			}
+			if err := os.WriteFile(filepath.Join(dir, "sources", "vn-reports.yaml"), []byte("[]\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
 			t.Chdir(dir)
 			var deps workflow.Deps
 			if err := loadSourceInputs(&deps, config.Config{}); err != nil {
@@ -112,5 +115,45 @@ func TestLoadSourceInputs_WiresKnowledgeWithoutDatabase(t *testing.T) {
 				t.Fatalf("build empty=%v eval empty=%v, want %v", deps.Build.Knowledge.Empty(), deps.Eval.Build.Knowledge.Empty(), tc.empty)
 			}
 		})
+	}
+}
+
+const oneReportRecord = `- origin: "eval"
+  origin_id: "case-2099-1"
+  kind: "wrong_text"
+  target: { key: "vn:vbpl:1", anchor: "" }
+  claim: { code: "reported" }
+`
+
+func TestLoadSourceInputs_WiresReports(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sources"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range []string{"vn-corrections.yaml", "vn-heading-exclusions.yaml", "vn-heading-reviews.yaml", "vn-ocr-waivers.yaml", "vn-knowledge.yaml"} {
+		if err := os.WriteFile(filepath.Join(dir, "sources", file), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(dir)
+	var deps workflow.Deps
+	if err := loadSourceInputs(&deps, config.Config{}); err == nil || !strings.Contains(err.Error(), "load reports") {
+		t.Fatalf("missing file: %v", err)
+	}
+	reports := filepath.Join(dir, "sources", "vn-reports.yaml")
+	if err := os.WriteFile(reports, []byte("- { origin: x }\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := loadSourceInputs(&deps, config.Config{}); err == nil || !strings.Contains(err.Error(), "load reports") {
+		t.Fatalf("invalid file: %v", err)
+	}
+	if err := os.WriteFile(reports, []byte(oneReportRecord), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := loadSourceInputs(&deps, config.Config{}); err != nil {
+		t.Fatal(err)
+	}
+	if deps.Build.Reports.Empty() || deps.Eval.Build.Reports.Empty() {
+		t.Fatal("reports are not wired into build and eval")
 	}
 }

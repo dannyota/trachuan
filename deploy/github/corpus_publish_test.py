@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from corpus_test_support import write_fixture
+from corpus_test_support import save_older_shape, write_fixture
 from corpus_manifest import create
 
 
@@ -15,7 +15,7 @@ class CorpusPublishTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)
-        write_fixture(self.path)
+        self.row, _ = write_fixture(self.path)
         self.current = json.loads((self.path / 'previous-manifest.json').read_bytes()) | {'sequence': 3}
 
     def manifest(self, sequence):
@@ -96,6 +96,32 @@ class CorpusPublishTest(unittest.TestCase):
         sign, run = self.publish(current=moved, existing=dict(sequence=6))
         sign.assert_called_once()
         self.assertEqual(run.call_args_list[-1].args[0][:2], ['oras', 'tag'])
+
+    @patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': '20990102_2'})
+    def test_back_dated_release_without_a_signed_manifest_never_signs(self):
+        save_older_shape(self.path, self.row)
+        self.manifest(7)
+        self.assert_refused_before_signing()
+
+    @patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': '20990102_2'})
+    def test_older_release_with_a_signed_manifest_signs_again(self):
+        save_older_shape(self.path, self.row)
+        self.manifest(7)
+        signed = json.loads((self.path / 'manifest.json').read_bytes()) | {'sequence': 2}
+        sign, _ = self.publish(existing=signed)
+        sign.assert_called_once()
+
+    @patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': '20990102_1'})
+    def test_cutoff_release_signs_for_the_first_time_without_a_decision(self):
+        save_older_shape(self.path, self.row)
+        self.manifest(7)
+        sign, _ = self.publish()
+        sign.assert_called_once()
+
+    def test_changed_signed_field_never_signs(self):
+        self.manifest(7)
+        signed = json.loads((self.path / 'manifest.json').read_bytes()) | {'sequence': 2, 'previous': '20990101_2'}
+        self.assert_refused_before_signing(existing=dict(return_value=signed))
 
     def test_wrong_ref_or_commit_prevents_signing(self):
         self.manifest(7)

@@ -275,7 +275,7 @@ func TestExtendSnapshot_NeverAppendsEvidenceToRun57(t *testing.T) {
 	if err = stage.RequireDecision("vn", "20261118_1", got); err != nil {
 		t.Fatalf("older run refused: %v", err)
 	}
-	if err = stage.RequireDecision("vn", "20261118_2", got); !errors.Is(err, stage.ErrNoDecision) {
+	if err = stage.RequireDecision("vn", "20261118_3", got); !errors.Is(err, stage.ErrNoDecision) {
 		t.Fatalf("run above the cutoff accepted: %v", err)
 	}
 }

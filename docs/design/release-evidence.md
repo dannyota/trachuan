@@ -95,7 +95,7 @@ active release, and signing the active release again recovers.
 ### Runs before this rule
 
 A snapshot without a decision is valid only at or below the cutoff
-`vn/20261118_1`, one value in the Go and Python code, bound by a test. Such a
+`vn/20261118_2`, one value in the Go and Python code, bound by a test. Such a
 run has no `evidence` stage and becomes `evaluated` after `eval`; a restart
 never appends `evidence` to it and a decision flag on it is refused. It uploads
 a report from `corpus eval --previous`, and release-row writes neither field, so
@@ -115,10 +115,10 @@ Schema version; bindings (`rel`, the dump's SHA-256, the build artifact hash,
 the report's SHA-256, the detector registry hash, the predecessor's `rel`, or
 `none` without one, and the SHA-256 of its `findings.json`, or `none` when it
 has none); per detector `complete: true`, its registry severity and the number
-of subjects observed and not observable, with an entry for every cross-signal
-detector of the stage's recipe; every finding with key, fingerprint, semantics
-number, `first_rel`, severity, status and `carried`; and the keys that are new,
-gone and carried.
+of subjects observed, not observable and excluded, with an entry for every
+cross-signal detector of the stage's recipe; every finding with key,
+fingerprint, semantics number, `first_rel`, severity, status and `carried`; and
+the keys that are new, gone and carried.
 
 ## `identity.jsonl`
 

@@ -81,7 +81,7 @@ func TestReleaseDecision_OlderRunWritesNeitherField(t *testing.T) {
 
 func TestReleaseDecision_RefusesMissingDecisionAboveCutoff(t *testing.T) {
 	summary := releaseRun{}
-	if _, err := applyReleaseDecision(&summary, "vn", "20261118_2", decisionSnapshot(t, nil), nil, artifact.Store{Root: t.TempDir()}); !errors.Is(err, stage.ErrNoDecision) {
+	if _, err := applyReleaseDecision(&summary, "vn", "20261118_3", decisionSnapshot(t, nil), nil, artifact.Store{Root: t.TempDir()}); !errors.Is(err, stage.ErrNoDecision) {
 		t.Fatalf("err = %v", err)
 	}
 }

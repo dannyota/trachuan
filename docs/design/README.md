@@ -76,7 +76,8 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [corpus schema](corpus-schema.md)                                                | Exact shared corpus template contract and schema version                                                         |
 | [corpus schema migration](corpus-schema-migration.md)                            | Restore requirements, schema versions and rollback across them                                                   |
 | [lexical](lexical.md)                                                            | Shared normalization, hashing, BM25 and statistics                                                               |
-| [retrieval recipe](retrieval-recipe.md)                                          | Shared Go API, recipes 2 and 3, validity and evidence shaping                                                    |
+| [retrieval recipe](retrieval-recipe.md)                                          | Shared Go API, recipes 2 and 3, evidence shaping                                                                 |
+| [retrieval validity](retrieval-validity.md)                                      | Eligibility, served status at the reference date, dated filtering                                                |
 | [sibling clause merge](retrieval-siblings.md)                                    | Candidate recipe 3 rule: clause hits of one article merge into one article hit, measured first                   |
 | [search results](mcp-results.md)                                                 | Compact search hits, snippets, related pointers, batch `read`, guide flow                                        |
 | [evaluation](evaluation.md)                                                      | Cohorts, identity mapping, calibration, metrics and caches                                                       |

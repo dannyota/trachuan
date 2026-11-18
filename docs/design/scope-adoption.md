@@ -135,7 +135,7 @@ stops being present, and when a resolved secondary key has disposition
   error naming both.
 - Retrieval returns `class` and `source` on every hit; the retrieval recipe does
   not rank by them, and admits `relation_context` documents only by number
-  reference ([retrieval](retrieval-recipe.md#validity-and-evidence)).
+  reference ([retrieval](retrieval-validity.md#validity-and-evidence)).
   Eligibility adds "not `validity_conflict`" under the bumped validity policy.
   "Primary hits" in metrics means the primary response group, whatever the
   membership class.

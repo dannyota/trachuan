@@ -7,9 +7,32 @@ import subprocess
 import tempfile
 import unittest
 
-from corpus_test_support import FakeCurl, add_heading_build, save_fixture, write_fixture
+import corpus_rules
+import corpus_test_support as support
+from corpus_manifest import create
+from corpus_test_support import FakeCurl, save_older_shape
 
 ROOT = Path(__file__).resolve().parents[2]
+REL = '20990102_1'
+
+
+def write_fixture(path):
+    row, report = support.write_fixture(path)
+    save_older_shape(path, row)
+    return row, report
+
+
+def save_fixture(path, row, report):
+    support.save_fixture(path, row, report)
+    save_older_shape(path, row)
+
+
+def add_heading_build(path, row, report):
+    record = support.add_heading_build(path, row, report)
+    save_older_shape(path, row)
+    return record
+
+
 FAKE = '''#!/usr/bin/env python3
 import json
 import os
@@ -39,19 +62,21 @@ if name == 'oras':
     manifest = (build / 'previous-manifest.json').read_bytes()
     moved = build / 'production-manifest.json'
     production = moved.read_bytes() if moved.exists() else manifest
+    signed_path = build / 'signed-manifest.json'
+    signed = signed_path.read_bytes() if signed_path.exists() else manifest
     signature = b'synthetic bundle'
     if 'tags' in args:
-        print(json.dumps(dict(tags=['vn-production', 'vn-20990101_1'])))
+        print(json.dumps(dict(tags=['vn-production', 'vn-20990101_1'] + (['vn-20990102_1'] if signed_path.exists() else []))))
     elif 'resolve' in args:
-        print('sha256:' + ('d' if args[-1].endswith(':vn-production') else 'c') * 64)
+        print('sha256:' + ('d' if args[-1].endswith(':vn-production') else 'e' if args[-1].endswith(':vn-20990102_1') else 'c') * 64)
     elif 'manifest' in args:
-        selected = production if args[-1].endswith('d' * 64) else manifest
+        selected = production if args[-1].endswith('d' * 64) else signed if args[-1].endswith('e' * 64) else manifest
         print(json.dumps(dict(artifactType='application/vnd.trachuan.corpus-release.v1',
                               layers=[dict(digest='sha256:' + hashlib.sha256(data).hexdigest(), size=len(data),
                                            annotations={'org.opencontainers.image.title': title})
                                       for title, data in [('manifest.json', selected), ('manifest.sigstore.json', signature)]])))
     elif 'blob' in args:
-        blobs = {hashlib.sha256(data).hexdigest(): data for data in (manifest, production)}
+        blobs = {hashlib.sha256(data).hexdigest(): data for data in (manifest, production, signed)}
         sys.stdout.buffer.write(blobs.get(args[-1].rsplit(':', 1)[1], signature))
 elif name == 'cosign':
     if os.getenv('FAKE_BAD_SIGNATURE'):
@@ -154,8 +179,18 @@ class CorpusUploadTest(unittest.TestCase):
         (repo / 'scripts').mkdir(parents=True)
         script = repo / 'scripts/corpus-upload.sh'
         shutil.copyfile(ROOT / 'scripts/corpus-upload.sh', script)
-        (repo / 'deploy').symlink_to(ROOT / 'deploy', target_is_directory=True)
+        shutil.copytree(ROOT / 'deploy/github', repo / 'deploy/github', ignore=shutil.ignore_patterns('__pycache__'))
+        rules = repo / 'deploy/github/corpus_rules.py'
+        text = rules.read_text()
+        cutoff = f"LEGACY_CUTOFF = {{'vn': {corpus_rules.LEGACY_CUTOFF['vn']!r}}}"
+        self.assertIn(cutoff, text, 'cutoff literal not found in corpus_rules.py')
+        rules.write_text(text.replace(cutoff, f"LEGACY_CUTOFF = {{'vn': {REL!r}}}"))
+        (repo / 'sources').mkdir()
+        shutil.copyfile(ROOT / 'sources/vn-heading-reviews.yaml', repo / 'sources/vn-heading-reviews.yaml')
         return script
+
+    def repo_tool(self, name):
+        return self.script.parents[1] / 'deploy/github' / name
 
     def upload_command(self, *flags, script=None):
         return ['bash', str(script or self.script), *flags, 'vn', '20990102_1',
@@ -251,12 +286,44 @@ class CorpusUploadTest(unittest.TestCase):
                 self.assertIn('not compared with the production release', result.stderr)
                 self.assertFalse(any('put-object' in call['args'] or call['name'] in {'gh', 'curl'} for call in self.calls()))
 
-    def test_selected_report_mismatch_never_calls_clients(self):
-        self.row['run']['eval_report_sha256'] = '0' * 64
-        (self.build / 'release.json').write_text(json.dumps(self.row))
-        result = self.run_upload()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.calls(), [])
+    def test_decision_fields_never_call_clients(self):
+        support.save_fixture(self.build, self.row, self.report)
+        for flags in ((), ('--dry-run',)):
+            with self.subTest(flags=flags):
+                result = self.run_upload(*flags)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('sidecar gate', result.stderr)
+                self.assertEqual(self.calls(), [])
+
+    def resign_check(self):
+        return subprocess.run(['python3', str(self.repo_tool('corpus_production.py')), 'resign-check', 'vn', REL,
+                               str(self.build)], env=self.env, capture_output=True, text=True)
+
+    def signed_manifest(self, **changes):
+        from manifest import canonical
+        support.save_fixture(self.build, self.row, self.report)
+        signed = json.loads(create('c' * 40, 7, 'vn', REL, self.build, self.build / 'report.json'))
+        save_older_shape(self.build, self.row)
+        (self.build / 'signed-manifest.json').write_bytes(canonical(signed | changes))
+
+    def test_resign_check_compares_the_verified_manifest_with_the_upload_directory(self):
+        self.signed_manifest()
+        result = self.resign_check()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, 'no signed field would change\n')
+        self.signed_manifest(previous='20990101_2')
+        result = self.resign_check()
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual(result.stdout, 'previous: signed "20990101_2" rebuilt "20990101_1"\n')
+        self.assertFalse(any(call['name'] in {'aws', 'gh', 'curl'} or 'sign-blob' in call['args'] or 'push' in call['args'] or 'tag' in call['args']
+                             for call in self.calls()))
+
+    def test_resign_check_refuses_an_unverified_manifest(self):
+        self.signed_manifest()
+        self.env['FAKE_BAD_SIGNATURE'] = '1'
+        result = self.resign_check()
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, '')
 
     def test_schema_eight_uploads_build_record_and_verifies_receipt(self):
         add_heading_build(self.build, self.row, self.report)
@@ -404,7 +471,7 @@ class CorpusUploadTest(unittest.TestCase):
                 path.write_bytes(canonical(manifest))
             save_fixture(self.build, self.row, self.report)
             commands = [self.upload_command(),
-                        ['python3', str(ROOT / 'deploy/github/corpus_manifest.py'), 'create', 'vn', '20990102_1',
+                        ['python3', str(self.repo_tool('corpus_manifest.py')), 'create', 'vn', '20990102_1',
                          str(self.build), str(self.build / 'report.json')]]
             for command in commands:
                 with self.subTest(fault=fault, executable=command[0]):
@@ -415,7 +482,7 @@ class CorpusUploadTest(unittest.TestCase):
 
     def test_signing_cli_checks_previous_before_creating_manifest(self):
         self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10')
-        command = ['python3', str(ROOT / 'deploy/github/corpus_manifest.py'), 'create', 'vn', '20990102_1',
+        command = ['python3', str(self.repo_tool('corpus_manifest.py')), 'create', 'vn', '20990102_1',
                    str(self.build), str(self.build / 'report.json')]
         result = subprocess.run(command, env=self.env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)

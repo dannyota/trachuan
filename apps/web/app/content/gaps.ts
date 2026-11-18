@@ -2,7 +2,7 @@ import type { components } from '@trachuan/schema/gen/openapi'
 import type { Language } from '../../i18n'
 import { formatNumber } from './format'
 
-type CategoryKey = 'content' | 'search' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'knowledge' | 'other'
+type CategoryKey = 'content' | 'search' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'knowledge' | 'summary' | 'other'
 export type GapCategory = { key: CategoryKey, name: string, sentence: string }
 export type GapSummary = GapCategory & { cases: number, casesLabel: string, casesSentence: string }
 
@@ -13,7 +13,7 @@ const categories: Record<CategoryKey, Record<Language, { name: string, sentence:
   validity: { vi: { name: 'Thông tin hiệu lực chưa đầy đủ', sentence: 'Thông tin hiệu lực của một số văn bản chưa đầy đủ.' }, en: { name: 'Validity incomplete', sentence: 'Validity information is incomplete for some documents.' } },
   relations: { vi: { name: 'Liên kết giữa các văn bản chưa đầy đủ', sentence: 'Một số liên kết giữa các văn bản chưa đầy đủ.' }, en: { name: 'Links between documents incomplete', sentence: 'Some links between documents are incomplete.' } },
   scope: { vi: { name: 'Thay đổi phạm vi nguồn', sentence: 'Một số văn bản đã bị gỡ, thay thế hoặc giữ lại từ bản trước.' }, en: { name: 'Source scope changes', sentence: 'Some documents were removed, replaced or retained from an earlier copy.' } },
-  ocr: { vi: { name: 'Nhận dạng ký tự đang được xem xét', sentence: 'Một số kết quả nhận dạng ký tự đang được xem xét.' }, en: { name: 'OCR under review', sentence: 'Some character recognition results are under review.' } },
+  ocr: { vi: { name: 'Nhận dạng ký tự cần xem xét', sentence: 'Phần nhận dạng ký tự của một số văn bản cần xem xét.' }, en: { name: 'OCR needs review', sentence: 'Character recognition for some documents needs review.' } },
   provenance: { vi: { name: 'Thông tin nguồn chưa đầy đủ', sentence: 'Thông tin về nguồn của một số văn bản chưa đầy đủ.' }, en: { name: 'Source information incomplete', sentence: 'Source information is incomplete for some documents.' } },
   topics: { vi: { name: 'Gán chủ đề chưa đầy đủ', sentence: 'Một số quy định có thể thiếu chủ đề.' }, en: { name: 'Topic assignments incomplete', sentence: 'Topics may be missing for some provisions.' } },
   omitted: { vi: { name: 'Quan hệ chưa hiển thị hết', sentence: 'Một số quan hệ chưa hiển thị; đọc văn bản để xem thêm.' }, en: { name: 'Relations omitted', sentence: 'Some relations are omitted; read the document for more.' } },
@@ -21,6 +21,7 @@ const categories: Record<CategoryKey, Record<Language, { name: string, sentence:
   evaluation: { vi: { name: 'Ngưỡng đánh giá chưa đạt', sentence: 'Một ngưỡng đánh giá chưa đạt hoặc chưa có kết quả.' }, en: { name: 'Evaluation threshold unmet', sentence: 'An evaluation threshold failed or was unavailable.' } },
   rejection: { vi: { name: 'Kiểm tra từ chối chưa đạt', sentence: 'Một kiểm tra từ chối trong đánh giá chưa đạt.' }, en: { name: 'Rejection check failed', sentence: 'An evaluation rejection check failed.' } },
   knowledge: { vi: { name: 'Kết quả kiểm tra quan hệ chưa được đưa vào', sentence: 'Một số kết quả kiểm tra quan hệ giữa các văn bản chưa được đưa vào bản phát hành này.' }, en: { name: 'Relation check results not included', sentence: 'Some check results on relations between documents are not included in this release.' } },
+  summary: { vi: { name: 'Trang thông tin văn bản chưa đầy đủ', sentence: 'Nội dung văn bản không bị ảnh hưởng, nhưng trang thông tin của một số văn bản thiếu một phần hoặc không có vì dữ liệu vượt giới hạn hiển thị.' }, en: { name: 'Document information pages incomplete', sentence: 'Document text is not affected, but information pages for some documents are partial or unavailable because their data exceeds display limits.' } },
   other: { vi: { name: 'Khác', sentence: 'Có những trường hợp khác cần xem xét.' }, en: { name: 'Other', sentence: 'Other cases need review.' } },
 }
 
@@ -31,13 +32,14 @@ const kinds: Record<Exclude<CategoryKey, 'other'>, readonly string[]> = {
   validity: ['consolidated_status_unordered', 'consolidated_status_unresolved', 'invalid_date', 'invalid_validity_interval', 'missing_effective_date', 'missing_commencement', 'multiple_commencement_sentences', 'multiple_effect_articles', 'partial_status_unexplained', 'unknown_status', 'validity_conflict', 'correction_evidence_unavailable'],
   relations: ['named_document_ambiguous', 'named_document_missing', 'unknown_relation_code', 'unknown_target', 'unresolved_provision_relation'],
   scope: ['scope_removed', 'source_replaced', 'withdrawn', 'source_withdrawn_retained', 'baseline_served'],
-  ocr: ['needs_ocr', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected'],
+  ocr: ['needs_ocr', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected', 'ocr_waiver_stale'],
   topics: ['seed_article_missing', 'override_target_missing'],
   omitted: ['relations_omitted'],
   historical: ['historical_document_dates'],
   evaluation: ['eval_floor_failed'],
   rejection: ['eval_rejection_failed'],
   knowledge: ['knowledge_stale'],
+  summary: ['summary_field_capped', 'summary_outline_capped', 'summary_row_capped'],
   provenance: ['source_provenance_missing', 'detail_id_mismatch', 'invalid_source_data', 'listing_unstable', 'source_identity_ambiguous'],
 }
 
@@ -46,11 +48,12 @@ export function gapCategory(kind: string | undefined, lang: Language): GapCatego
   return { key, ...categories[key][lang] }
 }
 
-export function gapSummary(coverage: Pick<components['schemas']['CorpusStatus'], 'gaps'>, lang: Language): GapSummary[] {
+export function gapSummary(coverage: Pick<components['schemas']['CorpusStatus'], 'gaps'> & { features?: Partial<components['schemas']['PublicStatus']['features']> }, lang: Language): GapSummary[] {
   const grouped = new Map<CategoryKey, GapSummary>()
   for (const [kind, count] of Object.entries(coverage.gaps || {})) {
     if (count <= 0) continue
     const category = gapCategory(kind, lang)
+    if (category.key === 'summary' && coverage.features?.public_summaries !== true) continue
     const cases = (grouped.get(category.key)?.cases || 0) + count
     const casesLabel = `${formatNumber(cases, lang)} ${lang === 'vi' ? 'trường hợp' : cases === 1 ? 'case' : 'cases'}`
     grouped.set(category.key, { ...category, cases, casesLabel, casesSentence: `${category.sentence.replace(/\.$/, '')} (${casesLabel}).` })

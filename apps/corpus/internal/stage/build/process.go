@@ -246,6 +246,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if e = writeKnowledgeArtifact(dir, s.cfg.Knowledge, counts.knowledge); e != nil {
 			return e
 		}
+		if e = writeReportsArtifact(dir, s.cfg.Reports); e != nil {
+			return e
+		}
 		reviewJSON, e := encodeValidityReview(counts.validity.reviews, counts.validity.partialDocuments)
 		if e != nil {
 			return e

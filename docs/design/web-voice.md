@@ -32,11 +32,12 @@ Copy states only what is true today.
   outside Tra Chuẩn. Copy says what the product does: it finds passages in the
   source documents and shows them word for word, with the document number and
   status; an assistant can read and quote them.
-- A stamp is the status recorded in Tra Chuẩn's dataset, with its stated basis,
-  which may be the source, a derivation or a reviewed correction. Copy never
-  calls it validity on a date and never lists some status terms as if they were
-  the whole set. The as-of line beside a stamp appears only where a status date
-  is shown.
+- A stamp is the status Tra Chuẩn's dataset gives a document on the reference
+  date, with its stated basis, which may be the source, a derivation or a
+  reviewed correction. It follows the document's dates
+  ([served status](retrieval-validity.md#served-status)). Copy never presents it
+  as a legal opinion and never lists some status terms as if they were the whole
+  set. The as-of line beside a stamp appears only where a status date is shown.
 - A link to the original exists only when the source publishes one.
 - Questions are never written to disk or logs. They are held in memory caches
   for a limited time ([privacy](web.md#public-no-account)), so copy never says

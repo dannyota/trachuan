@@ -18,11 +18,12 @@ type Count struct {
 	Classes       map[string]int
 	Observed      int
 	NotObservable int
+	Excluded      int
 	NotRun        string
 }
 
 func CountInputs(ctx context.Context, q store.Querier, env stage.Env, run stage.Run, release *pgxpool.Pool) Inputs {
-	return Inputs{Run: run, Release: release, ArtifactDir: lazyArtifactDirs(ctx, func() store.Querier { return q }, env, run)}
+	return Inputs{Run: run, Release: release, Build: lazyBuild(ctx, q, env, run), ArtifactDir: lazyArtifactDirs(ctx, func() store.Querier { return q }, env, run)}
 }
 
 func CountFindings(ctx context.Context, in Inputs, detectors []Detector) []Count {
@@ -36,7 +37,7 @@ func CountFindings(ctx context.Context, in Inputs, detectors []Detector) []Count
 			counts = append(counts, count)
 			continue
 		}
-		count.Findings, count.Observed, count.NotObservable = len(obs.Findings), obs.Observed, obs.NotObservable
+		count.Findings, count.Observed, count.NotObservable, count.Excluded = len(obs.Findings), obs.Observed, obs.NotObservable, obs.Excluded
 		for _, f := range obs.Findings {
 			if f.Severity != "" {
 				if count.Classes == nil {

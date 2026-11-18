@@ -136,7 +136,9 @@ is accepted. Samples of what remains read as titles.
 Summaries are available only when the operator flag `SERVER_PUBLIC_SUMMARIES` is
 on and the active release has the summary capability (its `document_summary`
 table at the expected projection). `GET /api/v1/public/status` reports the
-result as `features.public_summaries`.
+result as `features.public_summaries`. While it is false, the sources page
+leaves out the summary size gaps, because there are no summary pages to
+describe.
 
 | Situation                                                   | Public endpoints                          | Summary paths        | Topic links   | Sitemap documents child |
 | ----------------------------------------------------------- | ----------------------------------------- | -------------------- | ------------- | ----------------------- |

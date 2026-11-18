@@ -86,6 +86,27 @@ it('uses the singular case label in English for a count of one', () => {
   expect(gapSummary({ gaps: { knowledge_stale: 1 } }, 'en')[0]).toMatchObject({ casesLabel: '1 case', casesSentence: 'Some check results on relations between documents are not included in this release (1 case).' })
   expect(gapSummary({ gaps: { knowledge_stale: 1 } }, 'vi')[0]!.casesLabel).toBe('1 trường hợp')
 })
+it.each([
+  ['vi', 'Trang thông tin văn bản chưa đầy đủ', 'Nội dung văn bản không bị ảnh hưởng, nhưng trang thông tin của một số văn bản thiếu một phần hoặc không có vì dữ liệu vượt giới hạn hiển thị.', 'trường hợp'],
+  ['en', 'Document information pages incomplete', 'Document text is not affected, but information pages for some documents are partial or unavailable because their data exceeds display limits.', 'cases'],
+] as const)('classifies and groups summary and stale waiver gaps in %s', (lang, name, sentence, unit) => {
+  expect(gapCategory('ocr_waiver_stale', lang).key).toBe('ocr')
+  for (const kind of ['summary_field_capped', 'summary_outline_capped', 'summary_row_capped']) expect(gapCategory(kind, lang)).toEqual({ key: 'summary', name, sentence })
+  const result = gapSummary({ gaps: { summary_field_capped: 1, summary_outline_capped: 2, summary_row_capped: 3 }, features: { public_summaries: true } }, lang)
+  const label = `6 ${unit}`
+  expect(result).toEqual([{ key: 'summary', name, sentence, cases: 6, casesLabel: label, casesSentence: `${sentence.replace(/\.$/, '')} (${label}).` }])
+})
+it('leaves out the summary category unless public summaries are on', () => {
+  const gaps = { summary_row_capped: 3, no_tree: 1 }
+  for (const status of [{ gaps }, { gaps, features: { public_summaries: false } }]) expect(gapSummary(status, 'en').map(row => row.key)).toEqual(['content'])
+  expect(gapSummary({ gaps, features: { public_summaries: true } }, 'en').map(row => row.key)).toEqual(['summary', 'content'])
+})
+it.each([
+  ['vi', 'Nhận dạng ký tự cần xem xét', 'Phần nhận dạng ký tự của một số văn bản cần xem xét.'],
+  ['en', 'OCR needs review', 'Character recognition for some documents needs review.'],
+] as const)('pins the OCR category text in %s', (lang, name, sentence) => {
+  expect(gapCategory('ocr_flagged', lang)).toEqual({ key: 'ocr', name, sentence })
+})
 it('labels provenance and source withdrawal', () => {
   expect(textSourceLabel('source_tree', true, 'https://vbpl.vn/example', 'vi')).toBe('Nội dung: đầy đủ, từ cấu trúc văn bản của vbpl.vn')
   expect(textSourceLabel('html_transcription', false, 'https://chinhphu.vn/x', 'vi')).toContain('có thể chưa đầy đủ, từ bản HTML của chinhphu.vn')

@@ -100,7 +100,7 @@ go run ./apps/corpus/cmd/corpus eval vn 20261109 --out work/eval
 Add `--previous <report.json>` to compare a previous report or
 `--require-floors` to return exit status 2 when a floor fails or is unavailable.
 `corpus eval` is a diagnostic: its report cannot publish, except on the older
-path for `vn/20261118_1`.
+path for `vn/20261118_2`.
 
 `corpus cancel`, `corpus gaps`, `corpus accept-gaps --kind <kind> --note <text>`
 and `corpus export-history` take the same country and release. Run every command

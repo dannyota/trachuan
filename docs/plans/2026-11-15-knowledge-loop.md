@@ -18,7 +18,8 @@
 ## 16.2 Cross-signal detectors
 - [x] `unmatched_operative_claim` (relation grammar read-only over every document with text, one finding per sentence whose target resolves to a provision; review for sources relate reads, info for incomplete sources), `partial_without_provision_effect` (info), `raw_field_not_normalized`, `waived_document_without_relations`, with fixtures from this week's defects; `corpus detectors count` reports them on a release; none blocking.
 - [ ] `ocr_label_item_outside_labels`: needs the OCR check items, with a paragraph position, in the frozen inputs (extract artifact or evidence inputs).
-- [ ] `relation_kind_disagreement`. `tree_transcription_divergence` waits for a numeric definition from extract's `text.json` records.
+- [x] `relation_kind_disagreement`.
+- [ ] `tree_transcription_divergence` waits for a numeric definition from extract's `text.json` records.
 
 ## 16.3 Knowledge contract
 - [x] One validator (`corpus knowledge check`, build, CI test over `sources/`), all entries together: per-kind target, evidence and `depends` of knowledge-loop.md recomputed from the frozen run, exact-substring quote, refusal of `~k` anchors and URL evidence, stale handling (`knowledge_stale`) for effects and relations; decisions checked for structure only.
@@ -26,7 +27,7 @@
 - [x] `provision_effect` and `relation`: relation method `reviewed` (no schema version; `relation.method` is free text); the server admits it in `warnings.go`, `warning_sql.go`, `read_sql.go` and `hydrate_tree.go` (since v0.1.19); identity (S, T, kind), redundant and contradictory rules; runbook line for the first release that holds such rows.
 
 ## 16.4 Intake and release gate
-- [ ] `sources/<cc>-reports.yaml` with the closed schema, origin registry, 500-record bound, replay idempotence; detector `external_report`; `corpus findings import` converts an export batch into records for a pull request; error-reports.md keeps its batch guarantees.
+- [x] `sources/<cc>-reports.yaml` with the closed schema, origin registry, 500-record bound, replay idempotence; detector `external_report`; `corpus findings import` converts an export batch into records for a pull request; error-reports.md keeps its batch guarantees.
 - [ ] `identity.jsonl` in the evidence artifact (parent anchors, ambiguity mark, relation ends with `exact` and `named`, validity rows, the one hash format) and `changes.jsonl` from this summary and the predecessor's (bound to the predecessor's `identity.jsonl` hash; cause classes, hand-over key changes, legal and provenance changes, no moves, `baseline` when the predecessor has none), per release-evidence.md; upload of all three files; their hashes in the signed manifest; uploader and signing validator enforce the gate table of release-evidence.md; corpus-release.md updated in the same change.
 
 ## 16.5 First use
