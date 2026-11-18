@@ -39,6 +39,9 @@ func activityError(err error) error {
 	if errors.Is(err, detector.ErrUnregisteredGap) {
 		return temporal.NewNonRetryableApplicationError(err.Error(), "unregistered_gap", err)
 	}
+	if errors.Is(err, stage.ErrNoDecision) {
+		return temporal.NewNonRetryableApplicationError(err.Error(), "no_previous_report_decision", err)
+	}
 	var recipe *stage.RecipeError
 	if errors.As(err, &recipe) {
 		return temporal.NewNonRetryableApplicationError(recipe.Error(), "recipe_mismatch", err)
@@ -74,6 +77,9 @@ func (a *Activities) PlanStage(ctx context.Context, in stage.StageInput) (stage.
 	var snapshot stage.Snapshot
 	if err = json.Unmarshal(row.Snapshot, &snapshot); err != nil {
 		return stage.PlanResult{}, fmt.Errorf("decode run snapshot: %w", err)
+	}
+	if err = stage.RequireDecision(row.Country, row.Rel, snapshot); err != nil {
+		return stage.PlanResult{}, activityError(err)
 	}
 	st, err := a.lookup(in.Stage)
 	if err != nil {

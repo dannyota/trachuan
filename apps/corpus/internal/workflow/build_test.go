@@ -2,6 +2,8 @@ package workflow
 
 import (
 	"context"
+	"reflect"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -251,18 +253,87 @@ func TestBuildRelease_HeartbeatTimeout(t *testing.T) {
 	}
 }
 
-func TestBuildRelease_EvalEndsEvaluated(t *testing.T) {
+func TestBuildRelease_CloseResultDecidesEvaluated(t *testing.T) {
+	for _, tc := range []struct {
+		name, stage, until string
+		closed             stage.CloseResult
+		want               string
+	}{
+		{"older run ends at eval", "eval", "", stage.CloseResult{Evaluated: true}, "evaluated"},
+		{"older run until eval", "eval", "eval", stage.CloseResult{Evaluated: true}, "evaluated"},
+		{"decided run pauses until eval", "eval", "eval", stage.CloseResult{NextStage: "evidence"}, "paused"},
+		{"decided run ends at evidence", "evidence", "", stage.CloseResult{Evaluated: true}, "evaluated"},
+		{"last stage not evaluated", "fetch", "", stage.CloseResult{}, "paused"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			env := workflowTest(t)
+			in := testInput()
+			in.Stage, in.Until = tc.stage, tc.until
+			planMock(env, stage.PlanResult{})
+			finishMock(env, tc.closed)
+			markMock(env, tc.want)
+			env.ExecuteWorkflow(BuildRelease, in)
+			if err := env.GetWorkflowError(); err != nil {
+				t.Fatal(err)
+			}
+			env.AssertExpectations(t)
+		})
+	}
+}
+
+func TestBuildRelease_ReadsCloseVersionBeforeCloseStage(t *testing.T) {
 	env := workflowTest(t)
+	var mu sync.Mutex
+	var order []string
+	record := func(step string) func(mock.Arguments) {
+		return func(mock.Arguments) {
+			mu.Lock()
+			defer mu.Unlock()
+			order = append(order, step)
+		}
+	}
+	env.OnGetVersion("close-evaluated", temporalworkflow.DefaultVersion, temporalworkflow.Version(1)).Run(record("version")).Return(temporalworkflow.Version(1))
 	in := testInput()
-	in.Stage = "eval"
+	in.Stage = "evidence"
 	planMock(env, stage.PlanResult{})
-	finishMock(env, stage.CloseResult{})
+	env.OnActivity("CloseStage", mock.Anything, mock.Anything).Run(record("close")).Return(stage.CloseResult{Evaluated: true}, nil).Once()
+	env.OnActivity("Checkpoint", mock.Anything, mock.Anything).Return("", nil).Once()
 	markMock(env, "evaluated")
 	env.ExecuteWorkflow(BuildRelease, in)
 	if err := env.GetWorkflowError(); err != nil {
 		t.Fatal(err)
 	}
 	env.AssertExpectations(t)
+	if !reflect.DeepEqual(order, []string{"version", "close"}) {
+		t.Fatalf("order = %v", order)
+	}
+}
+
+func TestBuildRelease_DefaultVersionKeepsEvalComplete(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		evalComplete temporalworkflow.Version
+		want         string
+	}{
+		{"recorded eval-complete", 1, "evaluated"},
+		{"before eval-complete", temporalworkflow.DefaultVersion, "paused"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			env := workflowTest(t)
+			env.OnGetVersion("close-evaluated", temporalworkflow.DefaultVersion, temporalworkflow.Version(1)).Return(temporalworkflow.DefaultVersion)
+			env.OnGetVersion("eval-complete", temporalworkflow.DefaultVersion, temporalworkflow.Version(1)).Return(tc.evalComplete)
+			in := testInput()
+			in.Stage = "eval"
+			planMock(env, stage.PlanResult{})
+			finishMock(env, stage.CloseResult{})
+			markMock(env, tc.want)
+			env.ExecuteWorkflow(BuildRelease, in)
+			if err := env.GetWorkflowError(); err != nil {
+				t.Fatal(err)
+			}
+			env.AssertExpectations(t)
+		})
+	}
 }
 
 func TestBuildRelease_EmbedLimitsBatches(t *testing.T) {

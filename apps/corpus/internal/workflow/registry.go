@@ -8,6 +8,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
 	"danny.vn/trachuan/apps/corpus/internal/stage/embed"
 	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
+	"danny.vn/trachuan/apps/corpus/internal/stage/evidence"
 	"danny.vn/trachuan/apps/corpus/internal/stage/expand"
 	"danny.vn/trachuan/apps/corpus/internal/stage/extract"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
@@ -59,15 +60,16 @@ func (r Registry) Recipes(s stage.Snapshot) map[string]string {
 }
 
 type Deps struct {
-	Env      stage.Env
-	VBPL     *vbpl.Client
-	Chinhphu *chinhphu.Client
-	Document *embedding.Client
-	Build    build.Config
-	Waivers  extract.Waivers
-	Eval     eval.Config
+	Env       stage.Env
+	VBPL      *vbpl.Client
+	Chinhphu  *chinhphu.Client
+	Document  *embedding.Client
+	Build     build.Config
+	Waivers   extract.Waivers
+	Eval      eval.Config
+	Detectors []evidence.Detector
 }
 
 func Default(deps Deps) Registry {
-	return NewRegistry(discover.New(deps.VBPL, discover.WithChinhphu(deps.Chinhphu)), expand.New(deps.VBPL), fetch.New(deps.VBPL).WithChinhphu(deps.Chinhphu), extract.New().WithWaivers(deps.Waivers), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval))
+	return NewRegistry(discover.New(deps.VBPL, discover.WithChinhphu(deps.Chinhphu)), expand.New(deps.VBPL), fetch.New(deps.VBPL).WithChinhphu(deps.Chinhphu), extract.New().WithWaivers(deps.Waivers), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval), evidence.New(evidence.Config{Build: deps.Eval.Build, Detectors: append(evidence.CrossSignal(), deps.Detectors...)}))
 }

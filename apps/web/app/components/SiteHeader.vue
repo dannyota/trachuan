@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { shellMessages, type Language } from '../../i18n'
 import { loginUrl } from '../api/next'
+import { saveLanguage } from '../utils/language-cookie'
 import { useSessionStore } from '../stores/session'
 
 withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
@@ -18,11 +19,9 @@ const links = computed(() => [
 function closeMenu() { open.value = false; button.value?.focus() }
 function onKey(event: KeyboardEvent) { if (open.value && event.key === 'Escape') closeMenu() }
 function onOutside(event: MouseEvent) { if (open.value && !header.value?.contains(event.target as Node)) closeMenu() }
-function toggleLanguage() {
+async function toggleLanguage() {
   const next = language.value === 'vi' ? 'en' : 'vi'
-  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
-  const secure = location.protocol === 'http:' && loopback ? '' : '; Secure'
-  document.cookie = `lang=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`
+  await saveLanguage(next)
   if (route.path === '/link') language.value = next
   else location.reload()
 }

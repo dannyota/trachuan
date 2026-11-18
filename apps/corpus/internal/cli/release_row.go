@@ -2,11 +2,18 @@ package cli
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"regexp"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/config"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/internal/retrieval"
@@ -17,7 +24,11 @@ import (
 
 func runReleaseRow(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {
 	return runReleaseRowWith(ctx, args, stderr, func(ctx context.Context, cc, rel string) ([]byte, error) {
-		return readReleaseRow(ctx, cc, rel, os.Getenv("CORPUS_BUILDER_DATABASE_URL"), os.Getenv("CORPUS_DATABASE_URL"))
+		cfg, err := config.Load(os.Getenv)
+		if err != nil {
+			return nil, fmt.Errorf("load configuration: %w", err)
+		}
+		return readReleaseRow(ctx, cc, rel, os.Getenv("CORPUS_BUILDER_DATABASE_URL"), cfg.DatabaseURL, artifact.Store{Root: cfg.Artifacts})
 	})
 }
 
@@ -71,7 +82,7 @@ func releaseRowPoolConfig(url, database string) (*pgxpool.Config, error) {
 	return cfg, nil
 }
 
-func readReleaseRow(ctx context.Context, cc, rel, builderURL, workshopURL string) ([]byte, error) {
+func readReleaseRow(ctx context.Context, cc, rel, builderURL, workshopURL string, artifacts artifact.Store) ([]byte, error) {
 	name, err := build.DatabaseName(cc, rel)
 	if err != nil {
 		return nil, err
@@ -117,7 +128,7 @@ func readReleaseRow(ctx context.Context, cc, rel, builderURL, workshopURL string
 	if err != nil {
 		return nil, err
 	}
-	summary, err := readReleaseRun(ctx, cc, rel, workshopURL, row)
+	summary, err := readReleaseRun(ctx, cc, rel, workshopURL, row, artifacts)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +175,74 @@ type releaseRun struct {
 	IncompleteItems     int64  `json:"incomplete_items"`
 	UnacceptedGaps      int64  `json:"unaccepted_gaps"`
 	BuildArtifactSHA256 string `json:"build_artifact_sha256"`
+
+	EvalReportSHA256     string `json:"eval_report_sha256,omitempty"`
+	PreviousReportSHA256 string `json:"previous_report_sha256,omitempty"`
 }
 
-func readReleaseRun(ctx context.Context, cc, rel, url string, row map[string]json.RawMessage) (releaseRun, error) {
+type releaseItem struct {
+	Stage, State string
+	Key          string `json:"item_key"`
+	InputHash    string `json:"input_hash"`
+	RecipeHash   string `json:"recipe_hash"`
+	ArtifactHash string `json:"artifact_sha256"`
+	Path         string `json:"path"`
+}
+
+func sha256Hex(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func applyReleaseDecision(summary *releaseRun, cc, rel string, rawSnapshot json.RawMessage, items []releaseItem, artifacts artifact.Store) (bool, error) {
+	var snapshot stage.Snapshot
+	if err := json.Unmarshal(rawSnapshot, &snapshot); err != nil {
+		return false, fmt.Errorf("decode release run snapshot: %w", err)
+	}
+	if err := stage.RequireDecision(cc, rel, snapshot); err != nil {
+		return false, err
+	}
+	decision := snapshot.PreviousReport
+	if decision == nil {
+		return true, nil
+	}
+	if !decision.None() && !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(decision.SHA256) {
+		return false, fmt.Errorf("invalid previous report decision")
+	}
+	key := cc + "/" + rel
+	evidenceDone, reportFound := false, false
+	for _, item := range items {
+		if item.Key != key || item.State != "done" {
+			continue
+		}
+		switch item.Stage {
+		case stage.EvidenceStage:
+			evidenceDone = true
+		case "eval":
+			dir := artifacts.Abs(item.Path)
+			manifest, err := artifact.VerifyFiles(dir, "report.json")
+			if err != nil {
+				return false, fmt.Errorf("evaluation artifact failed verification: %w", err)
+			}
+			if manifest != item.ArtifactHash {
+				return false, fmt.Errorf("evaluation artifact failed verification: manifest %s, recorded %s", manifest, item.ArtifactHash)
+			}
+			data, err := os.ReadFile(filepath.Join(dir, "report.json"))
+			if err != nil {
+				return false, fmt.Errorf("read evaluation report: %w", err)
+			}
+			summary.EvalReportSHA256 = sha256Hex(data)
+			reportFound = true
+		}
+	}
+	if !reportFound {
+		return false, fmt.Errorf("release run has no done evaluation")
+	}
+	summary.PreviousReportSHA256 = decision.SHA256
+	return evidenceDone, nil
+}
+
+func readReleaseRun(ctx context.Context, cc, rel, url string, row map[string]json.RawMessage, artifacts artifact.Store) (releaseRun, error) {
 	cfg, err := releaseRowPoolConfig(url, "")
 	if err != nil {
 		return releaseRun{}, err
@@ -213,13 +289,7 @@ func readReleaseRun(ctx context.Context, cc, rel, url string, row map[string]jso
 		return releaseRun{}, fmt.Errorf("read release build inventory failed")
 	}
 	var inventory struct {
-		Items []struct {
-			Stage, State string
-			Key          string `json:"item_key"`
-			InputHash    string `json:"input_hash"`
-			RecipeHash   string `json:"recipe_hash"`
-			ArtifactHash string `json:"artifact_sha256"`
-		} `json:"items"`
+		Items []releaseItem `json:"items"`
 	}
 	if err = json.Unmarshal(raw, &inventory); err != nil {
 		return releaseRun{}, fmt.Errorf("decode release inventory: %w", err)
@@ -239,6 +309,10 @@ func readReleaseRun(ctx context.Context, cc, rel, url string, row map[string]jso
 	if summary.BuildArtifactSHA256 == "" {
 		return releaseRun{}, fmt.Errorf("release does not match the run's done build")
 	}
-	summary.Complete = summary.Complete && summary.ExpectedItems > 0 && summary.IncompleteItems == 0 && summary.UnacceptedGaps == 0
+	evidenceDone, err := applyReleaseDecision(&summary, cc, rel, run.Snapshot, inventory.Items, artifacts)
+	if err != nil {
+		return releaseRun{}, err
+	}
+	summary.Complete = summary.Complete && evidenceDone && summary.ExpectedItems > 0 && summary.IncompleteItems == 0 && summary.UnacceptedGaps == 0
 	return summary, nil
 }

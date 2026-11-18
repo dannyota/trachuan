@@ -227,3 +227,30 @@ func TestCloseStage_PausedSourceBlocksAdvance(t *testing.T) {
 		t.Fatalf("result=%+v next=%s state=%s message=%s failures=%d err=%v query=%v", result, next, state, message, failures, err, queryErr)
 	}
 }
+
+func TestCloseStage_ReportsEvaluatedFromSnapshot(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, rel, snapshot, stage string
+		want                       bool
+	}{
+		{"older run at eval", "20261118_1", `{"Recipes":{"eval":"recipe"}}`, "eval", true},
+		{"older run at fetch", "20261118_1", `{"Recipes":{"fetch":"recipe"}}`, "fetch", false},
+		{"decided run at eval", "20990109", `{"Recipes":{"eval":"recipe"},"PreviousReport":{"sha256":"none"}}`, "eval", false},
+		{"decided run at evidence", "20990109", `{"Recipes":{"evidence":"recipe"},"PreviousReport":{"sha256":"none"}}`, EvidenceStage, true},
+		{"missing decision above cutoff at eval", "20990109", `{"Recipes":{"eval":"recipe"}}`, "eval", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			env, in, s := controlSetup(t)
+			batchExec(t, env.DB, `UPDATE run SET rel=$2, snapshot=$3::jsonb, next_stage=$4 WHERE id=$1`, in.RunID, tc.rel, tc.snapshot, tc.stage)
+			in.Stage = tc.stage
+			result, err := CloseStage(context.Background(), env, s, in, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Evaluated != tc.want {
+				t.Fatalf("Evaluated = %v, want %v", result.Evaluated, tc.want)
+			}
+		})
+	}
+}

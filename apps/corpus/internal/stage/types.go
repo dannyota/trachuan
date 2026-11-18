@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -16,6 +18,70 @@ type Snapshot struct {
 	Stages                                           []string
 	Recipes                                          map[string]string
 	TaxonomyVersion, WorkerVersion, PreviousManifest string
+	PreviousReport                                   *PreviousReport `json:",omitempty"`
+}
+
+const EvidenceStage = "evidence"
+
+const NoPreviousReport = "none"
+
+const PreviousReportFile = "report.json"
+
+type PreviousReport struct {
+	SHA256 string `json:"sha256"`
+	Path   string `json:"path,omitempty"`
+}
+
+func (p PreviousReport) None() bool { return p.SHA256 == NoPreviousReport }
+
+var ErrNoDecision = errors.New("run has no previous report decision")
+
+func LegacyCutoff(country string) string {
+	if country == "vn" {
+		return "20261118_1"
+	}
+	return ""
+}
+
+func PredatesDecision(country, rel string, s Snapshot) bool {
+	cutoff := LegacyCutoff(country)
+	return s.PreviousReport == nil && cutoff != "" && CompareRel(rel, cutoff) <= 0
+}
+
+func RequireDecision(country, rel string, s Snapshot) error {
+	if s.PreviousReport != nil || PredatesDecision(country, rel, s) {
+		return nil
+	}
+	return fmt.Errorf("%w: %s/%s", ErrNoDecision, country, rel)
+}
+
+func EvaluatedAfter(country, rel string, s Snapshot, name string) bool {
+	if PredatesDecision(country, rel, s) {
+		return name == "eval"
+	}
+	return name == EvidenceStage
+}
+
+func CompareRel(a, b string) int {
+	ap := strings.SplitN(a, "_", 2)
+	bp := strings.SplitN(b, "_", 2)
+	if ap[0] != bp[0] {
+		return strings.Compare(ap[0], bp[0])
+	}
+	var ai, bi int
+	if len(ap) == 2 {
+		ai, _ = strconv.Atoi(ap[1])
+	}
+	if len(bp) == 2 {
+		bi, _ = strconv.Atoi(bp[1])
+	}
+	if ai < bi {
+		return -1
+	}
+	if ai > bi {
+		return 1
+	}
+	return 0
 }
 
 // Run identifies a pipeline run and its frozen snapshot.

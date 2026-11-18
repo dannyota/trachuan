@@ -6,7 +6,8 @@ from updater.deploy_host import auth_arguments, AUTH_CLIENT_SECONDS, AUTH_OUTPUT
 from updater.deploy_io import CommandError
 
 
-SCRIPT = ('set +x; set -eu; export PGPASSWORD; PGPASSWORD=$(cat /run/secrets/auth_db_password); '
+SCRIPT = ('set +x; set -eu; export PGPASSWORD PGREQUIREAUTH; PGREQUIREAUTH=scram-sha-256; '
+          'PGPASSWORD=$(cat /run/secrets/auth_db_password); '
           '[ -n "$PGPASSWORD" ]; exec "$@"')
 OPTIONS = ('PGOPTIONS=-c search_path=pg_catalog,public -c statement_timeout=10s -c lock_timeout=5s '
            '-c idle_in_transaction_session_timeout=10s -c client_connection_check_interval=2s')
@@ -100,7 +101,7 @@ class AuthReadTest(fixture.ActivationFixture, unittest.TestCase):
                      'corpus_vn_20990101 ', 'corpus_vn_20990101\n', 'corpus_vn_20990101_0', 'frameworks_2099'):
             with self.subTest(name=name):
                 self.calls.clear()
-                with self.assertRaisesRegex(ValueError, 'superuser session refused'):
+                with self.assertRaisesRegex(ValueError, 'invalid database name'):
                     self.host.psql(name, 'SELECT 1;')
                 self.assertEqual(self.calls, [])
 

@@ -104,6 +104,7 @@ it('switches the link ceremony language without reloading its document', async (
   const wrapper = mount(SiteHeader, { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' }, SealLogo: true } } })
   try {
     await wrapper.get('.language-button').trigger('click')
+    await flushPromises()
     expect(language.value).toBe('vi')
     expect(wrapper.get('.language-button').text()).toBe('English')
     expect(document.cookie).toContain('lang=vi')

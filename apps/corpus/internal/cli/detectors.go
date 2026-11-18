@@ -10,10 +10,17 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/detector"
 )
 
-func runDetectors(_ context.Context, args []string, stdout, stderr io.Writer) int {
+func runDetectors(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	return runDetectorsWith(ctx, args, stdout, stderr, loadDetectorCounts)
+}
+
+func runDetectorsWith(ctx context.Context, args []string, stdout, stderr io.Writer, load detectorCounter) int {
 	usage := func() int {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus detectors list [--json]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus detectors list [--json] | corpus detectors count <cc> <rel>")
 		return 2
+	}
+	if len(args) > 0 && args[0] == "count" {
+		return runDetectorsCount(ctx, args[1:], stdout, stderr, load)
 	}
 	if len(args) == 0 || args[0] != "list" {
 		return usage()

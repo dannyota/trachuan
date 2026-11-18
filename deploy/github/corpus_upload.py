@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import tempfile
 
 from corpus_manifest import identity, release_files, validate_inputs
 from corpus_previous import verified_previous
+from corpus_production import require_settled
 from manifest import positive
 
 
@@ -17,22 +19,41 @@ def etag(result):
     return value
 
 
-def upload_file(path, key, client, part_size=64 * 1024**2):
+def require_validated(digest, size, expected, key):
+    if digest != expected[0] or size != expected[1]:
+        raise ValueError('local file changed after validation: ' + key.rsplit('/', 1)[1])
+
+
+def upload_file(path, key, client, part_size=64 * 1024**2, bucket='trachuan-releases', expected=None):
     size = path.stat().st_size
     positive(size, 'upload size')
-    common = ['--bucket', 'trachuan-releases', '--key', key]
+    common = ['--bucket', bucket, '--key', key]
+    if expected is not None and size != expected[1]:
+        raise ValueError('local file changed after validation: ' + key.rsplit('/', 1)[1])
+
+    def put(body):
+        return dict(ContentLength=size, ETag=etag(client(['put-object', *common, '--body', str(body),
+                                                          '--content-length', str(size)])))
+
     if size <= part_size:
-        result = client(['put-object', *common, '--body', str(path), '--content-length', str(size)])
-        return dict(ContentLength=size, ETag=etag(result))
+        if expected is None:
+            return put(path)
+        data = path.read_bytes()
+        require_validated(hashlib.sha256(data).hexdigest(), len(data), expected, key)
+        with tempfile.TemporaryDirectory() as temporary:
+            body = Path(temporary) / 'body'
+            body.write_bytes(data)
+            return put(body)
     upload_id = client(['create-multipart-upload', *common]).get('UploadId')
     if not isinstance(upload_id, str) or not upload_id:
         raise ValueError('multipart upload did not return an upload id')
     multipart = [*common, '--upload-id', upload_id]
-    parts, transferred = [], 0
+    parts, transferred, stream = [], 0, hashlib.sha256()
     try:
         with tempfile.TemporaryDirectory() as temporary, path.open('rb') as source:
             body = Path(temporary) / 'part'
             while chunk := source.read(part_size):
+                stream.update(chunk)
                 body.write_bytes(chunk)
                 number = len(parts) + 1
                 result = client(['upload-part', *multipart, '--part-number', str(number),
@@ -41,6 +62,8 @@ def upload_file(path, key, client, part_size=64 * 1024**2):
                 transferred += len(chunk)
         if transferred != size:
             raise ValueError('local upload size changed')
+        if expected is not None:
+            require_validated(stream.hexdigest(), transferred, expected, key)
         result = client(['complete-multipart-upload', *multipart,
                          '--multipart-upload', json.dumps(dict(Parts=parts))])
         return dict(ContentLength=size, ETag=etag(result))
@@ -50,6 +73,13 @@ def upload_file(path, key, client, part_size=64 * 1024**2):
         except (subprocess.CalledProcessError, ValueError):
             pass
         raise
+
+
+def verify_receipts(receipts, client, bucket='trachuan-releases'):
+    for key, receipt in receipts.items():
+        current = client(['head-object', '--bucket', bucket, '--key', key])
+        if type(current.get('ContentLength')) is not int or current['ContentLength'] != receipt['ContentLength'] or current.get('ETag') != receipt['ETag']:
+            raise ValueError('uploaded object size or ETag changed: ' + key.rsplit('/', 1)[1])
 
 
 def upload(country, rel, directory, report):
@@ -64,6 +94,7 @@ def upload(country, rel, directory, report):
 
     row, candidate = validate_inputs(country, rel, directory, report)
     with tempfile.TemporaryDirectory() as temporary:
+        require_settled(candidate, Path(temporary))
         verified_previous(candidate, Path(temporary), client, release_row=row)
 
     receipts = {}
@@ -71,10 +102,7 @@ def upload(country, rel, directory, report):
         source = report if name == 'report.json' else directory / name
         key = f'{country}/{rel}/{name}'
         receipts[key] = upload_file(source, key, client)
-    for key, receipt in receipts.items():
-        current = client(['head-object', '--bucket', 'trachuan-releases', '--key', key])
-        if type(current.get('ContentLength')) is not int or current['ContentLength'] != receipt['ContentLength'] or current.get('ETag') != receipt['ETag']:
-            raise ValueError('uploaded object size or ETag changed: ' + key.rsplit('/', 1)[1])
+    verify_receipts(receipts, client)
 
 
 def main():

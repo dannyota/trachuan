@@ -78,7 +78,7 @@ func newHarness(t *testing.T) *harness {
 	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"vn-corrections.yaml", "vn-ocr-waivers.yaml", "vn-heading-exclusions.yaml", "vn-heading-reviews.yaml"} {
+	for _, name := range []string{"vn-corrections.yaml", "vn-ocr-waivers.yaml", "vn-heading-exclusions.yaml", "vn-heading-reviews.yaml", "vn-knowledge.yaml"} {
 		if err := os.WriteFile(filepath.Join(h.root, "sources", name), nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +119,7 @@ func newHarness(t *testing.T) *harness {
 	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	sources := "country: vn\nvbpl:\n  sweep_agencies: ['62']\n  keyword_agencies: ['62']\n  keywords: ['test']\nrelation_codes:\n  '10':\n    kind: amends_supplements\n    label: amends\nstatus_codes: {}\n"
+	sources := "country: vn\nvbpl:\n  sweep_agencies: ['62']\n  keyword_agencies: ['62']\n  keywords: ['test']\ncentral_issuers:\n  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM\nrelation_codes:\n  '10':\n    kind: amends_supplements\n    label: amends\nstatus_codes: {}\n"
 	if err := os.WriteFile(filepath.Join(h.root, "sources", "vn.yaml"), []byte(sources), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -145,6 +145,9 @@ func (h *harness) env(fault string) []string {
 
 func (h *harness) command(args ...string) {
 	h.t.Helper()
+	if len(args) > 0 && args[0] == "start" {
+		args = append(args, "--no-previous-report")
+	}
 	cmd := exec.CommandContext(h.ctx, os.Getenv("CORPUS_PROOF_BINARY"), args...)
 	cmd.Dir, cmd.Env = h.root, h.env("")
 	out, err := cmd.CombinedOutput()

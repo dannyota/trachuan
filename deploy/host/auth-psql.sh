@@ -8,7 +8,7 @@ session() {
  [[ -t 0 ]] || attach+=(-i)
  # shellcheck disable=SC2016
  podman "${attach[@]}" trachuan-postgres sh -c \
-  'set +x; set -eu; export PGPASSWORD; PGPASSWORD=$(cat /run/secrets/auth_db_password); [ -n "$PGPASSWORD" ]; exec "$@"' sh \
+  'set +x; set -eu; export PGPASSWORD PGREQUIREAUTH; PGREQUIREAUTH=scram-sha-256; PGPASSWORD=$(cat /run/secrets/auth_db_password); [ -n "$PGPASSWORD" ]; exec "$@"' sh \
   timeout --signal=TERM --kill-after=5s 60s env PGCONNECT_TIMEOUT=5 \
   'PGOPTIONS=-c search_path=pg_catalog,public -c statement_timeout=30s -c lock_timeout=5s -c idle_in_transaction_session_timeout=30s -c client_connection_check_interval=2s' \
   psql --no-password -XqAt "$@" -h 127.0.0.1 -U auth_owner -d auth -v ON_ERROR_STOP=1

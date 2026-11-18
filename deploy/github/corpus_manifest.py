@@ -9,6 +9,7 @@ from manifest import canonical, positive, require_match
 from corpus_cohorts import cohort_counts
 from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
+from corpus_rules import older_shape_allowed, require_status_country
 
 
 def unique_object(pairs):
@@ -168,21 +169,39 @@ def extensions(value):
         raise ValueError('invalid extension version')
 
 
-def validate_inputs(country, rel, directory, report_path):
-    row, report, _ = validated_inputs(country, rel, directory, report_path)
+def validate_selected_report(row, report, report_bytes, signing):
+    run = row['run']
+    fields = ('eval_report_sha256', 'previous_report_sha256')
+    present = [field for field in fields if field in run]
+    if not present:
+        if not older_shape_allowed(row['country'], row['rel'], signing):
+            raise ValueError('release run has no selected report decision')
+        return
+    if len(present) != len(fields):
+        raise ValueError('release run has only one selected report hash')
+    if hashlib.sha256(report_bytes).hexdigest() != run['eval_report_sha256']:
+        raise ValueError('report differs from the selected report')
+    if report['previous_diff']['previous']['report_sha256'] != run['previous_report_sha256']:
+        raise ValueError('report previous differs from the frozen previous report')
+
+
+def validate_inputs(country, rel, directory, report_path, signing=False):
+    row, report, _ = validated_inputs(country, rel, directory, report_path, signing)
     return row, report
 
 
-def validated_inputs(country, rel, directory, report_path):
+def validated_inputs(country, rel, directory, report_path, signing=False):
     identity(country, rel)
     row = decode((directory / 'release.json').read_bytes())
-    report = decode(report_path.read_bytes())
+    report_bytes = report_path.read_bytes()
+    report = decode(report_bytes)
     if not isinstance(row, dict) or row.get('country') != country or row.get('rel') != rel:
         raise ValueError('release row identity differs from inputs')
     validate_report(report, country, rel, release_row=row)
     run = row.get('run')
     if not isinstance(run, dict) or run.get('complete') is not True or run.get('incomplete_items') != 0 or run.get('unaccepted_gaps') != 0:
         raise ValueError('run must be complete with every gap accepted')
+    validate_selected_report(row, report, report_bytes, signing)
     positive(run.get('expected_items'), 'expected items')
     extensions(row.get('extensions'))
     positive(row.get('schema_version'), 'schema version')
@@ -274,7 +293,7 @@ def read_manifest(data):
 
 
 def create(commit, sequence, country, rel, directory, report_path, previous_report=None, heading_reviews_path=None):
-    row, report, evidence = validated_inputs(country, rel, directory, report_path)
+    row, report, evidence = validated_inputs(country, rel, directory, report_path, signing=True)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
     obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
@@ -304,6 +323,7 @@ def main():
     parser.add_argument('--list-files', action='store_true')
     args = parser.parse_args()
     if args.command == 'validate':
+        require_status_country(args.country)
         row, _ = validate_inputs(args.country, args.rel, args.directory, args.report)
         if args.list_files:
             print('\n'.join(release_files(row['schema_version'])))
@@ -313,7 +333,7 @@ def main():
         if os.environ['GITHUB_REF'] != 'refs/heads/main':
             raise ValueError('dispatch corpus release from main')
         from corpus_previous import check_remote
-        row, report = validate_inputs(args.country, args.rel, args.directory, args.report)
+        row, report = validate_inputs(args.country, args.rel, args.directory, args.report, signing=True)
         previous_report = check_remote(report, release_row=row)
         (args.directory / 'manifest.json').write_bytes(create(
             os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),

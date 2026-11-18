@@ -7,7 +7,7 @@ from . import deploy_release_target as target
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_lock import AdvisoryLock
 from .deploy_corpus_verify import toc
-from .deploy_host import activator_arguments
+from .deploy_host import activator_arguments, activator_client
 from .deploy_io import CommandError, interrupted
 
 
@@ -26,17 +26,25 @@ class Database:
     def arguments(self, *args):
         return activator_arguments(*args)
 
+    def target(self, name, *shared):
+        if name not in shared:
+            self.sql.database(name)
+        return name
+
+    def session(self, database, options=sql.SCHEMA_PATH):
+        return activator_client(self.target(database, 'auth', 'postgres'), options)
+
     def user(self, *args, **kwargs):
         self.check_lock()
         return self.host.activator(*args, **kwargs)
 
     def query(self, text, database='auth', options=sql.SCHEMA_PATH):
         self.check_lock()
-        return self.host.activator_psql(database, text, options)
+        return self.host.activator_psql(self.target(database, 'auth', 'postgres'), text, options)
 
     def admin(self, database, statements, options=sql.CATALOG_PATH):
         self.check_lock()
-        return self.host.psql(database, statements, options).decode().strip()
+        return self.host.psql(self.target(database), statements, options).decode().strip()
 
     def targets(self):
         return target.Targets(self.host.paths.state / (self.kind.key + '-targets'))
@@ -45,15 +53,16 @@ class Database:
         self.targets().keep(operations)
 
     def remember_target(self, row):
-        name = row['database_name']
+        name = self.target(row['database_name'])
         oid = self.query(target.target_oid(name))
         self.targets().write(row['operation_id'], name, oid)
         return oid
 
     def target_oid(self, row):
+        name = self.target(row['database_name'])
         if row['mode'] != 'new':
             return None
-        stored = self.targets().read(row['operation_id'], row['database_name'])
+        stored = self.targets().read(row['operation_id'], name)
         if stored:
             return stored
         self.clear_leftovers()
@@ -94,10 +103,19 @@ class Database:
         return json.loads(raw) if raw else None
 
     def operations(self):
-        return json.loads(self.query(self.sql.operations()))
+        rows = sql.journal_json(self.query(self.sql.operations()))
+        if not isinstance(rows, list):
+            raise sql.JournalRefused(sql.REFUSED)
+        return [self.sql.journal_row(row) for row in rows]
+
+    def recorded(self, raw, row, step):
+        inserted = dict(row, step=step)
+        expected = dict(inserted, corpus_kind=self.kind.name, **sql.written(step, self.kind.label))
+        sql.same_row(self.sql.journal_row(sql.journal_json(raw)), expected)
+        return inserted
 
     def append(self, row, step):
-        return json.loads(self.query(self.sql.journal(row, step)))
+        return self.recorded(self.query(self.sql.journal(row, step)), row, step)
 
     def projection(self, row):
         if row['manifest']['schema_version'] >= 8:
@@ -107,8 +125,9 @@ class Database:
         return 0
 
     def activate(self, row):
+        self.sql.activation_values(row)
         self.verify_target(row)
-        return json.loads(self.query(self.kind.activation(self, row)))
+        return self.recorded(self.query(self.kind.activation(self, row)), row, 'activated')
 
     def protected(self, name, operation=None):
         self.sql.database(name)
@@ -130,7 +149,7 @@ class Database:
         self.sql.database(name)
         if self.protected(name, operation):
             raise ValueError('refusing to drop protected database')
-        self.client('dropdb', '--if-exists', name)
+        self.client('dropdb', '--if-exists', self.target(name))
 
     def drop(self, name):
         self.sql.database(name)
@@ -186,7 +205,7 @@ class Database:
         self.clear_leftovers()
         if exists:
             self.drop_owned(name, row['operation_id'])
-        self.client('createdb', '--template=template0', name)
+        self.client('createdb', '--template=template0', self.target(name))
         if not self.owned(name):
             raise ValueError('activation target not owned by activator')
         self.remember_target(row)
@@ -194,9 +213,10 @@ class Database:
     def create(self, row):
         name, manifest = row['database_name'], row['manifest']
         sql.database(name)
+        statements = sql.prepare(name, manifest['extensions'])
         self.check_extensions(manifest)
         self.make(row)
-        outcome = self.target_admin(row, sql.prepare(name, manifest['extensions']))
+        outcome = self.target_admin(row, statements)
         if outcome == 'superuser':
             raise ValueError(sql.SUPERUSER_REFUSED)
         if outcome != 'configured':
@@ -230,13 +250,14 @@ class Database:
         return self.save_list(row, toc(self.listing(dump).decode(), self.rules['extensions']))
 
     def load(self, row, dump, listing):
+        name = self.target(row['database_name'])
         self.verify_target(row)
         try:
             self.user('env', 'PGOPTIONS=-c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=2 '
                       '-c statement_timeout=0 -c lock_timeout=0 -c idle_in_transaction_session_timeout=0 '
                       '-c transaction_timeout=0 ' + sql.CATALOG_PATH,
                       'pg_restore', '--no-password', '-h', '127.0.0.1', '-U', 'activator',
-                      '--dbname', row['database_name'], '--no-owner', '--no-privileges', '--exit-on-error',
+                      '--dbname', name, '--no-owner', '--no-privileges', '--exit-on-error',
                       '--single-transaction', '--use-list', listing, input_file=dump, timeout=3600)
         finally:
             self.host.user('podman', 'exec', 'trachuan-postgres', 'rm', '-f', listing)
@@ -279,6 +300,7 @@ class Database:
         return json.loads(self.server(image, *args, secret=database is not None, **options))
 
     def smoke(self, row, image):
+        self.target(row['database_name'])
         self.check_lock()
         self.check_catalog(row, True)
         self.on_target(row, sql.PREWARM)

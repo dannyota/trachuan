@@ -49,7 +49,7 @@ func TestProof_RestartReusesAcquisitionsWithRepeatingExpandGap(t *testing.T) {
 			t.Error(e)
 		}
 	}()
-	list, err := source.Parse([]byte("country: vn\nvbpl:\n  selection_version: 1\n  sweep_agencies: ['62']\nrelation_codes:\n  '10': {kind: amends_supplements, label: amends, amending: true}\nstatus_codes: {}\n"))
+	list, err := source.Parse([]byte("country: vn\nvbpl:\n  selection_version: 1\n  sweep_agencies: ['62']\ncentral_issuers:\n  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM\nrelation_codes:\n  '10': {kind: amends_supplements, label: amends, amending: true}\nstatus_codes: {}\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestProof_RestartReusesAcquisitionsWithRepeatingExpandGap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := run.Deps{DB: h.db, Temporal: temporal, TaskQueue: h.rel, Stages: registry.Names(), RecipesFor: registry.Recipes, SourceList: raw}
+	d := run.Deps{DB: h.db, Temporal: temporal, TaskQueue: h.rel, Stages: registry.Names(), RecipesFor: registry.Recipes, SourceList: raw, PreviousReport: run.ReportChoice{None: true}}
 	for generation := 1; generation <= 3; generation++ {
 		before := h.gateway.details.Load()
 		if err = run.Start(ctx, d, "vn", h.rel, "fetch", ""); err != nil {

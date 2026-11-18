@@ -5,12 +5,13 @@ from pathlib import Path
 import re
 
 from .deploy_corpus_heading import validate_headings
+from .deploy_corpus_sql import RELEASE
 from .deploy_io import canonical, decode
 from .deploy_verify import flags, match, positive
 
 
 def release_name(value):
-    match(r'[0-9]{8}(?:_[1-9][0-9]*)?', value, 'corpus release')
+    match(RELEASE, value, 'corpus release')
     datetime.strptime(value[:8], '%Y%m%d')
 
 

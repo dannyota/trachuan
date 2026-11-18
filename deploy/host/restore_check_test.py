@@ -127,6 +127,7 @@ if name == 'psql':
             smoke = next(call for call in calls if call[0] == 'psql' and 'pg_is_in_recovery' not in ' '.join(call))
             self.assertIn('--dbname=auth', smoke)
             self.assertIn('--username=auth_owner', smoke)
+            self.assertNotIn('PGREQUIREAUTH', (HOST / 'restore-auth.sh').read_text())
             self.assertNotIn('--username=postgres', smoke)
             self.assertIn('--no-password', smoke)
             self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public -c statement_timeout=120s -c lock_timeout=5s '

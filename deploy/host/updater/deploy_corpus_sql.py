@@ -4,6 +4,22 @@ import re
 from .deploy_corpus_heading import headings_approved
 
 
+COUNTRY = '[a-z]{2}'
+RELEASE = r'[0-9]{8}(?:_[1-9][0-9]*)?'
+OPERATION = '[0-9a-f]{32}'
+DIGEST = '[0-9a-f]{64}'
+MODES = ('new', 'retained', 'prune')
+STEPS = ('started', 'creating', 'created', 'restoring', 'restored', 'validated', 'checked',
+         'activated', 'reverted', 'aborted', 'pruning', 'pruned')
+ROW_FIELDS = ('operation_id', 'country', 'rel', 'mode', 'database_name', 'manifest_hash',
+              'dump_sha256', 'expected_active_db', 'manifest')
+REFUSED = 'invalid release journal row'
+
+
+class JournalRefused(ValueError):
+    pass
+
+
 def literal(value):
     if value is None:
         return 'NULL'
@@ -18,10 +34,66 @@ def plain(name):
     return name
 
 
+def dollar_body(value):
+    if value is not None and (not isinstance(value, str) or '$' in value or '\\' in value):
+        raise ValueError('invalid activation value')
+    return literal(value)
+
+
+def shaped(pattern, value):
+    return isinstance(value, str) and re.fullmatch(pattern, value) is not None
+
+
 def database(name):
-    if not isinstance(name, str) or not re.fullmatch(r'corpus_[a-z]{2}_[0-9]{8}(?:_[1-9][0-9]*)?', name):
+    if not shaped('corpus_' + COUNTRY + '_' + RELEASE, name):
         raise ValueError('invalid corpus database name')
     return '"' + name + '"'
+
+
+def named(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return False
+    return True
+
+
+def journal_row(row, check=database, country=COUNTRY, release=RELEASE):
+    if not isinstance(row, dict):
+        raise JournalRefused(REFUSED)
+    prune = row.get('mode') == 'prune'
+    expected = row.get('expected_active_db')
+    if not (shaped(OPERATION, row.get('operation_id')) and shaped(country, row.get('country'))
+            and shaped(release, row.get('rel')) and row.get('mode') in MODES
+            and named(check, row.get('database_name')) and (expected is None or named(check, expected))
+            and row.get('step') in STEPS
+            and all(shaped(DIGEST, row.get(field)) or (prune and row.get(field) is None)
+                    for field in ('manifest_hash', 'dump_sha256'))
+            and (isinstance(row.get('manifest'), dict) or (prune and row.get('manifest') is None))):
+        raise JournalRefused(REFUSED)
+    return row
+
+
+def journal_json(raw):
+    try:
+        return json.loads(raw)
+    except (ValueError, RecursionError):
+        raise JournalRefused(REFUSED) from None
+
+
+def same_row(returned, inserted):
+    if any(returned.get(field) != inserted.get(field)
+           for field in ROW_FIELDS + ('step', 'state', 'message', 'corpus_kind')):
+        raise JournalRefused(REFUSED)
+
+
+def activation_values(row, check=database, country=COUNTRY):
+    if not shaped(country, row['country']):
+        raise ValueError('invalid activation country')
+    check(row['database_name'])
+    if row['expected_active_db'] is not None:
+        check(row['expected_active_db'])
+    return tuple(dollar_body(row[field]) for field in ('country', 'database_name', 'expected_active_db'))
 
 
 CATALOG_PATH = '-c search_path=pg_catalog'
@@ -66,9 +138,17 @@ def database_owner(name):
             literal(name) + ';')
 
 
+def extension_versions(extensions):
+    if not isinstance(extensions, dict):
+        raise ValueError('invalid manifest extensions')
+    if not all(isinstance(version, str) for version in extensions.values()):
+        raise ValueError('invalid manifest extension version')
+    return [(plain(name), version) for name, version in extensions.items()]
+
+
 def create_extensions(extensions):
-    return ''.join('CREATE EXTENSION IF NOT EXISTS ' + plain(extension) + ' WITH SCHEMA public VERSION ' +
-                   literal(version) + ';\n' for extension, version in extensions.items())
+    return ''.join('CREATE EXTENSION IF NOT EXISTS ' + extension + ' WITH SCHEMA public VERSION ' +
+                   literal(version) + ';\n' for extension, version in extension_versions(extensions))
 
 
 def prepare(name, extensions):
@@ -127,11 +207,14 @@ def forget(name, corpus='law'):
     return 'DELETE FROM retired_release WHERE ' + kind(corpus) + ' AND db_name=' + literal(name) + ';'
 
 
-def journal(row, step, corpus='law', label='corpus'):
+def written(step, label='corpus'):
     terminal = step in ('activated', 'reverted', 'aborted', 'pruned')
-    fields = ('operation_id', 'country', 'rel', 'mode', 'database_name', 'manifest_hash',
-              'dump_sha256', 'expected_active_db', 'manifest', 'step', 'state', 'message')
-    value = dict(row, step=step, state='complete' if terminal else 'open', message=label + ' ' + step)
+    return dict(state='complete' if terminal else 'open', message=label + ' ' + step)
+
+
+def journal(row, step, corpus='law', label='corpus'):
+    fields = ROW_FIELDS + ('step', 'state', 'message')
+    value = dict(row, step=step, **written(step, label))
     value['manifest'] = json.dumps(row['manifest'], separators=(',', ':')) if row['manifest'] else None
     if corpus != 'law':
         fields += ('corpus_kind',)
@@ -141,8 +224,10 @@ def journal(row, step, corpus='law', label='corpus'):
 
 
 def activate(row, projection=0):
+    if type(projection) is not int or projection not in (0, 1):
+        raise ValueError('invalid activation projection')
     approved = 'true' if projection == 1 and headings_approved(row['manifest']) else 'false'
-    country, target, expected = (literal(row[k]) for k in ('country', 'database_name', 'expected_active_db'))
+    country, target, expected = activation_values(row)
     retained = ("DELETE FROM retired_release WHERE corpus_kind='law' AND country=" + country +
                 ' AND db_name=' + target + ';' if row['mode'] == 'retained' else '')
     return f"""BEGIN;

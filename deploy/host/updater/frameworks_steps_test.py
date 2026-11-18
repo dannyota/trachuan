@@ -110,8 +110,9 @@ class StepsFixture:
         self.assertTrue(options.endswith(' -c search_path=' + path) or options == 'PGOPTIONS=-c search_path=' + path)
 
     def assert_postgres(self, args, database):
-        self.assertEqual(args[:6], ['podman', 'exec', '-i', '--env', ADMIN, 'trachuan-postgres'])
-        self.assertEqual(args[6:], ['/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
+        self.assertEqual(args[:8], ['podman', 'exec', '-i', '--env', ADMIN, '--env', 'PGREQUIREAUTH=scram-sha-256',
+                                    'trachuan-postgres'])
+        self.assertEqual(args[8:], ['/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
                                     'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1'])
 
     def assert_guard_first(self, sql, statement):

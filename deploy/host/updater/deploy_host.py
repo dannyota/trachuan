@@ -1,8 +1,8 @@
 import re
 
+from . import deploy_corpus_sql, deploy_frameworks_sql
 from .deploy_corpus_sql import (AUTH_ACTIVE_DATABASE, AUTH_SCHEMA_VERSION, CATALOG_PATH, PREWARM, PREWARM_SKIPPED,
-                                SCHEMA_PATH, database as corpus_database, database_owner)
-from .deploy_frameworks_sql import database as frameworks_database
+                                SCHEMA_PATH, database_owner)
 from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
@@ -12,6 +12,21 @@ AUTH_OUTPUT_LIMIT = 4096
 AUTH_CLIENT_SECONDS = 30
 AUTH_OPTIONS = (SCHEMA_PATH + ' -c statement_timeout=10s -c lock_timeout=5s '
                 '-c idle_in_transaction_session_timeout=10s -c client_connection_check_interval=2s')
+SCRAM_ONLY = ('--env', 'PGREQUIREAUTH=scram-sha-256')
+CLIENT_SHARED = ('auth', 'postgres')
+SUPERUSER_SHARED = ('postgres',)
+
+
+def client_database(name, shared=CLIENT_SHARED):
+    if name in shared:
+        return name
+    for check in (deploy_corpus_sql.database, deploy_frameworks_sql.database):
+        try:
+            check(name)
+            return name
+        except ValueError:
+            pass
+    raise ValueError('invalid database name')
 
 
 def pins(manifest):
@@ -21,7 +36,8 @@ def pins(manifest):
 
 def secret_arguments(secret, *args):
     return ['podman', 'exec', '-i', 'trachuan-postgres', 'sh', '-c',
-            'set +x; set -eu; export PGPASSWORD; PGPASSWORD=$(cat /run/secrets/' + secret + '); '
+            'set +x; set -eu; export PGPASSWORD PGREQUIREAUTH; PGREQUIREAUTH=scram-sha-256; '
+            'PGPASSWORD=$(cat /run/secrets/' + secret + '); '
             '[ -n "$PGPASSWORD" ]; exec "$@"', 'sh', *args]
 
 
@@ -29,22 +45,15 @@ def activator_arguments(*args):
     return secret_arguments('activator_db_password', *args)
 
 
+def activator_client(database, options=SCHEMA_PATH):
+    return ('env', 'PGOPTIONS=' + options, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1',
+            '-U', 'activator', '-v', 'ON_ERROR_STOP=1', '-d', client_database(database))
+
+
 def auth_arguments(sql):
     return secret_arguments('auth_db_password', 'timeout', '--signal=TERM', '--kill-after=2s', '15s',
                             'env', 'PGCONNECT_TIMEOUT=5', 'PGOPTIONS=' + AUTH_OPTIONS, 'psql', '--no-password', '-XqAt',
                             '-h', '127.0.0.1', '-U', 'auth_owner', '-v', 'ON_ERROR_STOP=1', '-d', 'auth', '-c', sql)
-
-
-def superuser_database(name):
-    if name == 'postgres':
-        return
-    for check in (corpus_database, frameworks_database):
-        try:
-            check(name)
-            return
-        except ValueError:
-            pass
-    raise ValueError('superuser session refused outside postgres and release databases')
 
 
 class Host:
@@ -77,18 +86,16 @@ class Host:
         self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
     def psql(self, database, sql, options=CATALOG_PATH):
-        superuser_database(database)
-        return self.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + options, 'trachuan-postgres',
+        return self.user('podman', 'exec', '-i', '--env', 'PGOPTIONS=' + options, *SCRAM_ONLY, 'trachuan-postgres',
                          '/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt',
-                         '-h', '127.0.0.1', '-U', 'postgres', '-d', database,
+                         '-h', '127.0.0.1', '-U', 'postgres', '-d', client_database(database, SUPERUSER_SHARED),
                          '-v', 'ON_ERROR_STOP=1', input=sql.encode())
 
     def activator(self, *args, **kwargs):
         return self.user(*activator_arguments(*args), **kwargs)
 
     def activator_psql(self, database, sql, options=SCHEMA_PATH):
-        return self.activator('env', 'PGOPTIONS=' + options, 'psql', '--no-password', '-XqAt', '-h', '127.0.0.1',
-                              '-U', 'activator', '-v', 'ON_ERROR_STOP=1', '-d', database,
+        return self.activator(*activator_client(database, options),
                               input=('SET standard_conforming_strings=on;\n' + sql).encode()).decode().strip()
 
     def auth_psql(self, sql):
@@ -122,7 +129,7 @@ class Host:
 
     def restart_postgres(self):
         self.systemctl('restart', 'postgres')
-        self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+        self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
                   '/usr/local/bin/wait-postgres.sh', timeout=150)
 
     def restore_postgres(self, candidate):
@@ -147,9 +154,9 @@ class Host:
 
     def postgres(self):
         self.restart_postgres()
-        self.user('podman', 'exec', 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
+        self.user('podman', 'exec', *SCRAM_ONLY, 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
         database = self.auth_psql(AUTH_ACTIVE_DATABASE)
-        corpus_database(database)
+        deploy_corpus_sql.database(database)
         self.prewarm_active(database)
 
     def prewarm_active(self, database):
@@ -178,8 +185,8 @@ class Host:
                 available = False
         if not available:
             return False
-        self.user('podman', 'exec', '-i', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh', 'bash', '-s',
-                  input=script)
+        self.user('podman', 'exec', '-i', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+                  'bash', '-s', input=script)
         return True
 
     def migrate(self):

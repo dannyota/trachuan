@@ -1,4 +1,4 @@
-from .deploy_corpus_sql import literal, plain
+from .deploy_corpus_sql import extension_versions, literal, plain
 
 
 KINDS = ('view', 'materialized view', 'trigger', 'function', 'procedure', 'aggregate', 'rule', 'policy',
@@ -86,8 +86,8 @@ def rows(items):
 
 
 def extensions(versions, retained=False):
-    return [('extension', plain(name), None if retained else version + ' public superuser')
-            for name, version in versions.items()]
+    return [('extension', name, None if retained else version + ' public superuser')
+            for name, version in extension_versions(versions)]
 
 
 def access_allowed(alias, reader, granted):

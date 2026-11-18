@@ -6,17 +6,26 @@ if [[ ${1:-} == --dry-run ]]; then
   dry_run=true
   shift
 fi
-if [[ $# != 4 ]]; then
+frameworks=false
+if [[ $# == 2 && $1 == frameworks ]]; then
+  frameworks=true
+  rel=$2
+  [[ $rel =~ ^[0-9]{8}(_[0-9]{1,2})?$ ]] || {
+    echo 'Invalid frameworks release identity' >&2; exit 2;
+  }
+elif [[ $# != 4 ]]; then
   echo 'usage: corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>' >&2
+  echo '       corpus-upload.sh [--dry-run] frameworks <rel>' >&2
   exit 2
+else
+  country=$1
+  rel=$2
+  build_dir=$3
+  report=$4
+  [[ $country =~ ^[a-z]{2}$ && $rel =~ ^[0-9]{8}_[0-9]+$ ]] || {
+    echo 'Invalid corpus release identity' >&2; exit 2;
+  }
 fi
-country=$1
-rel=$2
-build_dir=$3
-report=$4
-[[ $country =~ ^[a-z]{2}$ && $rel =~ ^[0-9]{8}_[0-9]+$ ]] || {
-  echo 'Invalid corpus release identity' >&2; exit 2;
-}
 endpoint=${OCI_S3_ENDPOINT:?OCI_S3_ENDPOINT is required}
 [[ $endpoint == https://* && $endpoint != *'@'* ]] || {
   echo 'OCI_S3_ENDPOINT must be HTTPS without credentials' >&2; exit 2;
@@ -31,10 +40,18 @@ if [[ $dry_run != true ]]; then
   exec 9> "$lock_directory/corpus-upload.lock"
   flock --exclusive --nonblock 9 || { echo 'Another corpus upload holds the local lock' >&2; exit 1; }
 fi
+if [[ $frameworks == true ]]; then
+  if [[ $dry_run == true ]]; then
+    exec python3 "$root/deploy/github/frameworks_upload.py" --dry-run "$rel"
+  fi
+  exec python3 "$root/deploy/github/frameworks_upload.py" "$rel"
+fi
 files=$(python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$rel" "$build_dir" "$report" --list-files)
 prefix="$country/$rel/"
 
 if [[ $dry_run == true ]]; then
+  printf 'Require report previous rel and SHA-256 to equal the verified %s-production manifest\n' "$country"
+  printf 'Require release of https://trachuan.vn/api/v1/public/status to equal that rel\n'
   printf 'Verify previous signed manifest and report SHA-256; recompute comparisons before upload\n'
   printf 'Check empty prefix s3://trachuan-releases/%s with profile trachuan-release-upload\n' "$prefix"
   while IFS= read -r file; do

@@ -79,7 +79,7 @@ func TestWorker_RunsRegisteredStageEndToEnd(t *testing.T) {
 			t.Error(runErr)
 		}
 	}()
-	if err := run.Start(ctx, run.Deps{TaskQueue: rel, DB: db, Temporal: server.Client(), Stages: registry.Names(), RecipesFor: registry.Recipes, SourceList: []byte(`{}`)}, "vn", rel, "", ""); err != nil {
+	if err := run.Start(ctx, run.Deps{TaskQueue: rel, DB: db, Temporal: server.Client(), Stages: registry.Names(), RecipesFor: registry.Recipes, SourceList: []byte(`{}`), PreviousReport: run.ReportChoice{None: true}}, "vn", rel, "", ""); err != nil {
 		t.Fatal(err)
 	}
 	ticker := time.NewTicker(100 * time.Millisecond)

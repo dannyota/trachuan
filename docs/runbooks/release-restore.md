@@ -11,42 +11,76 @@ fields are `aws_access_key_id` and `aws_secret_access_key`. Region is
 `ap-singapore-1`. The uploader uses that named shared-credentials profile and
 supplies a temporary configuration with path-style S3 addressing. It never reads
 or prints the keys. Set `OCI_S3_ENDPOINT` to the releases bucket's HTTPS S3
-compatibility endpoint. Python 3.11 or later, `flock`, signed-in `gh` and
-`cosign` v3.1.4 are also required. The uploader runs `cosign verify-blob` to
-verify the active release's signed manifest. On macOS, install `flock` with
-`brew install flock` if absent
+compatibility endpoint. Python 3.11 or later, `flock`, `curl`, `oras`, signed-in
+`gh` and `cosign` v3.1.4 are also required. The uploader runs
+`cosign verify-blob` to verify the production and previous releases' signed
+manifests. On macOS, install `flock` with `brew install flock` if absent
 ([Homebrew](https://formulae.brew.sh/formula/flock)). The uploader prints its
 AWS CLI version. The workflow installs and requires AWS CLI 2.40.0 and prints
 its version.
 
-Evaluate with
-`corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
-uploaded `report.json` of the release active in production, exactly as its
-signed manifest binds it. Never use a stage evaluation artifact from the
-artifact store for `--previous`. Accept the run's reviewed gaps with
-`corpus accept-gaps`. The upload requires completed quality checks, passing
-required gating comparisons in every product cohort with cases, and no research
-override. All cohorts must be present; empty cohorts require no comparisons.
+A release compares with the production release from the moment its run is
+created. Before the first `corpus start` with `--previous-report`, restart the
+corpus worker on code that has the flag, so no older worker picks up the run.
+Pass the uploaded `report.json` of the production release, exactly as its signed
+`<cc>-production` manifest binds it. Never pass a stage evaluation artifact from
+the artifact store. `corpus start` freezes that choice as the
+[selected report](../design/release-evidence.md#selected-report) decision; a
+different previous release needs a new run and `rel`.
+
+When the run is `evaluated`, accept its reviewed gaps with `corpus accept-gaps`.
+The report to upload is `report.json` of the run's `eval` artifact. A
+`corpus eval` report cannot publish. The upload requires completed quality
+checks, passing required gating comparisons in every product cohort with cases,
+and no research override. All cohorts must be present; empty cohorts require no
+comparisons.
 
 Prepare a separate upload directory so the immutable build artifact stays
 unchanged. Copy its dump, original manifest and build record without
-regenerating the manifest. With `CORPUS_DATABASE_URL` and
-`CORPUS_BUILDER_DATABASE_URL` configured:
+regenerating the manifest. With `CORPUS_DATABASE_URL`,
+`CORPUS_BUILDER_DATABASE_URL` and an absolute `CORPUS_ARTIFACTS` configured:
 
 ```sh
 CC=vn
-REL=20261114_3
+REL=20261120_1
 BUILD=/path/to/verified-build-artifact
 UPLOAD=/path/to/new-upload-directory
-REPORT=/path/to/evaluation/report.json
-PREVIOUS=/path/to/previous-upload-directory/report.json
-corpus eval "$CC" "$REL" --out /path/to/evaluation --previous "$PREVIOUS"
+PREVIOUS=/path/to/production-upload-directory/report.json
+corpus start "$CC" "$REL" --previous-report "$PREVIOUS"
+```
+
+After the run is `evaluated`:
+
+```sh
+ARTIFACT=$(psql "$CORPUS_DATABASE_URL" -At -v cc="$CC" -v rel="$REL" <<'SQL'
+SELECT a.path FROM run r
+JOIN run_item i ON i.run_id = r.id
+JOIN artifact a ON a.id = i.artifact_id
+WHERE r.country = :'cc' AND r.rel = :'rel'
+  AND i.stage = 'eval' AND i.state = 'done';
+SQL
+)
+REPORT=$CORPUS_ARTIFACTS/$ARTIFACT/report.json
 mkdir "$UPLOAD"
 cp "$BUILD/corpus.dump" "$BUILD/MANIFEST.sha256" "$BUILD/build.json" "$UPLOAD/"
 corpus release-row "$CC" "$REL" --out "$UPLOAD/release.json"
 bash scripts/corpus-upload.sh --dry-run "$CC" "$REL" "$UPLOAD" "$REPORT"
 bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
 ```
+
+The older path is for `vn/20261118_1` only, whose run predates this rule: it has
+no decision, so evaluate with
+`corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
+production release's uploaded report, and upload that report. Its `release.json`
+has no selected report hashes; upload refuses that shape for every other
+release.
+
+The upload refuses unless production is settled: the report's previous `rel` and
+SHA-256 must equal `rel` and `report.sha256` of the verified `<cc>-production`
+manifest, and `release` of `https://trachuan.vn/api/v1/public/status` must be
+that `rel`. A release still activating, waiting on recipes, failed or rolled
+back by hand blocks it. Only `vn` can upload until that endpoint takes a
+country. If production has moved on, the release needs a new run and `rel`.
 
 Dry-run validates local files and prints the upload and dispatch plan without
 calling AWS or GitHub. A real upload holds
@@ -55,12 +89,52 @@ same owner. The uploader creates the cache directory with mode `0700`, checks
 the prefix is empty, uploads every object (`build.json` too from schema 8), then
 rechecks every size and ETag against its upload receipt. It keeps the uploaded
 report as `$UPLOAD/report.json` before dispatching `corpus-release.yml` from
-`main`. Use that file as `--previous` for the next release after this release
-becomes active. If dispatch alone fails, dispatch it manually with the same
-country and release; do not upload again. A partial upload reserves that prefix;
-use a new release id for a rebuilt corpus. The signed manifest authorizes
-release; the report's `release_eligible` remains false. Host activation follows
+`main`. Use that file as `--previous-report` for the next release after this
+release becomes active. If dispatch alone fails, dispatch it manually with the
+same country and release; do not upload again. A partial upload reserves that
+prefix; use a new release id for a rebuilt corpus. The signed manifest
+authorizes release; the report's `release_eligible` remains false. Host
+activation follows
 [corpus release](../design/corpus-release.md#host-activation).
+
+Signing repeats the production comparison before it signs or pushes anything, so
+a refusal leaves no tag and no signature. A release whose `<cc>-<rel>` manifest
+already exists with a sequence at or below production's is exempt, which keeps
+retry and rollback working. Dispatching the same release again retries a failed
+activation.
+
+When an earlier run pushed the release but failed to move `<cc>-production`, the
+comparison applies to the retry only while production's sequence is below the
+pushed one. Once another release holds production with a higher sequence, the
+pushed release is exempt too: signing it moves the tag, the host refuses it
+because its `previous` is not the active release, and uploads stay blocked.
+Recover by signing the active release again:
+
+```sh
+gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<active rel>
+```
+
+### First release with reviewed knowledge
+
+Before uploading the first release whose `sources/<cc>-knowledge.yaml` holds a
+`provision_effect` or `relation` entry, confirm that production runs v0.1.19 or
+later, which admits relation method `reviewed`, and that the
+[release floor](../design/pull-deployment.md#release-floor) is at or above that
+image, so no rollback can reach an image that drops the warning.
+
+### Roll back a corpus release
+
+Request a lasting rollback by signing the older release again, within its
+retention window:
+
+```sh
+gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<older rel>
+```
+
+The new signature gives that release a new sequence, `<cc>-production` follows
+it, and the host reactivates the retained database. A manual swap of
+`corpus_release.active_db` leaves the tag behind, and the next upload refuses
+until the two agree.
 
 ### Refresh the home sample
 

@@ -58,7 +58,9 @@ func (s *Stage) inputHash(art artifact.Result, run stage.Run) (string, error) {
 		return "", err
 	}
 	previous := ""
-	if s.cfg.Previous != "" {
+	if decision := run.Snapshot.PreviousReport; decision != nil {
+		previous = decision.SHA256
+	} else if s.cfg.Previous != "" {
 		b, e := os.ReadFile(s.cfg.Previous)
 		if e != nil {
 			return "", fmt.Errorf("read previous report: %w", e)
@@ -86,6 +88,7 @@ func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run, opts
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("ensure build: %w", err)
 	}
+	opts.PreviousReport = s.cfg.Previous
 	return s.runBuild(ctx, env, run, db, art, opts)
 }
 
@@ -167,7 +170,6 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	}
 	opts.Mapping = mapping
 	opts.EvaluationDate = retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}
-	opts.PreviousReport = s.cfg.Previous
 	opts.BuildArtifactSHA256 = art.SHA256
 	opts.DumpSHA256 = db.Record.Dump.SHA256
 	opts.DatabaseInstanceKind = db.Instance
@@ -208,7 +210,11 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err = s.checkInputHash(art, run, item.InputHash); err != nil {
 		return stage.Output{}, err
 	}
-	report, cache, err := s.runBuild(ctx, env, run, db, art, evaluation.Options{})
+	previous, err := s.stagePrevious(env, run)
+	if err != nil {
+		return stage.Output{}, err
+	}
+	report, cache, err := s.runBuild(ctx, env, run, db, art, evaluation.Options{PreviousReport: previous})
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -247,8 +253,51 @@ func (s *Stage) Resolve(_ context.Context, env stage.Env, run stage.Run, item st
 	if r.Status != "complete" || r.Country != run.Country || r.Rel != run.Rel || r.ReleaseEligible {
 		return stage.Resolution{}, fmt.Errorf("invalid evaluation report")
 	}
+	if err = checkDecision(run.Snapshot.PreviousReport, r); err != nil {
+		return stage.Resolution{}, err
+	}
 	return stage.Resolution{Gaps: reportGaps(r)}, nil
 }
+
+func (s *Stage) stagePrevious(env stage.Env, run stage.Run) (string, error) {
+	decision := run.Snapshot.PreviousReport
+	if decision == nil {
+		return s.cfg.Previous, nil
+	}
+	if decision.None() {
+		return "", nil
+	}
+	path := filepath.Join(env.Artifacts.Abs(decision.Path), stage.PreviousReportFile)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read frozen previous report: %w", err)
+	}
+	if fmt.Sprintf("%x", sha256.Sum256(data)) != decision.SHA256 {
+		return "", fmt.Errorf("frozen previous report SHA-256 differs from the run's decision")
+	}
+	return path, nil
+}
+
+func checkDecision(decision *stage.PreviousReport, r evaluation.Report) error {
+	if decision == nil {
+		return nil
+	}
+	compared, err := r.ComparedRelease()
+	if err != nil {
+		return fmt.Errorf("evaluation report does not match the previous report decision: %v", err)
+	}
+	if decision.None() {
+		if compared != nil {
+			return fmt.Errorf("evaluation report names previous release %s, previous report decision is none", compared.Rel)
+		}
+		return nil
+	}
+	if compared == nil || compared.ReportSHA256 != decision.SHA256 {
+		return fmt.Errorf("evaluation report does not match the previous report decision %s", decision.SHA256)
+	}
+	return nil
+}
+
 func reportGaps(r evaluation.Report) []stage.Gap {
 	var gaps []stage.Gap
 	for _, f := range r.Floors {

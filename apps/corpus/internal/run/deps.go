@@ -22,5 +22,7 @@ type Deps struct {
 	RecipesFor           func(stage.Snapshot) map[string]string
 	Stages               []string
 	SourceList           json.RawMessage
+	PreviousReport       ReportChoice
+	Notice               func(string)
 	Now                  func() time.Time
 }

@@ -14,7 +14,8 @@ AUTH_LIMITS = ('statement_timeout=30s', 'lock_timeout=5s', 'idle_in_transaction_
                'client_connection_check_interval=2s')
 RECORDER = '''#!/usr/bin/env python3
 import json, os, sys
-keys = ('PGPASSWORD', 'PGUSER', 'PGPASSFILE', 'PGSERVICEFILE', 'PGCONNECT_TIMEOUT', 'PGOPTIONS', 'ACTIVATOR_DB_PASSWORD')
+keys = ('PGPASSWORD', 'PGUSER', 'PGPASSFILE', 'PGSERVICEFILE', 'PGCONNECT_TIMEOUT', 'PGOPTIONS', 'PGREQUIREAUTH',
+        'ACTIVATOR_DB_PASSWORD')
 with open(os.environ['SESSIONS'], 'a') as out:
     out.write(json.dumps(dict(args=sys.argv[1:], sql=sys.stdin.read(), env={k: os.environ.get(k) for k in keys})) + '\\n')
 '''
@@ -63,8 +64,9 @@ class SuperuserSessionTest(unittest.TestCase):
                      '--username auth_owner', '--dbname auth'):
             self.assertIn(word, grants['command'])
         self.assertIn("PGPASSWORD=$auth_password PGPASSFILE=/dev/null PGSERVICEFILE=/dev/null PGCONNECT_TIMEOUT=5 \\\n"
-                      "PGOPTIONS='-c search_path=pg_catalog ", (HOST / 'provision-activator.sh').read_text())
+                      "PGOPTIONS='-c password_encryption=scram-sha-256 -c search_path=pg_catalog ", (HOST / 'provision-activator.sh').read_text())
         self.assertEqual(option(grants, 'search_path'), ['search_path=pg_catalog'])
+        self.assertEqual(option(grants, 'password_encryption'), ['password_encryption=scram-sha-256'])
         for limit in AUTH_LIMITS:
             self.assertIn(limit, [item.strip() for item in grants['options']])
         for statement in ('GRANT CONNECT ON DATABASE auth TO activator;', 'GRANT USAGE ON SCHEMA public TO activator;',
@@ -113,6 +115,8 @@ class ProvisionerRunTest(unittest.TestCase):
             with self.subTest(how=how):
                 admin, grants = self.run_script(how)
                 self.assertEqual(admin['args'][-4:], ['--username', 'postgres', '--dbname', 'postgres'])
+                self.assertEqual(admin['env']['PGREQUIREAUTH'], 'scram-sha-256')
+                self.assertEqual(grants['env']['PGREQUIREAUTH'], 'scram-sha-256')
                 self.assertEqual(admin['env']['PGPASSWORD'], 'synthetic-admin')
                 self.assertEqual(admin['env']['ACTIVATOR_DB_PASSWORD'], 'synthetic-activator')
                 self.assertIn('ALTER ROLE activator PASSWORD', admin['sql'])

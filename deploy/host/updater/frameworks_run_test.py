@@ -10,6 +10,7 @@ from updater import activation_test as fixture
 from updater import deploy_io
 from updater.deploy_corpus import Corpus
 from updater.deploy_corpus_kind import FRAMEWORKS
+from updater.deploy_corpus_sql import JournalRefused
 from updater.deploy_io import canonical, CommandError
 from updater.deploy_registry import Registry
 from updater.frameworks_activation_test import Database
@@ -99,6 +100,12 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
 
     def result_hash(self):
         return hashlib.sha256(self.directory.joinpath('manifest.json').read_bytes()).hexdigest()
+
+    def test_refused_journal_row_is_reported_as_recovery(self):
+        self.db.operations = mock.Mock(side_effect=JournalRefused('invalid release journal row'))
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
+                         ('failed', 'recovery', 'invalid release journal row'))
 
     def test_waits_for_release_floor_before_any_host_or_registry_action(self):
         self.state.data['release_floor'] = BLOCK['min_release_floor'] - 1
