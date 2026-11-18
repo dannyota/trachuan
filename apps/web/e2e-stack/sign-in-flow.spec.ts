@@ -21,5 +21,5 @@ test('rejects an unverified email', async ({ page }) => {
   await page.goto('/account')
   await authorize(page, freshEmail(), false)
   await expect(page).toHaveURL(/\/login\?error=login_failed$/)
-  await expect(page.getByText('Đăng nhập không thành công. Vui lòng thử lại.')).toBeVisible()
+  await expect(page.getByText('Đăng nhập không thành công. Bạn thử lại nhé.')).toBeVisible()
 })

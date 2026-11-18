@@ -30,7 +30,7 @@ it('announces the existing failure message when copying fails', async () => {
   const wrapper = mount(CopyButton, { props: { text: 'citation', label: 'Sao chép trích dẫn' } })
   await wrapper.get('button').trigger('click')
   await flushPromises()
-  expect(wrapper.get('[aria-live]').text()).toBe('Đã xảy ra lỗi. Vui lòng thử lại.')
+  expect(wrapper.get('[aria-live]').text()).toBe('Có lỗi xảy ra. Bạn thử lại nhé.')
   expect(wrapper.get('[aria-live]').classes()).toContain('visually-hidden')
   expect(wrapper.get('button').text()).toBe('Chưa sao chép được')
   expect(wrapper.get('button svg[data-icon="alert"]').exists()).toBe(true)

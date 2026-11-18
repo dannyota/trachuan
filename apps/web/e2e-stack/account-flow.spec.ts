@@ -32,7 +32,7 @@ test('creates and revokes a token, revokes another session and signs out', async
     expect(result.result.structuredContent.state).toBe('open')
     await dialog.getByRole('button', { name: 'Đóng' }).click()
     await page.reload()
-    const reports = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Báo lỗi của bạn' }) })
+    const reports = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Lỗi đã báo' }) })
     await expect(reports).toContainText('1/2099/TT-TEST')
     await reports.getByRole('button', { name: 'Rút báo cáo' }).click()
     await expect(reports).toContainText('Đã rút')
