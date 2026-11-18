@@ -6,7 +6,8 @@ import subprocess
 import tempfile
 
 from corpus_manifest import decode, validate_report
-from manifest import canonical, positive
+from manifest import canonical
+from object_store import fetch_checked
 
 
 def verified_previous(report, directory, client, release_row=None):
@@ -17,18 +18,8 @@ def verified_previous(report, directory, client, release_row=None):
     manifest = release(country, rel, directory / 'previous-manifest')
     if manifest['country'] != country or manifest['rel'] != rel:
         raise ValueError('previous manifest identity differs from report')
-    common = ['--bucket', 'trachuan-releases', '--key', f'{country}/{rel}/report.json']
-    metadata = client(['head-object', *common])
-    size, etag = metadata.get('ContentLength'), metadata.get('ETag')
-    positive(size, 'previous report size')
-    if size > 16 * 1024**2 or not isinstance(etag, str) or not etag:
-        raise ValueError('invalid previous report size or ETag')
-    path = directory / 'previous-report.json'
-    result = client(['get-object', *common, '--range', f'bytes=0-{size - 1}',
-                     '--if-match', etag, str(path)])
-    data = path.read_bytes()
-    if len(data) != size or result.get('ETag') != etag or result.get('ContentRange') != f'bytes 0-{size - 1}/{size}':
-        raise ValueError('previous report download identity or size differs')
+    data = fetch_checked(client, 'trachuan-releases', f'{country}/{rel}/report.json',
+                         directory / 'previous-report.json', 16 * 1024**2, 'previous report')
     digest = hashlib.sha256(data).hexdigest()
     if digest != previous['report_sha256'] or digest != manifest['report']['sha256']:
         raise ValueError('previous report SHA-256 differs from report or signed manifest')
