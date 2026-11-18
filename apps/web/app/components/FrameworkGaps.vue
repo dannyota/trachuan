@@ -12,15 +12,18 @@ const error = ref('')
 const notice = ref('')
 const unavailable = ref(false)
 const loading = ref(false)
-async function load(more = false, restart = false) {
+async function load(more = false, restart: false | 'release' | 'cursor' = false) {
   if (loading.value) return
   loading.value = true
+  error.value = ''
   const response = await api.client.GET('/api/v1/frameworks/gaps', { params: { query: { versions: [props.handle], ...(more ? { cursor: cursor.value, release: release.value } : {}) } } })
   loading.value = false
   if (response.response.status === 404) { notFound(); return }
   if (!response.data) {
     const code = response.error?.error.code || 'unavailable'
-    if (more && code === 'cursor_expired') { notice.value = ''; gaps.value = []; cursor.value = ''; await load(false, true); return }
+    if (more && code === 'cursor_expired') { notice.value = ''; gaps.value = []; cursor.value = ''; await load(false, 'cursor'); return }
+    if (more && code === 'release_expired') { notice.value = ''; await load(false, 'release'); return }
+    if (restart === 'release' && code === 'invalid_request') { notFound(); return }
     error.value = code
     return
   }
@@ -38,6 +41,6 @@ await load()
     <h2 class="fw-section-title">{{ labels.gaps }}</h2>
     <p v-if="unavailable" class="notice">{{ labels.accessUnavailable }}</p><p v-if="notice" role="status">{{ notice }}</p>
     <div v-for="(gap, index) in gaps" :key="index" class="fw-row"><span v-if="gap.subject" class="num">{{ gap.subject }}</span><p class="fw-title">{{ gapLabel(gap.kind) }}</p><p class="fw-meta">{{ gap.detail }}</p></div>
-    <p v-if="error" role="alert">{{ errorMessage(language, error) }}</p><button v-if="cursor && !error" type="button" class="btn btn-secondary" :disabled="loading" @click="load(true)">{{ labels.more }}</button>
+    <p v-if="error" role="alert">{{ errorMessage(language, error) }}</p><button v-if="cursor" type="button" class="btn btn-secondary" :disabled="loading" @click="load(true)">{{ labels.more }}</button>
   </section>
 </template>

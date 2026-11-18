@@ -209,3 +209,65 @@ it('drops the restart notice when a second restart fails', async () => {
   expect(wrapper.find('[role="alert"]').exists()).toBe(true)
   expect(wrapper.text()).not.toContain(reloaded)
 })
+
+const releaseGone = { response: { status: 409 }, error: { error: { code: 'release_expired' } } }
+
+it('restarts a search from the top when the release expired on show more', async () => {
+  const { wrapper, post } = await searchToExpiry([searchResult('first', 'cursor-a'), releaseGone, searchResult('fresh')])
+  expect(wrapper.text()).toContain(reloaded)
+  expect(wrapper.text()).toContain('fresh')
+  expect(wrapper.text()).not.toContain('first')
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+  const body = (post.mock.calls[2] as unknown[])[1] as { body: Record<string, unknown> }
+  expect(body.body).toMatchObject({ query: 'query' })
+  expect(body.body).not.toHaveProperty('cursor')
+  expect(body.body).not.toHaveProperty('release')
+})
+
+it('shows no restart notice when the restart after release expiry fails', async () => {
+  const { wrapper, post } = await searchToExpiry([searchResult('first', 'cursor-a'), releaseGone, failed])
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloaded)
+  expect(post).toHaveBeenCalledTimes(3)
+})
+
+it('shows the error for a first-page search release expiry without retrying', async () => {
+  const { wrapper, post } = setup('mixed', Search, false, false, [releaseGone])
+  await flushPromises()
+  await wrapper.get('input').setValue('query')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(wrapper.get('[role="alert"]').text()).toBe('The release has expired.')
+  expect(wrapper.text()).not.toContain(reloaded)
+  expect(post).toHaveBeenCalledTimes(1)
+})
+
+it('keeps the search rows and button after a failed restart on release expiry, then recovers', async () => {
+  const { wrapper, post } = await searchToExpiry([searchResult('first', 'cursor-a'), releaseGone, failed, releaseGone, searchResult('fresh')])
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloaded)
+  expect(wrapper.text()).toContain('first')
+  expect(wrapper.find('button[type="button"]').exists()).toBe(true)
+  await wrapper.get('button[type="button"]').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain(reloaded)
+  expect(wrapper.text()).toContain('fresh')
+  expect(wrapper.text()).not.toContain('first')
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+  expect(post).toHaveBeenCalledTimes(5)
+})
+
+it('keeps the search rows but drops show more when the restart returns invalid_request', async () => {
+  const { wrapper, post } = await searchToExpiry([searchResult('first', 'cursor-a'), releaseGone, { response: { status: 400 }, error: { error: { code: 'invalid_request' } } }])
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain(reloaded)
+  expect(wrapper.text()).toContain('first')
+  expect(wrapper.find('button[type="button"]').exists()).toBe(false)
+  expect(post).toHaveBeenCalledTimes(3)
+})
+
+it('clears the search rows before a failed restart on cursor expiry', async () => {
+  const { wrapper } = await searchToExpiry([searchResult('first', 'cursor-a'), expired, failed])
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain('first')
+})
