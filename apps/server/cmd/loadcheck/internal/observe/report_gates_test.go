@@ -239,13 +239,15 @@ func TestReport_WebAndServerMemoryFromCurrent(t *testing.T) {
 			serviceSamples(b, map[string]serviceSample{"web": {Current: 1, Peak: web}, "server": {Current: 1, Peak: server}}),
 		}
 	}
-	gates := report(t, records, mk(300<<20, 2156000000), extras{})
+	gates := report(t, records, mk(300000000, 2156000000), extras{})
 	g := want(t, gates, "web memory peak", "pass")
-	if g.Value != "300.00 MiB" || g.Limit != "≤ 300.00 MiB" {
+	if g.Value != "300.00 MB (286.10 MiB)" || g.Limit != "≤ 300 MB" {
 		t.Fatalf("web %+v", g)
 	}
-	want(t, gates, "server memory peak", "pass")
-	gates = report(t, records, mk(300<<20+1, 2156000001), extras{})
+	if g := want(t, gates, "server memory peak", "pass"); g.Limit != "≤ 2156 MB" {
+		t.Fatalf("server %+v", g)
+	}
+	gates = report(t, records, mk(300000001, 2156000001), extras{})
 	want(t, gates, "web memory peak", "fail")
 	want(t, gates, "server memory peak", "fail")
 	want(t, report(t, records, nil, extras{}), "web memory peak", "unavailable")
@@ -258,10 +260,10 @@ func TestReport_MemoryPeakSetBeforeRunIsIgnored(t *testing.T) {
 		memSample(t0.Add(900*time.Millisecond), 120<<20, 500<<20, "web", "queryembed"),
 	}
 	gates := report(t, records, samples, extras{})
-	if g := want(t, gates, "web memory peak", "pass"); g.Value != "120.00 MiB" {
+	if g := want(t, gates, "web memory peak", "pass"); g.Value != "125.83 MB (120.00 MiB)" {
 		t.Fatalf("%+v", g)
 	}
-	if g := want(t, gates, "queryembed memory peak", "info"); g.Value != "120.00 MiB" {
+	if g := want(t, gates, "queryembed memory peak", "info"); g.Value != "125.83 MB (120.00 MiB)" {
 		t.Fatalf("%+v", g)
 	}
 }
@@ -273,11 +275,11 @@ func TestReport_MemoryPeakSetDuringRunCounts(t *testing.T) {
 		memSample(t0.Add(900*time.Millisecond), 120<<20, 400<<20, "web", "postgres", "caddy"),
 	}
 	gates := report(t, records, samples, extras{})
-	if g := want(t, gates, "web memory peak", "fail"); g.Value != "400.00 MiB" {
+	if g := want(t, gates, "web memory peak", "fail"); g.Value != "419.43 MB (400.00 MiB)" {
 		t.Fatalf("%+v", g)
 	}
 	for _, name := range []string{"postgres", "caddy"} {
-		if g := want(t, gates, name+" memory peak", "info"); g.Value != "400.00 MiB" {
+		if g := want(t, gates, name+" memory peak", "info"); g.Value != "419.43 MB (400.00 MiB)" {
 			t.Fatalf("%+v", g)
 		}
 	}

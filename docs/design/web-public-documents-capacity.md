@@ -135,5 +135,6 @@ Abort the window by going to step 4 when any of these occurs: a signed-in
 request fails other than with its account's own limit; search p95 over one
 minute exceeds 2 s; a service's `memory.current` passes 90% of its cgroup cap; a
 container restarts; PostgreSQL connections pass 45; or a non-test request fails
-in the server log. Host CPU is gated in the report, not an abort trigger. During
-phase D, complete the activation back to `vn/20261117_7` first.
+in the server log; in phases A to C only, host CPU stays above 90% for 60
+seconds. Phase D has no host CPU trigger. During phase D, complete the
+activation back to the release that was active before the run first.

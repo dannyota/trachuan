@@ -103,7 +103,7 @@ func runMemoryPeak(inRun []sample, name string) (uint64, bool) {
 	return peak, found
 }
 func memoryGates(ws []window, samples, inRun []sample) []gate {
-	limits := map[string]uint64{"web": 300 * mib, "server": 2156000000}
+	limits := map[string]uint64{"web": 300000000, "server": 2156000000}
 	names := map[string]bool{"web": true, "server": true}
 	for _, s := range inRun {
 		for name := range s.Services {
@@ -122,14 +122,14 @@ func memoryGates(ws []window, samples, inRun []sample) []gate {
 		text := "recorded"
 		if gated {
 			limit = limits[name]
-			text = fmt.Sprintf("≤ %.2f MiB", float64(limit)/mib)
+			text = fmt.Sprintf("≤ %d MB", limit/1000000)
 		}
 		peak, found := runMemoryPeak(inRun, name)
 		if len(ws) == 0 || !found || !allCovered(ws, samples, hasService(name)) {
 			gates = append(gates, unavailable(label, text))
 			continue
 		}
-		value := fmt.Sprintf("%.2f MiB", float64(peak)/mib)
+		value := fmt.Sprintf("%.2f MB (%.2f MiB)", float64(peak)/1e6, float64(peak)/mib)
 		if gated {
 			addGate(&gates, label, value, text, peak <= limit)
 		} else {
