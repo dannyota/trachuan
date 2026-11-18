@@ -56,11 +56,14 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    previous release's: MRR@8 may be below the previous value while it stays
    within a fixed tolerance of the highest value reached under those recipes,
    with recall@20 still strict
-   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). A change that
-   alters only the abstention threshold or its calibration policy ships when
-   matched citations are identical on every cohort and abstention balanced
-   accuracy does not fall on either cohort. Reports state the small sample size;
-   no interval or superiority claim is required.
+   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). A loss whose
+   credited documents left current-law eligibility through a validity change
+   between the two releases is excused on both metrics
+   ([losses from corrected validity](../design/evaluation-validity-losses.md)).
+   A change that alters only the abstention threshold or its calibration policy
+   ships when matched citations are identical on every cohort and abstention
+   balanced accuracy does not fall on either cohort. Reports state the small
+   sample size; no interval or superiority claim is required.
 5. Every evaluation reports returned evidence characters per response (p50,
    p95). A change that only reduces size ships when matched citations and gate
    results are identical on every cohort.
@@ -226,3 +229,10 @@ accuracy on either cohort.
   `abstention.calibration_sha256` from its release's data. Condition 1 of the
   MRR@8 tolerance compares retrieval recipes without that field; the abstention
   threshold and every other field must still match.
+- 2026-11-18 (proposed): excused losses from corrected validity added to item 4
+  after `vn/20261118_1`: a reviewed correction ended 32/2012/TT-NHNN, wrongly
+  current in `vn/20261117_7`, and development case dev-033 lost the hit it had
+  credited (recall@20 0.7611 to 0.7522, MRR@8 0.6673 to 0.6595). The gate held
+  212 other corrections; the entry was dropped to ship them. Accepted cost: the
+  validators trust the validity fields the candidate report states. Scoring of
+  cases tagged `historical` stays open.
