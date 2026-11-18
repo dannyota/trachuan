@@ -7,8 +7,9 @@ fails on every run. The result shows `invalid release journal row` (step
 `recovery`, `activation` or `prune`), or `invalid corpus database name` or
 `invalid frameworks database name` (step `manifest`, `activation` or `prune`).
 Treat it as a possible compromise of the server. These queries print counts
-only, as one `|`-separated line per kind. Run them as `trachuan`; the script
-connects as `auth_owner`, never as `postgres`.
+only, as `|`-separated lines. The first prints a line only for a kind that has
+journal rows, so an empty result is normal for a kind that has none. Run them as
+`trachuan`; the script connects as `auth_owner`, never as `postgres`.
 
 Journal rows, latest per operation. After the kind comes the row count, and
 every later number must be 0:
@@ -66,8 +67,8 @@ ORDER BY k.corpus_kind;
 SQL
 ```
 
-A schema named `activator` would be searched before `public` by the updater's
-sessions and hide what these queries read, so this count must be 0:
+An older updater's sessions search a schema named `activator` before `public`,
+so one could hide what these queries read. This count must be 0:
 
 ```sh
 bash /srv/trachuan/host/auth-psql.sh <<'SQL'
