@@ -7,15 +7,14 @@ A host timer activates it. Code follows [pull deployment](pull-deployment.md).
 ## Upload
 
 `scripts/corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>` runs
-on the MacBook after `corpus eval` and uploads to bucket `trachuan-releases`,
-prefix `<cc>/<rel>/`:
+on the MacBook after the run is `evaluated` and uploads to bucket
+`trachuan-releases`, prefix `<cc>/<rel>/`:
 
 - `corpus.dump`: the build's verified dump.
 - `MANIFEST.sha256`: the build artifact manifest
   ([pipeline](pipeline.md#items-artifacts-and-gaps)).
-- `report.json`: the [evaluation](evaluation.md) report, with `--previous` set
-  to the active report. For version 1, `--previous-release` supplies
-  `release.json` or a signed manifest. Version 2 keeps the full retrieval
+- `report.json`: the [selected report](release-evidence.md#selected-report) of
+  the run, compared with the active report. Version 2 keeps the full retrieval
   recipe.
 - `release.json`: the dump's `release` row as JSON
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
@@ -26,7 +25,8 @@ prefix `<cc>/<rel>/`:
 workshop read-only, without Temporal. `release.json` keeps the release row's
 column names, excluding `singleton`, and adds `extensions`, `run` and
 `recipe_hash_inputs`. `run` records its id, expected and incomplete item counts,
-unaccepted gap count, matching build artifact hash and `complete`. Complete
+unaccepted gap count, matching build artifact hash, the two report hashes of the
+[selected report](release-evidence.md#selected-report) and `complete`. Complete
 requires an evaluated or released run, every item done or a gap with a gap row,
 every gap accepted, and a done build whose input and recipe hashes match the
 release row. The workshop reads share one repeatable-read snapshot.

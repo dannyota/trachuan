@@ -26,6 +26,38 @@ binds, and never changes, the build artifact and the evaluation report.
   ([relations from text](relations-text.md)). Nothing may be pinned to an
   ambiguous provision.
 
+## Selected report
+
+A run decides what it is compared with when it is created. `corpus start` of a
+new run requires exactly one of `--previous-report <report.json>`, the uploaded
+version 2 report of the release active in production, or `--no-previous-report`.
+Neither or both refuses the start, so a forgotten flag cannot look like a
+baseline. The snapshot freezes the decision: the file's absolute path and
+SHA-256, or `none`. A later start of the run may repeat the same decision or
+omit it; a different one is refused.
+
+The `eval` stage reads the frozen file, fails when its SHA-256 differs, and
+compares with it. That hash is already in the stage's input hash, so another
+previous report cannot reuse an evaluation; no stage recipe changes, and the
+server checks none of the eval or evidence recipes. The `report.json` of the
+run's `eval` item is the **selected report**: `evidence` reads it and it is the
+file a release uploads. `corpus eval` stays a diagnostic. `--until eval` pauses
+the run after `eval`; only `evidence` makes it `evaluated`.
+
+`corpus release-row` adds `eval_report_sha256` and `previous_report_sha256` (or
+`none`) to `run`. The uploader requires the report to hash to
+`eval_report_sha256`, `previous_diff.previous.report_sha256` to equal
+`previous_report_sha256`, and that previous release to be the one the verified
+`<cc>-production` manifest names at upload. So when production moves after the
+run started, the run cannot publish and the release needs a new run and `rel`. A
+`none` run cannot publish, since upload requires a `previous_diff`.
+
+A run whose snapshot holds no decision was created before this rule. It has no
+`evidence` stage, becomes `evaluated` after `eval`, and uploads a report from
+`corpus eval --previous` under the older checks; release-row writes neither
+field. The last such release is vn/20261118_1. This path ends with the gate
+below, which requires the sidecars.
+
 ## `findings.json`
 
 Schema version; bindings (`rel`, the dump's SHA-256, the build artifact hash,
@@ -115,23 +147,24 @@ identities, a move is one removal and one addition for the reader to review.
 
 ## Upload
 
-An evaluation against another predecessor is a new evidence item and artifact.
-Once a `rel` has an upload prefix it is never reused, so that case needs a new
-`rel` ([corpus release](corpus-release.md)). The release upload gains
-`findings.json`, `identity.jsonl` and `changes.jsonl` beside the dump,
-`MANIFEST.sha256`, `report.json` and `release.json`, and the signed corpus
-manifest carries the SHA-256 of all three.
+The predecessor is frozen when the run is created, so comparing with another
+release takes a new run. Once a `rel` has an upload prefix it is never reused
+([corpus release](corpus-release.md)). The release upload gains `findings.json`,
+`identity.jsonl` and `changes.jsonl` beside the dump, `MANIFEST.sha256`,
+`report.json` and `release.json`, and the signed corpus manifest carries the
+SHA-256 of all three.
 
 ## Gate
 
-| Condition                                                                                                                    | Result                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                  | unchanged                                                                                                                                    |
-| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff` | refuse                                                                                                                                       |
-| a detector not complete                                                                                                      | refuse                                                                                                                                       |
-| an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                       |
-| `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                             |
-| first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
+| Condition                                                                                                                       | Result                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                     | unchanged                                                                                                                                    |
+| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff`    | refuse                                                                                                                                       |
+| the report is not the run's `eval` report, or its previous report is not the frozen one or not the production release at upload | refuse                                                                                                                                       |
+| a detector not complete                                                                                                         | refuse                                                                                                                                       |
+| an `open` finding of a `blocking` detector, fired or carried                                                                    | refuse                                                                                                                                       |
+| `open` findings of `review` and `info` detectors                                                                                | allowed, counted                                                                                                                             |
+| first release with evidence                                                                                                     | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
 
 ## Downstream use
 

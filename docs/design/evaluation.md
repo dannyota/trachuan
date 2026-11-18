@@ -52,6 +52,11 @@ floors or a failed rejection check (development floors that are `not_run`
 because the file is empty do not count), for future automation; it cannot turn
 an incomplete run into a passing report.
 
+The stage compares with the previous report the run froze at start, and its
+report is the one a release uploads
+([selected report](release-evidence.md#selected-report)); the CLI is a
+diagnostic.
+
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
 verified build artifact hash, fixture and mapping hashes, previous report hash
 or empty string, frozen date, and mode list in fixed order. Recipe hash covers
@@ -197,11 +202,11 @@ when the release serves nodes, every taxonomy classification floor that applies
 to the release passes (a failed or unavailable applicable row fails), and all
 three rejection checks pass; legacy has no gate. `release_eligible` is always
 false in this baseline, including when `quality_pass` is true. Measured failures
-leave the stage done and the run evaluated, with `quality_pass:false` and
-`release_eligible:false`. Per-case `mapping_incomplete` is a reported
-diagnostic, not a run failure. Malformed fixture/map files, incomplete case
-execution or infrastructure failure fail the stage. CLI and status must
-distinguish completed evaluation from passed quality gates.
+leave the stage done and the run on its way to `evaluated`, with
+`quality_pass:false` and `release_eligible:false`. Per-case `mapping_incomplete`
+is a reported diagnostic, not a run failure. Malformed fixture/map files,
+incomplete case execution or infrastructure failure fail the stage. CLI and
+status must distinguish completed evaluation from passed quality gates.
 
 ## Cache and report format
 

@@ -49,6 +49,9 @@ signed dump to OCI Object Storage. Decision and alternatives:
   lost start response leaves a workflow that marks the row `running`. If an open
   workflow of an older generation holds the id, start refuses and names
   `corpus cancel` or `corpus recover`.
+- Creating a run requires `--previous-report <file>` or `--no-previous-report`,
+  frozen in the snapshot
+  ([selected report](release-evidence.md#selected-report)).
 - A start with a later or no `--until` appends missing stages and freezes their
   recipes at that moment, in one update recorded in the run message. A restart
   from `cancelled` or `failed` extends exactly like one from `paused`. Stages
@@ -162,27 +165,30 @@ explicit source-resume command. Neither is an acceptable coverage gap.
 
 ## Stages
 
-| Stage      | Input                                       | Output                                                                | Completeness rule                                                                                                                                                           |
-| ---------- | ------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                      | full listing per source every run; reconcile independent supports and distinguish selection loss from catalog absence under [source ingest rules](#source-ingest-rules)     |
-| `expand`   | Frozen direct VBPL seeds                    | One-hop context membership and source evidence                        | Proposed scope stage; never expand context output; failures keep coverage gaps, [sources](sources.md#one-hop-relation-context)                                              |
-| `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                        | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
-| `extract`  | files                                       | structure tree with verbatim text                                     | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
-| `relate`   | VBPL references, text                       | relations with kind, evidence, affected provisions when captured      | never guessed; unknown targets are gaps                                                                                                                                     |
-| `chunk`    | Done fetch and extract artifacts            | Chunks and source-span/omission report                                | [Chunk contract](chunk.md); metadata changes invalidate prefixes                                                                                                            |
-| `embed`    | Verified chunk artifacts                    | Binary dense vectors, ordinal/token index and gaps                    | [Embed contract](embedder.md#embed-stage); each ordinal is embedded or explicitly rejected                                                                                  |
-| `classify` | trees, vectors, taxonomy, seeds             | assignments                                                           | every article has an assignment or an "unassigned" gap                                                                                                                      |
-| `build`    | Frozen upstream artifact inventory          | Local corpus database and verified custom dump                        | [Build contract](index.md); shared schema, dense/BM25 counts, empty taxonomy, provisional threshold                                                                         |
-| `eval`     | Verified build, fixtures and identity map   | Reports, exact/ANN arm caches and previous diff                       | [Eval contract](evaluation.md); floor failure is reported, incomplete scoring fails the stage                                                                               |
-| `release`  | evaluated database                          | Uploaded dump and signed [corpus release](corpus-release.md) manifest | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
+| Stage      | Input                                                   | Output                                                                | Completeness rule                                                                                                                                                           |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover` | source list YAML; previous release manifest             | expected document set with source modified dates                      | full listing per source every run; reconcile independent supports and distinguish selection loss from catalog absence under [source ingest rules](#source-ingest-rules)     |
+| `expand`   | Frozen direct VBPL seeds                                | One-hop context membership and source evidence                        | Proposed scope stage; never expand context output; failures keep coverage gaps, [sources](sources.md#one-hop-relation-context)                                              |
+| `fetch`    | expected set                                            | metadata JSON, every listed attachment, hashes                        | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
+| `extract`  | files                                                   | structure tree with verbatim text                                     | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
+| `relate`   | VBPL references, text                                   | relations with kind, evidence, affected provisions when captured      | never guessed; unknown targets are gaps                                                                                                                                     |
+| `chunk`    | Done fetch and extract artifacts                        | Chunks and source-span/omission report                                | [Chunk contract](chunk.md); metadata changes invalidate prefixes                                                                                                            |
+| `embed`    | Verified chunk artifacts                                | Binary dense vectors, ordinal/token index and gaps                    | [Embed contract](embedder.md#embed-stage); each ordinal is embedded or explicitly rejected                                                                                  |
+| `classify` | trees, vectors, taxonomy, seeds                         | assignments                                                           | every article has an assignment or an "unassigned" gap                                                                                                                      |
+| `build`    | Frozen upstream artifact inventory                      | Local corpus database and verified custom dump                        | [Build contract](index.md); shared schema, dense/BM25 counts, empty taxonomy, provisional threshold                                                                         |
+| `eval`     | Verified build, fixtures and identity map               | Reports, exact/ANN arm caches and previous diff                       | [Eval contract](evaluation.md); floor failure is reported, incomplete scoring fails the stage                                                                               |
+| `evidence` | Build, selected report, knowledge, predecessor evidence | One artifact with findings and release evidence                       | [Evidence contract](knowledge-loop.md#detectors); a detector that cannot complete fails the stage                                                                           |
+| `release`  | evaluated database                                      | Uploaded dump and signed [corpus release](corpus-release.md) manifest | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
 
 The index baseline appends `chunk`, `embed`, `build`, `eval` to the existing
 registry and frozen run snapshot. `classify` and `release` remain future stages;
 the baseline does not register placeholders for them. Build computes sparse
 vectors because BM25 needs corpus-wide statistics; there is no lexical stage.
-After a completed eval the run is `evaluated`, even when measured quality fails;
-status also shows `quality_pass` and `release_eligible`, never just "passed".
-Existing terminal/generation rules still fence every stage commit.
+After a completed `evidence` the run is `evaluated`, even when measured quality
+fails; a run created before the previous-report rule has no such stage and is
+`evaluated` after `eval`. Status also shows `quality_pass` and
+`release_eligible`, never just "passed". Existing terminal/generation rules
+still fence every stage commit.
 
 Build artifacts contain the exact dump that later release work may upload; eval
 emits a sidecar bound to its hash. Signing, manifest production and host
