@@ -21,6 +21,24 @@ def positive(value, field):
         raise ValueError('invalid ' + field)
 
 
+def frameworks_policy(value):
+    block = value['frameworks']
+    if not isinstance(block, dict) or set(block) != {'repository', 'identity', 'namespace', 'bucket', 'min_release_floor'}:
+        raise ValueError('invalid frameworks policy fields')
+    match(r'ghcr\.io/[a-z0-9_./-]+', block['repository'], 'frameworks repository')
+    identity = block['identity']
+    if (not isinstance(identity, str) or not identity.startswith('^') or not identity.endswith('$')
+            or identity == value['corpus_identity']):
+        raise ValueError('frameworks identity must be anchored and differ from corpus identity')
+    try:
+        re.compile(identity)
+    except re.error as error:
+        raise ValueError('invalid frameworks identity') from error
+    match(r'[a-z0-9]+', block['namespace'], 'frameworks namespace')
+    match(r'[a-z0-9][a-z0-9-]{0,62}', block['bucket'], 'frameworks bucket')
+    positive(block['min_release_floor'], 'frameworks release floor')
+
+
 def policy(path):
     value = json.loads(Path(path).read_bytes())
     keys = {'version', 'repository', 'release_repository', 'rollback_repository',
@@ -28,7 +46,7 @@ def policy(path):
             'workflow_path', 'images', 'upstream', 'extensions', 'sigstore_trust_root',
             'vault_id', 'region', 'secrets', 'corpus_repository', 'corpus_identity',
             'release_namespace', 'release_bucket'}
-    if not isinstance(value, dict) or set(value) - {'release_floor'} != keys or value['version'] != 1:
+    if not isinstance(value, dict) or set(value) - {'release_floor', 'frameworks'} != keys or value['version'] != 1:
         raise ValueError('invalid policy fields')
     release_floor(value)
     match(r'ocid1\.vault\.[A-Za-z0-9_.-]+', value['vault_id'], 'vault id')
@@ -56,6 +74,8 @@ def policy(path):
     match(r'[a-z0-9][a-z0-9-]{0,62}', value['release_bucket'], 'release bucket')
     if not isinstance(value['extensions'], list) or value['extensions'] not in (['vector','ltree'], ['ltree','vector']):
         raise ValueError('invalid extension allowlist')
+    if 'frameworks' in value:
+        frameworks_policy(value)
     return value
 
 

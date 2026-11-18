@@ -8,7 +8,10 @@ from updater.corpus_activation_test import Database, Crash
 from updater.deploy_io import canonical, CommandError
 from updater import deploy_corpus as c
 from updater.deploy_corpus_result import ReleaseResult
+from updater.deploy_registry import Registry
 from updater.deploy_run import Updater
+from updater.frameworks_run_test import missing_tag
+from updater.frameworks_verify_test import NESTED
 
 
 class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
@@ -51,6 +54,20 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.registry.fetch.side_effect = CommandError('registry failed')
         self.state.data['accepted']['corpus'].clear()
         self.assertFalse(self.run_phase())
+
+    def test_missing_law_tag_keeps_failing_once_a_corpus_manifest_was_accepted(self):
+        self.phase.registry = Registry(self.rules, missing_tag)
+        self.state.data['accepted']['corpus']['1'] = {'hash': 'a' * 64, 'status': 'active'}
+        self.assertFalse(self.run_phase())
+        self.assertEqual(self.result()['status'], 'failed')
+        self.assertTrue(self.result()['message'].startswith(
+            'corpus command failed or run interrupted: oras resolve: exit 1: Error response from registry: '))
+
+    def test_nested_law_manifest_ends_as_failed_result(self):
+        self.directory.joinpath('manifest.json').write_bytes(NESTED)
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
+                         ('failed', 'manifest', 'invalid corpus manifest JSON'))
 
     def test_missing_mount_waits_without_any_activator_connection(self):
         for mode in ('activate', 'verify'):
@@ -204,7 +221,7 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.state.data['accepted']['corpus']['1']['status'], 'failed')
         self.assertEqual(self.state.data['active'], active_image)
 
-    def test_three_phase_order_and_corpus_failure_preserves_image_result(self):
+    def test_phase_order_and_corpus_failure_preserves_image_result(self):
         paths = self.paths
         paths.policy.parent.mkdir(parents=True, exist_ok=True)
         paths.policy.write_bytes(canonical(self.rules))
@@ -213,12 +230,12 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         paths.backup_lock.parent.mkdir(parents=True, exist_ok=True)
         paths.backup_lock.touch()
         app = Updater(paths, self.runner, user_prefix=[])
-        self.assertEqual(app.phases, ('secrets','images','corpus'))
+        self.assertEqual(app.phases, ('secrets','images','corpus','frameworks'))
         calls = []
         for name in app.phases:
             setattr(app, name, lambda *args, phase=name: calls.append(phase) or (phase != 'corpus'))
         self.assertEqual(app.run(), 1)
-        self.assertEqual(calls, ['secrets','images','corpus'])
+        self.assertEqual(calls, ['secrets','images','corpus','frameworks'])
 
     def test_resource_thresholds(self):
         with mock.patch('updater.deploy_corpus.Path.read_text', return_value='MemAvailable: 2441407 kB\n'), \

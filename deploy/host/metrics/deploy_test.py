@@ -55,6 +55,38 @@ class DeployMetricsTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 publisher.release(path, now)
 
+    def test_release_metrics_carry_kind_dimension_for_law_and_frameworks(self):
+        now = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as directory:
+            law = Path(directory) / 'release.json'
+            frameworks = Path(directory) / 'release-frameworks.json'
+            def collect():
+                with mock.patch.object(publisher, 'RELEASE_RESULT', law), \
+                     mock.patch.object(publisher, 'FRAMEWORKS_RESULT', frameworks), \
+                     mock.patch.object(publisher, 'DEPLOY_RESULT', Path(directory) / 'missing'), \
+                     mock.patch.object(publisher, 'SECRETS_RESULT', Path(directory) / 'missing'), \
+                     mock.patch.object(publisher, 'WATCH_RESULT', Path(directory) / 'missing'), \
+                     mock.patch.object(publisher, 'BACKUP_DIR', Path(directory)), \
+                     mock.patch.object(publisher, 'filesystem', return_value=(25, 100)):
+                    return [item for item in publisher.collect('test-host', now) if item[0].startswith('release_')]
+            law.write_text(json.dumps(dict(status='ok')))
+            self.assertEqual(collect(), [('release_failed', 0, {'host': 'test-host', 'kind': 'law'}),
+                                         ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'law'})])
+            law.write_text(json.dumps(dict(status='failed')))
+            frameworks.write_text(json.dumps(dict(status='waiting', waiting_since='2026-01-01T00:00:00Z')))
+            self.assertEqual(collect(), [
+                ('release_failed', 1, {'host': 'test-host', 'kind': 'law'}),
+                ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'law'}),
+                ('release_failed', 0, {'host': 'test-host', 'kind': 'frameworks'}),
+                ('release_waiting_age_seconds', 86400, {'host': 'test-host', 'kind': 'frameworks'})])
+            law.unlink()
+            frameworks.write_text(json.dumps(dict(status='failed')))
+            self.assertEqual(collect(), [('release_failed', 1, {'host': 'test-host', 'kind': 'frameworks'}),
+                                         ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'frameworks'})])
+            frameworks.write_text(json.dumps(dict(status='bogus')))
+            with self.assertRaises(ValueError):
+                collect()
+
     def test_failure_statuses_and_last_success_are_published(self):
         now = datetime(2026, 1, 2, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as directory:

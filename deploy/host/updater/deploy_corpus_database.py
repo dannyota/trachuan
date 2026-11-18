@@ -1,13 +1,15 @@
 import json
 
 from . import deploy_corpus_sql as sql
+from .deploy_corpus_kind import LAW
 from .deploy_corpus_lock import AdvisoryLock
 from .deploy_corpus_verify import toc
 
 
 class Database:
-    def __init__(self, host, rules):
+    def __init__(self, host, rules, kind=LAW):
         self.host, self.rules, self.holder = host, rules, None
+        self.kind, self.sql = kind, kind.sql
 
     def lock(self):
         return AdvisoryLock(self)
@@ -31,48 +33,47 @@ class Database:
                          input=('SET standard_conforming_strings=on;\n' + text).encode()).decode().strip()
 
     def current(self, country):
-        value = self.query('SELECT active_db FROM corpus_release WHERE country=' + sql.literal(country) + ';')
+        value = self.query(self.sql.current(country))
         if value:
-            sql.database(value)
+            self.sql.database(value)
         return value or None
 
     def retirement(self, name):
-        sql.database(name)
-        raw = self.query('SELECT json_build_object(\'dump_sha256\',dump_sha256,\'live\',retain_until > now()) '
-                         'FROM retired_release WHERE db_name=' + sql.literal(name) + ';')
+        self.sql.database(name)
+        raw = self.query(self.sql.retirement(name))
         return json.loads(raw) if raw else None
 
     def operations(self):
-        return json.loads(self.query("SELECT coalesce(json_agg(j ORDER BY id),'[]') FROM ("
-            'SELECT DISTINCT ON (operation_id) * FROM release_journal WHERE operation_id IS NOT NULL '
-            'ORDER BY operation_id,id DESC) j;'))
+        return json.loads(self.query(self.sql.operations()))
 
     def append(self, row, step):
-        return json.loads(self.query(sql.journal(row, step)))
+        return json.loads(self.query(self.sql.journal(row, step)))
 
-    def activate(self, row):
-        projection = 0
+    def projection(self, row):
         if row['manifest']['schema_version'] >= 8:
             name = row['database_name']
             if self.query("SELECT to_regclass('public.document_summary') IS NOT NULL;", name) == 't':
                 if self.query('SELECT NOT EXISTS(SELECT FROM document_summary WHERE projection <> 1);', name) == 't':
-                    projection = 1
-        return json.loads(self.query(sql.activate(row, projection)))
+                    return 1
+        return 0
+
+    def activate(self, row):
+        return json.loads(self.query(self.kind.activation(self, row)))
 
     def protected(self, name):
-        sql.database(name)
-        return self.query(sql.protected(name)) == 't'
+        self.sql.database(name)
+        return self.query(self.sql.protected(name)) == 't'
 
     def exists(self, name):
-        sql.database(name)
+        self.sql.database(name)
         return self.query('SELECT EXISTS(SELECT FROM pg_database WHERE datname=' + sql.literal(name) + ');') == 't'
 
     def connections(self, name):
-        sql.database(name)
+        self.sql.database(name)
         return self.query('SELECT EXISTS(SELECT FROM pg_stat_activity WHERE datname=' + sql.literal(name) + ');') == 't'
 
     def drop(self, name):
-        sql.database(name)
+        self.sql.database(name)
         if self.protected(name):
             raise ValueError('refusing to drop protected database')
         self.host.psql('postgres', "SELECT format('ALTER DATABASE %I OWNER TO activator',datname) "
@@ -83,14 +84,13 @@ class Database:
         self.user('dropdb', '--no-password', '-h', '127.0.0.1', '-U', 'activator', '--if-exists', name)
 
     def expired(self):
-        return json.loads(self.query("SELECT coalesce(json_agg(db_name),'[]') FROM retired_release "
-                                     'WHERE retain_until <= now();'))
+        return json.loads(self.query(self.sql.expired()))
 
     def forget(self, name):
-        sql.database(name)
+        self.sql.database(name)
         if self.protected(name) or self.exists(name):
             raise ValueError('cannot forget protected or existing database')
-        self.query('DELETE FROM retired_release WHERE db_name=' + sql.literal(name) + ';')
+        self.query(self.sql.forget(name))
 
     def check_extensions(self, manifest):
         installed = json.loads(self.query("SELECT json_object_agg(name,default_version) "
@@ -154,7 +154,7 @@ class Database:
         if database is not None:
             sql.database(database)
             args += ['--secret', 'server_corpus_database_url,type=env,target=SERVER_CORPUS_DATABASE_URL']
-        args += [image, 'release-check']
+        args += [image, 'release-check', *self.kind.check]
         if database is not None:
             args += ['--database', database]
         return json.loads(self.host.user(*args, timeout=150))

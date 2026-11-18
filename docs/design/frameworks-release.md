@@ -133,8 +133,9 @@ these differences:
 
 - **Pull and verify.** Tag `frameworks-production`, the frameworks identity, and
   a verifier with the field list above that refuses any other `corpus_kind`.
-  Until a frameworks manifest is accepted, a missing package is status `current`
-  with "no frameworks release published".
+  Until a frameworks manifest is accepted, a missing `frameworks-production` tag
+  in the shared package is status `current` with "no frameworks release
+  published".
 - **Mode.** `retained` and `new` as for law, over `retired_release` rows of kind
   `frameworks`. `new` requires `previous` to equal the active frameworks
   release; with no `frameworks_release` row it requires `previous` null, the
@@ -146,7 +147,8 @@ these differences:
   recipe's query hash must equal the running embedder's, else status `waiting`.
   Without `--kind` the output stays the law output, byte for byte.
 - **Staging.** `/srv/trachuan/data/releases/frameworks-<rel>/`, mode `0700`,
-  deleted when activation ends in any state.
+  deleted when activation ends in any state, and by every updater run that holds
+  the locks, with or without a `frameworks` block.
 - **Logs.** No session in a frameworks database may write an error, statement or
   parameter to the PostgreSQL log. Right after creating the database, as
   `postgres`, set `log_min_messages` and `log_min_error_statement` to `panic`,
@@ -182,9 +184,12 @@ these differences:
   database to `retired_release` with kind `frameworks`. The law phase never
   writes `frameworks_release`; the frameworks phase never writes
   `corpus_release`.
-- **Result.** `/srv/trachuan/state/deploy/release-frameworks.json`; the metrics
-  timer publishes `release_failed` and `release_waiting_age_seconds` with a
-  `kind` dimension, and the alarms fire for either kind.
+- **Result.** `/srv/trachuan/state/deploy/release-frameworks.json` (removed,
+  with the frameworks prune marker, by an updater whose policy has no block) and
+  the log `/var/log/trachuan/release-frameworks.log`; the release-floor wait is
+  step `floor`; the metrics timer publishes `release_failed` and
+  `release_waiting_age_seconds` with a `kind` dimension, and the alarms fire for
+  either kind.
 
 The daily prune handles retired databases of both kinds, parsing each name by
 its kind's prefix. Recovery, protection and the seven-day window are the law

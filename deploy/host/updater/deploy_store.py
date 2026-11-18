@@ -16,6 +16,7 @@ class Paths:
         self.state = self.root / 'var/lib/trachuan-deploy'
         self.host = self.root / 'srv/trachuan/host'
         self.bundles = self.root / 'srv/trachuan/bundles'
+        self.releases = self.root / 'srv/trachuan/data/releases'
         self.quadlet = self.root / 'home/trachuan/.config/containers/systemd'
         self.user_units = self.root / 'home/trachuan/.config/systemd/user'
         self.postgres_unit = self.quadlet / 'trachuan-postgres.container'

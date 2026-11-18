@@ -38,18 +38,20 @@ An indeterminate observation (a missing result, `running`, `skipped`, a check
 skipped during a deploy) keeps the current state and does not advance or reset
 the window.
 
-| Signal                   | Fires when                                                                                                  | Clears when                                               | Mark |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---- |
-| site not ready           | `GET http://127.0.0.1:8080/readyz` is not 200 within 5 s on 3 consecutive observations spanning 3 min       | one 200                                                   | 🔴   |
-| deploy stopped           | deploy `result.json` status `stopped`                                                                       | status `ok` or `current`                                  | 🔴   |
-| backup failed            | a backup job result (`full`, `diff`, `verify`, `health`, `restore-check`) is `failed` or `unknown`          | that job is `ok` with `last_success_at` after the failure | 🔴   |
-| backup old               | the newest `full` or `diff` `last_success_at` is over 26 h old                                              | a newer success brings it under 26 h                      | 🔴   |
-| deploy failing           | 3 consecutive completed updater attempts (distinct `started_at`) are `failed` or `rolled_back`, over 15 min | status `ok` or `current`                                  | 🟠   |
-| corpus release failing   | consecutive completed attempts in `release.json` are `failed` for 30 min                                    | status `ok`, `current` or `verified`                      | 🟠   |
-| corpus release waiting   | `release.json` `waiting_since` is over 24 h old                                                             | status `ok`, `current` or `verified`                      | 🟠   |
-| secrets failing or stale | `secrets.json` attempts are `failed` for 30 min, or `last_success_at` is over 2 h old                       | `ok` or `current` with `last_success_at` under 2 h old    | 🟠   |
-| filesystem               | `/` or `/srv/trachuan/data` used over 70% on every observation for 15 min                                   | used under 65%                                            | 🟠   |
-| memory                   | `MemAvailable` under 10% of `MemTotal` in `/proc/meminfo` on every observation for 15 min                   | `MemAvailable` over 15%                                   | 🟠   |
+| Signal                     | Fires when                                                                                                  | Clears when                                               | Mark |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---- |
+| site not ready             | `GET http://127.0.0.1:8080/readyz` is not 200 within 5 s on 3 consecutive observations spanning 3 min       | one 200                                                   | 🔴   |
+| deploy stopped             | deploy `result.json` status `stopped`                                                                       | status `ok` or `current`                                  | 🔴   |
+| backup failed              | a backup job result (`full`, `diff`, `verify`, `health`, `restore-check`) is `failed` or `unknown`          | that job is `ok` with `last_success_at` after the failure | 🔴   |
+| backup old                 | the newest `full` or `diff` `last_success_at` is over 26 h old                                              | a newer success brings it under 26 h                      | 🔴   |
+| deploy failing             | 3 consecutive completed updater attempts (distinct `started_at`) are `failed` or `rolled_back`, over 15 min | status `ok` or `current`                                  | 🟠   |
+| corpus release failing     | consecutive completed attempts in `release.json` are `failed` for 30 min                                    | status `ok`, `current` or `verified`                      | 🟠   |
+| corpus release waiting     | `release.json` `waiting_since` is over 24 h old                                                             | status `ok`, `current` or `verified`                      | 🟠   |
+| frameworks release failing | as corpus release failing, in `release-frameworks.json`                                                     | status `ok`, `current` or `verified`                      | 🟠   |
+| frameworks release waiting | as corpus release waiting, in `release-frameworks.json`                                                     | status `ok`, `current` or `verified`                      | 🟠   |
+| secrets failing or stale   | `secrets.json` attempts are `failed` for 30 min, or `last_success_at` is over 2 h old                       | `ok` or `current` with `last_success_at` under 2 h old    | 🟠   |
+| filesystem                 | `/` or `/srv/trachuan/data` used over 70% on every observation for 15 min                                   | used under 65%                                            | 🟠   |
+| memory                     | `MemAvailable` under 10% of `MemTotal` in `/proc/meminfo` on every observation for 15 min                   | `MemAvailable` over 15%                                   | 🟠   |
 
 The readiness check is skipped while
 `systemctl is-active trachuan-deploy.service` reports `active` or `activating`:

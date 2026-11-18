@@ -126,7 +126,7 @@ class SecretsRunTest(fixture.SecretsFixture, unittest.TestCase):
         self.assertEqual(path.read_bytes(), metadata)
 
     def test_hourly_phase_and_force_before_image_activation(self):
-        self.assertEqual(self.app.phases, ('secrets', 'images', 'corpus'))
+        self.assertEqual(self.app.phases, ('secrets', 'images', 'corpus', 'frameworks'))
         self.app.phases = ('secrets', 'images')
         with mock.patch('updater.deploy_run.Secrets.run', return_value=True) as run:
             self.assertEqual(self.app.run(), 0)

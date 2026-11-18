@@ -1,14 +1,15 @@
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import time
 
 from .deploy_corpus_activate import Activation, COMPLETE
 from .deploy_corpus_database import Database
+from .deploy_corpus_kind import LAW
 from .deploy_corpus_result import ReleaseResult
-from .deploy_corpus_verify import compatible, verify
 from .deploy_io import atomic, canonical, CommandError, Busy
 
 
@@ -16,22 +17,35 @@ class ActivatorNotProvisioned(Exception):
     pass
 
 
+def interrupted(error):
+    seen = set()
+    while error is not None and id(error) not in seen:
+        if isinstance(error, InterruptedError):
+            return True
+        seen.add(id(error))
+        error = error.__cause__ or error.__context__
+    return False
+
+
 class Corpus:
-    def __init__(self, state, store, host, rules, registry, database=None, prepare=lambda: True, clock=time.time):
+    def __init__(self, state, store, host, rules, registry, database=None, prepare=lambda: True, clock=time.time,
+                 kind=LAW):
         self.state, self.store, self.host, self.rules, self.registry = state, store, host, rules, registry
-        self.db = database or Database(host, rules)
-        self.engine = Activation(self.db)
+        self.kind, self.label = kind, kind.label
+        self.db = database or Database(host, rules, kind)
+        self.engine = Activation(self.db, kind)
         self.prepare, self.clock = prepare, clock
-        self.result = ReleaseResult(host.paths, clock)
-        self.hash, self.manifest, self.mode, self.step = None, None, None, 'corpus'
-        self.artifacts = host.paths.state / 'corpus-artifacts'
+        self.result = ReleaseResult(host.paths, clock, kind.result)
+        self.hash, self.manifest, self.mode, self.step = None, None, None, kind.label
+        self.artifacts = host.paths.state / kind.artifacts
+        self.interrupted = False
 
     def image(self):
         return self.store.load(self.state.data['active']).manifest['images']['server']
 
     def prepare_activation(self):
         if not self.prepare():
-            raise ValueError('secret replacement pending before corpus activation')
+            raise ValueError('secret replacement pending before ' + self.label + ' activation')
         self.provision()
 
     def provision(self):
@@ -45,32 +59,36 @@ class Corpus:
             atomic(target / name, (directory / name).read_bytes())
 
     def load(self, row):
-        self.hash, self.manifest = verify(self.artifacts / row['manifest_hash'], self.rules, self.host.runner)
+        self.hash, self.manifest = self.kind.verify(self.artifacts / row['manifest_hash'], self.rules, self.host.runner)
         if (self.hash != row['manifest_hash'] or self.manifest != row['manifest']
-                or any(row[key] != self.manifest[field] for key, field in
-                       (('database_name','database'), ('country','country'), ('rel','rel')))
+                or row['database_name'] != self.manifest['database'] or row['rel'] != self.manifest['rel']
+                or row['country'] != self.kind.country(self.manifest)
                 or row['dump_sha256'] != self.manifest['dump']['sha256']):
-            raise ValueError('corpus recovery manifest mismatch')
-        binding = self.state.data['accepted']['corpus'].get(str(self.manifest['sequence']))
+            raise ValueError(self.label + ' recovery manifest mismatch')
+        binding = self.state.records(self.kind.key).get(str(self.manifest['sequence']))
         if not binding or binding['hash'] != self.hash:
-            raise ValueError('corpus recovery sequence binding missing')
+            raise ValueError(self.label + ' recovery sequence binding missing')
 
     def resources(self):
         free = next((int(line.split()[1])*1024 for line in Path('/proc/meminfo').read_text().splitlines()
                      if line.startswith('MemAvailable:')), None)
         if free is None or free < 2500000000:
-            raise ValueError('corpus activation needs 2.5 GB free memory')
+            raise ValueError(self.label + ' activation needs 2.5 GB free memory')
         disk = shutil.disk_usage(self.host.paths.root / 'srv/trachuan/data')[2]
         if disk < 10000000000:
-            raise ValueError('corpus activation needs 10 GB free disk')
+            raise ValueError(self.label + ' activation needs 10 GB free disk')
 
     def dump_path(self):
-        return (self.host.paths.root / 'srv/trachuan/data/releases' /
-                (self.manifest['country'] + '-' + self.manifest['rel']) / 'corpus.dump')
+        return self.host.paths.releases / self.kind.staging(self.manifest) / self.kind.dump
+
+    def stage(self):
+        self.kind.admit(self.mode)
+        return self.download()
 
     def download(self):
         target = self.dump_path()
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(target.parent, 0o700)
         metadata = self.manifest['dump']
         if target.exists():
             digest = hashlib.sha256()
@@ -81,37 +99,29 @@ class Corpus:
                 return target
             target.unlink()
         target.with_suffix('.partial').unlink(missing_ok=True)
+        _, namespace, bucket = self.kind.settings(self.rules)
         self.host.runner(['python3', '-I', str(Path(__file__).with_name('deploy_corpus_download.py')),
-            self.rules['region'], self.rules['release_namespace'], self.rules['release_bucket'], str(target)],
+            self.rules['region'], namespace, bucket, str(target)],
             input=canonical(metadata), timeout=3600, error_prefix='OCI_ERROR:')
         return target
 
     def finish(self, row):
         self.mode = row['mode']
         if row['step'] == 'aborted':
-            self.state.fail(self.hash)
-            self.result.write('failed', 'aborted', 'corpus activation guard changed', self.hash, self.manifest, self.mode)
+            self.state.fail(self.hash, self.kind.key)
+            self.result.write('failed', 'aborted', self.label + ' activation guard changed',
+                              self.hash, self.manifest, self.mode)
             return False
-        records = self.state.data['accepted']['corpus']
-        sequence = self.manifest['sequence']
-        active = self.db.current(self.manifest['country']) == row['database_name']
-        for number, record in records.items():
-            if record['hash'] == self.hash:
-                record['status'] = 'active' if active else 'retained'
-            elif active and record['status'] == 'active':
-                record['status'] = 'retained'
-            elif active and record['status'] == 'pending' and int(number) < sequence:
-                self.state.mark_failed(record['hash'])
-        self.state.save()
+        active = self.db.current(self.kind.country(self.manifest)) == row['database_name']
+        self.state.settle(self.kind.key, self.hash, self.manifest['sequence'], active)
         self.dump_path().unlink(missing_ok=True)
-        self.result.write('ok', 'complete', 'corpus release activated', self.hash, self.manifest, self.mode)
+        self.result.write('ok', 'complete', self.label + ' release activated', self.hash, self.manifest, self.mode)
         return True
 
     def check(self, image):
         self.step = 'compatibility'
-        if not compatible(self.manifest, self.db.describe(image)):
-            self.result.write('waiting', self.step, 'recipe pair activation is not implemented',
-                              self.hash, self.manifest, self.mode)
+        if not self.kind.compatible(self.manifest, self.db.describe(image)):
+            self.result.write('waiting', self.step, self.kind.waiting, self.hash, self.manifest, self.mode)
             return False
         self.db.check_extensions(self.manifest)
         self.step = 'resources'
@@ -121,7 +131,7 @@ class Corpus:
     def recover(self, mode):
         with self.db.lock():
             rows = self.db.operations()
-        pending = self.state.data['accepted']['corpus']
+        pending = self.state.records(self.kind.key)
         for row in rows:
             if row['mode'] == 'prune':
                 continue
@@ -135,7 +145,7 @@ class Corpus:
             self.load(row)
             self.mode = row['mode']
             if mode == 'verify':
-                self.result.write('verified', 'recovery', 'interrupted corpus activation; activation disabled',
+                self.result.write('verified', 'recovery', 'interrupted ' + self.label + ' activation; activation disabled',
                                   self.hash, self.manifest, self.mode)
                 return True
             self.prepare_activation()
@@ -150,14 +160,14 @@ class Corpus:
                 if not self.check(image):
                     return True
                 self.step = 'recovery'
-                dump = self.download() if self.mode == 'new' and row['step'] in ('started','creating','created','restoring') else None
+                dump = self.stage() if self.mode == 'new' and row['step'] in ('started','creating','created','restoring') else None
                 return self.finish(self.engine.resume(row, dump, image, recheck=True))
         return None
 
     def prune(self, mode):
         if mode != 'activate':
             return
-        marker = self.host.paths.state / 'corpus-prune.json'
+        marker = self.host.paths.state / self.kind.marker
         day = datetime.fromtimestamp(self.clock(), timezone.utc).date().isoformat()
         previous = json.loads(marker.read_bytes()) if marker.exists() else None
         with self.db.lock():
@@ -171,6 +181,9 @@ class Corpus:
 
     def run(self, directory, mode):
         try:
+            if not self.kind.ready(self.state, self.rules):
+                self.result.write('waiting', 'floor', 'release floor')
+                return True
             self.step = 'provision'
             self.provision()
             recovered = self.recover(mode)
@@ -178,27 +191,28 @@ class Corpus:
                 return recovered
             self.prune(mode)
             self.step = 'fetch'
+            repository = self.kind.settings(self.rules)[0]
             try:
-                path = self.registry.fetch(self.rules['corpus_repository'], 'vn-production', Path(directory)/'corpus', 'corpus-release')
+                path = self.registry.fetch(repository, self.kind.tag, Path(directory)/self.label, 'corpus-release')
             except CommandError as error:
-                if error.reason in ('not_found', 'denied') and not self.state.data['accepted']['corpus']:
-                    self.result.write('current', 'fetch', 'no corpus release published')
+                if error.reason in ('not_found', 'denied') and not self.state.records(self.kind.key):
+                    self.result.write('current', 'fetch', self.kind.unpublished)
                     return True
                 raise
             self.step = 'manifest'
-            self.hash, self.manifest = verify(path, self.rules, self.host.runner)
-            decision = self.state.decision('corpus', self.hash, self.manifest['sequence'])
+            self.hash, self.manifest = self.kind.verify(path, self.rules, self.host.runner)
+            decision = self.state.decision(self.kind.key, self.hash, self.manifest['sequence'])
             if decision == 'noop':
-                failed = self.hash in self.state.data['failed']
+                failed = self.hash in self.state.failed(self.kind.key)
                 with self.db.lock():
                     self.mode = next((r['mode'] for r in self.db.operations()
                                       if r['manifest_hash'] == self.hash and r['mode'] != 'prune'), None)
                 self.result.write('failed' if failed else 'current', 'noop',
-                                  'corpus manifest failed; re-sign the release to retry' if failed
-                                  else 'corpus manifest already seen',
+                                  self.label + ' manifest failed; re-sign the release to retry' if failed
+                                  else self.label + ' manifest already seen',
                                   self.hash, self.manifest, self.mode)
                 return not failed
-            self.state.accept('corpus', self.hash, self.manifest['sequence'])
+            self.state.accept(self.kind.key, self.hash, self.manifest['sequence'])
             self.remember(path)
             if mode == 'activate':
                 self.prepare_activation()
@@ -208,10 +222,11 @@ class Corpus:
                 if not self.check(image):
                     return True
                 if mode == 'verify':
-                    self.result.write('verified', 'complete', 'corpus verified; activation disabled', self.hash, self.manifest, self.mode)
+                    self.result.write('verified', 'complete', self.label + ' verified; activation disabled',
+                                      self.hash, self.manifest, self.mode)
                     return True
                 self.step = 'download'
-                dump = self.download() if self.mode == 'new' else None
+                dump = self.stage() if self.mode == 'new' else None
                 self.step = 'activation'
                 return self.finish(self.engine.run(self.hash, self.manifest, dump, image))
         except ActivatorNotProvisioned:
@@ -220,10 +235,14 @@ class Corpus:
         except Busy:
             self.result.write('skipped', self.step, 'activation advisory lock busy; retry later', self.hash, self.manifest, self.mode)
             return True
-        except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError) as error:
-            reason = str(error) if isinstance(error, ValueError) else 'corpus command failed or run interrupted'
-            if isinstance(error, CommandError) and error.detail:
-                reason += ': ' + error.detail
+        except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError, RecursionError) as error:
+            self.interrupted = interrupted(error)
+            reason = str(error) if isinstance(error, ValueError) else self.label + ' command failed or run interrupted'
+            if isinstance(error, RecursionError):
+                reason = self.label + ' input nested too deeply'
+            cause = self.kind.cause(error.detail) if isinstance(error, CommandError) and error.detail else None
+            if cause:
+                reason += ': ' + cause
             if self.hash:
                 try:
                     with self.db.lock():
@@ -231,8 +250,8 @@ class Corpus:
                         if rows and rows[-1]['step'] in ('activated','reverted'):
                             return self.finish(rows[-1])
                         if rows and rows[-1]['step'] == 'aborted':
-                            self.state.fail(self.hash)
-                except (OSError, ValueError, CommandError, Busy):
-                    pass
+                            self.state.fail(self.hash, self.kind.key)
+                except (OSError, ValueError, CommandError, Busy) as inner:
+                    self.interrupted = self.interrupted or interrupted(inner)
             self.result.write('failed', self.step, reason, self.hash, self.manifest, self.mode)
             return False

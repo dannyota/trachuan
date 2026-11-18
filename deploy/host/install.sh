@@ -110,7 +110,7 @@ chmod 0640 /var/log/trachuan/backup.log
 setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/deploy
 setfacl -m u:trachuan-watch:--x /var/log/trachuan
 setfacl -m u:trachuan-watch:r-x,d:u:trachuan-watch:r-x /srv/trachuan/state/deploy
-for file in result.json release.json secrets.json; do
+for file in result.json release.json release-frameworks.json secrets.json; do
  [[ ! -f /srv/trachuan/state/deploy/$file ]] || setfacl -m u:trachuan-metrics:r--,u:trachuan-watch:r-- "/srv/trachuan/state/deploy/$file"
 done
 for dir in /srv/trachuan/state/watch /var/log/trachuan/watch; do

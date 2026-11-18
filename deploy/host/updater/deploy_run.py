@@ -6,9 +6,10 @@ import tempfile
 from .deploy_activate import Activator
 from .deploy_bundle import bundle
 from .deploy_corpus import Corpus
+from .deploy_corpus_kind import FRAMEWORKS
 from .deploy_host import Host
 from .deploy_floor import check_floor
-from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
+from .deploy_io import atomic, Busy, command, CommandError, Lock, remove, Result
 from .deploy_registry import Registry
 from .deploy_secrets import Secrets
 from .deploy_secrets_state import raw_pending, SecretsState
@@ -16,6 +17,8 @@ from .deploy_state import State
 from .deploy_store import Candidate, Paths, Store
 from .deploy_verify import match, policy, positive, Verifier, verify_manifest
 
+
+INTERRUPTED = 'interrupted'
 
 class Updater:
     def __init__(self, paths=None, runner=command, user_prefix=None):
@@ -25,7 +28,7 @@ class Updater:
         self.verifier = Verifier(self.rules, runner, user_prefix)
         self.registry = Registry(self.rules, runner)
         self.store = Store(self.paths, self.rules, runner)
-        self.phases = ('secrets', 'images', 'corpus')
+        self.phases = ('secrets', 'images', 'corpus', 'frameworks')
         self.secrets_failed = False
         self.step, self.hash, self.manifest = 'starting', None, None
 
@@ -136,11 +139,39 @@ class Updater:
                                                        authorization=hash_value, rollback=auth)
         result.write('ok', 'rollback', 'authorized rollback activated', hash_value, candidate.manifest)
 
+    def release(self, phase, directory, mode):
+        outcome = phase.run(directory, mode)
+        return INTERRUPTED if phase.interrupted else outcome
+
     def corpus(self, state, directory, mode, result):
         if (state.data['journal'] or {}).get('status') == 'stopped':
             return False
-        return Corpus(state, self.store, self.host, self.rules, self.registry,
-                      prepare=lambda: self.secrets(state, directory, mode, result, force=True)).run(directory, mode)
+        return self.release(Corpus(state, self.store, self.host, self.rules, self.registry,
+                                   prepare=lambda: self.secrets(state, directory, mode, result, force=True)),
+                            directory, mode)
+
+    def frameworks(self, state, directory, mode, result):
+        if 'frameworks' not in self.rules:
+            return None
+        if (state.data['journal'] or {}).get('status') == 'stopped':
+            return False
+        return self.release(Corpus(state, self.store, self.host, self.rules, self.registry, kind=FRAMEWORKS,
+                                   prepare=lambda: self.secrets(state, directory, mode, result, force=True)),
+                            directory, mode)
+
+    def cleanup(self, result):
+        try:
+            FRAMEWORKS.discard(self.paths.releases)
+            if 'frameworks' not in self.rules:
+                remove(self.paths.result.with_name(FRAMEWORKS.result + '.json'))
+                remove(self.paths.state / FRAMEWORKS.marker)
+            return True
+        except OSError:
+            try:
+                result.append(dict(status='warning', step='cleanup', message='frameworks cleanup failed'))
+            except OSError:
+                pass
+            return False
 
     def failure(self, result, state, error):
         status = None
@@ -165,34 +196,47 @@ class Updater:
         return 1
 
     def run(self):
-        state = None
         self.secrets_failed = False
         try:
             with Lock(self.paths.lock), Lock(self.paths.backup_lock, create=False):
                 result = Result(self.paths.result, self.paths.log)
                 try:
-                    state = State(self.paths.state / 'state.json')
-                    result.state = state
-                    mode = self.mode()
-                    self.step = 'recovery'
-                    activator = Activator(state, self.store, self.host)
-                    stopped = activator.enforce_stopped()
-                    if self.backup_pending(result):
-                        return 0
-                    recovered = None if stopped or self.secret_pending() else activator.recover()
-                    if recovered:
-                        journal = state.data['journal']
-                        result.write(recovered, 'recovery', activator.recovery_message, journal['target'])
-                        return 1
-                    with tempfile.TemporaryDirectory(prefix='run-', dir=self.paths.state) as directory:
-                        for phase in self.phases:
-                            if getattr(self, phase)(state, Path(directory), mode, result) is False:
-                                return 1
-                    return int(self.secrets_failed)
-                except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError) as error:
-                    return self.failure(result, state, error)
+                    code = self.locked(result)
+                finally:
+                    cleaned = self.cleanup(result)
+                return code if cleaned else 1
         except Busy:
             return 0
+
+    def locked(self, result):
+        state = None
+        try:
+            state = State(self.paths.state / 'state.json')
+            result.state = state
+            mode = self.mode()
+            self.step = 'recovery'
+            activator = Activator(state, self.store, self.host)
+            stopped = activator.enforce_stopped()
+            if self.backup_pending(result):
+                return 0
+            recovered = None if stopped or self.secret_pending() else activator.recover()
+            if recovered:
+                journal = state.data['journal']
+                result.write(recovered, 'recovery', activator.recovery_message, journal['target'])
+                return 1
+            failed = False
+            with tempfile.TemporaryDirectory(prefix='run-', dir=self.paths.state) as directory:
+                for phase in self.phases:
+                    outcome = getattr(self, phase)(state, Path(directory), mode, result)
+                    if outcome == INTERRUPTED:
+                        return 1
+                    if outcome is False:
+                        if phase not in ('corpus', 'frameworks'):
+                            return 1
+                        failed = True
+            return int(failed or self.secrets_failed)
+        except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError) as error:
+            return self.failure(result, state, error)
 
     def bootstrap(self, hash_value, release_floor=None):
         match('[0-9a-f]{64}', hash_value, 'bootstrap manifest hash')

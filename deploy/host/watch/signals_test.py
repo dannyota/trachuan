@@ -12,7 +12,7 @@ def record(status, started=NOW, success=None, **values):
 
 
 def sample():
-    return dict(deploy=None, release=None, secrets=None,
+    return dict(deploy=None, release=None, frameworks=None, secrets=None,
                 backups={}, ready=None, corpus=None, disk={}, memory=None)
 
 

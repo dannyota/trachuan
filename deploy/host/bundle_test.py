@@ -68,6 +68,20 @@ class InstallerTest(unittest.TestCase):
                       'PT10M', 'WARNING', 'PT24H', 'docs/runbooks/alarms.md'):
             self.assertIn(value, alarm)
 
+    def test_release_results_and_logs_of_both_kinds_are_readable_and_rotated(self):
+        source = (HOST / "install.sh").read_text()
+        loops = [m for m in re.finditer(r"for file in ([^;]+); do\n(.*?)\ndone", source, re.S)
+                 if '/srv/trachuan/state/deploy/$file' in m.group(2)]
+        self.assertEqual(len(loops), 1)
+        self.assertLessEqual({"release.json", "release-frameworks.json"}, set(shlex.split(loops[0].group(1))))
+        self.assertIn("u:trachuan-metrics:r--,u:trachuan-watch:r--", loops[0].group(2))
+        stanzas = re.findall(r"^(/[^{\n]+)\{\n(.*?)^\}", (HOST / "logrotate-trachuan").read_text(), re.S | re.M)
+        release = [body for paths, body in stanzas if "/var/log/trachuan/release.log" in paths.split()]
+        frameworks = [body for paths, body in stanzas if "/var/log/trachuan/release-frameworks.log" in paths.split()]
+        self.assertEqual(len(frameworks), 1)
+        self.assertEqual(frameworks, release)
+        self.assertIn("create 0640 root root", frameworks[0])
+
     def test_restore_directory_is_provisioned_before_rootless_use(self):
         source = (HOST / "install.sh").read_text()
         loop = re.search(r"for dir in ([^;]+); do\n(.*?)\ndone", source, re.S)
