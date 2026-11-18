@@ -37,8 +37,11 @@ the class at the reference date: today in Asia/Ho_Chi_Minh, or `as_of`. A stored
 and as `not_yet` before its `eff_from`; any other class is served as stored.
 Search hits, `read`, document status, public summaries and taxonomy lists use
 one rule, and a taxonomy list's `is_current` equals `Validity.Current` for that
-date. A cache of such a response is keyed by the date or expires within minutes.
-Eligibility, ranking and the validity policy version do not change.
+date. Response caches either key on the Vietnam date (MCP search and taxonomy,
+the public summary) or expire within minutes: a topic page can show the previous
+day's class for up to about 20 minutes after midnight (Nitro 540 s plus a
+browser max-age of 600 s). Eligibility, ranking and the validity policy version
+do not change.
 
 Copy the document's `status_basis` into `Validity.StatusBasis` in both modes,
 including `derived_from_consolidated` when [build](normalization.md) derived its
