@@ -76,7 +76,7 @@ if args[0]=='wait':
                 stub = work / binary
                 stub.write_text('''#!/usr/bin/env python3
 import json, os, pathlib, sys
-with pathlib.Path(os.environ['CALLS']).open('a') as out: out.write(json.dumps([pathlib.Path(sys.argv[0]).name, *sys.argv[1:]])+'\\n')
+with pathlib.Path(os.environ['CALLS']).open('a') as out: out.write(json.dumps([pathlib.Path(sys.argv[0]).name, *sys.argv[1:], 'PGOPTIONS='+os.environ.get('PGOPTIONS', '')])+'\\n')
 name=pathlib.Path(sys.argv[0]).name
 if name == 'pg_controldata': print('max_connections setting: 75\\nmax_worker_processes setting: 12\\nmax_wal_senders setting: 15\\nmax_prepared_xacts setting: 4\\nmax_locks_per_xact setting: 80')
 if name == 'postgres': print('FATAL: synthetic recovery diagnostic', file=sys.stderr)
@@ -96,7 +96,9 @@ if name == 'psql':
             restore = next(call for call in calls if call[0] == 'pgbackrest')
             for arg in ['--set=20270115-020000F', '--db-include=auth', '--type=immediate', '--target-action=promote', 'restore']:
                 self.assertIn(arg, restore)
-            self.assertEqual((work/'runtime/pg_hba.conf').read_text(), 'local all postgres peer\n')
+            self.assertEqual((work/'runtime/pg_hba.conf').read_text(),
+                             'local all postgres peer\nlocal auth auth_owner peer map=restore\n')
+            self.assertEqual((work/'runtime/pg_ident.conf').read_text(), 'restore postgres auth_owner\n')
             postgres = next(call for call in calls if call[0] == 'postgres')
             self.assertIn('listen_addresses=', postgres)
             self.assertIn('archive_mode=off', postgres)
@@ -104,9 +106,21 @@ if name == 'psql':
             for option in ['max_connections=75', 'max_worker_processes=12', 'max_wal_senders=15', 'max_prepared_transactions=4', 'max_locks_per_transaction=80']:
                 self.assertIn(option, postgres)
             self.assertIn('hba_file='+str(work/'runtime/pg_hba.conf'), postgres)
+            self.assertIn('ident_file='+str(work/'runtime/pg_ident.conf'), postgres)
+            ready = next(call for call in calls if call[0] == 'psql' and 'pg_is_in_recovery' in ' '.join(call))
+            self.assertIn('--username=postgres', ready)
+            self.assertIn('--dbname=postgres', ready)
+            self.assertIn('--command=SELECT pg_catalog.pg_is_in_recovery()', ready)
             smoke = next(call for call in calls if call[0] == 'psql' and 'pg_is_in_recovery' not in ' '.join(call))
             self.assertIn('--dbname=auth', smoke)
+            self.assertIn('--username=auth_owner', smoke)
+            self.assertNotIn('--username=postgres', smoke)
             self.assertIn('--no-password', smoke)
+            self.assertIn('PGOPTIONS=-c search_path=pg_catalog,public', smoke)
+            query = next(arg for arg in smoke if arg.startswith('--command='))
+            for relation in ('goose_db_version', 'account', 'web_session', 'oauth_grant', 'oauth_token', 'personal_token'):
+                self.assertIn('FROM public.'+relation, query)
+            self.assertEqual(sum(call[0] == 'psql' and '--dbname=auth' in call for call in calls), 1)
 
     def test_restore_arguments_and_peer_only_postgres(self):
         self.check_restore_worker()

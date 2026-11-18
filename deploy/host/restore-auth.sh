@@ -5,7 +5,8 @@ runtime=${RESTORE_RUNTIME:-/run/restore-check}
 data=${PGDATA:-/var/lib/postgresql/18/docker}
 mkdir -p "$runtime"
 chmod 0700 "$runtime"
-printf 'local all postgres peer\n' >"$runtime/pg_hba.conf"
+printf 'local all postgres peer\nlocal auth auth_owner peer map=restore\n' >"$runtime/pg_hba.conf"
+printf 'restore postgres auth_owner\n' >"$runtime/pg_ident.conf"
 pgbackrest --stanza=trachuan --pg1-path="$data" --set="$1" --db-include=auth \
  --type=immediate --target-action=promote restore >/dev/null
 control=$(LC_ALL=C pg_controldata "$data")
@@ -24,7 +25,7 @@ max_locks_per_transaction|max_locks_per_xact setting|64
 SETTINGS
 postgres -D "$data" "${settings[@]}" -c listen_addresses= -c archive_mode=off \
  -c "unix_socket_directories=$runtime" -c unix_socket_permissions=0700 \
- -c "hba_file=$runtime/pg_hba.conf" -c shared_buffers=128MB \
+ -c "hba_file=$runtime/pg_hba.conf" -c "ident_file=$runtime/pg_ident.conf" -c shared_buffers=128MB \
  -c hot_standby=off -c shared_preload_libraries= -c logging_collector=off -c log_destination=stderr >"$runtime/postgres.log" 2>&1 &
 server=$!
 cleanup() {
@@ -39,7 +40,7 @@ deadline=$((SECONDS+1200))
 ready=false
 while ((SECONDS < deadline)); do
  if [[ $(psql -XAt --no-password --host="$runtime" --username=postgres --dbname=postgres \
-  --set=ON_ERROR_STOP=1 --command='SELECT pg_is_in_recovery()' 2>/dev/null) == f ]]; then
+  --set=ON_ERROR_STOP=1 --command='SELECT pg_catalog.pg_is_in_recovery()' 2>/dev/null) == f ]]; then
   ready=true
   break
  fi
@@ -47,8 +48,10 @@ while ((SECONDS < deadline)); do
  sleep 1
 done
 [[ $ready == true ]]
-psql -XAt --no-password --host="$runtime" --username=postgres --dbname=auth --set=ON_ERROR_STOP=1 \
- --command="SELECT max(version_id) FROM goose_db_version WHERE is_applied;
- SELECT count(*) FROM account; SELECT count(*) FROM web_session;
- SELECT count(*) FROM oauth_grant; SELECT count(*) FROM oauth_token; SELECT count(*) FROM personal_token;
- SET enable_seqscan=off; SELECT id FROM account ORDER BY id LIMIT 1;" >/dev/null
+PGOPTIONS='-c search_path=pg_catalog,public' \
+psql -XAt --no-password --host="$runtime" --username=auth_owner --dbname=auth --set=ON_ERROR_STOP=1 \
+ --command="SELECT pg_catalog.max(version_id) FROM public.goose_db_version WHERE is_applied;
+ SELECT pg_catalog.count(*) FROM public.account; SELECT pg_catalog.count(*) FROM public.web_session;
+ SELECT pg_catalog.count(*) FROM public.oauth_grant; SELECT pg_catalog.count(*) FROM public.oauth_token;
+ SELECT pg_catalog.count(*) FROM public.personal_token;
+ SET enable_seqscan=off; SELECT id FROM public.account ORDER BY id LIMIT 1;" >/dev/null

@@ -14,8 +14,8 @@ FEED = ['/usr/local/bin/postgres-admin.sh', 'bash', '-s']
 class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
     def test_frameworks_pointer_grant_is_guarded_and_excludes_delete(self):
         script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
-        self.assertIn("SELECT 'GRANT SELECT, INSERT, UPDATE ON frameworks_release TO activator'\n"
-                      "WHERE to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
+        self.assertIn("SELECT 'GRANT SELECT, INSERT, UPDATE ON public.frameworks_release TO activator'\n"
+                      "WHERE pg_catalog.to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
         self.assertNotIn("'retired_release','frameworks_release'", script)
 
     def provision_input(self):
@@ -38,8 +38,8 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertIn("d.datname !~ '^frameworks_[0-9]{8}(_[0-9]{1,2})?$' \\gexec", text)
         self.assertLess(text.index('ALTER ROLE activator LOGIN'), text.index('ALTER ROLE activator RESET ALL;'))
 
-    def test_provisioner_session_pins_search_path(self):
-        self.assertIn('-c search_path=pg_catalog,public', self.provision_input().splitlines()[0])
+    def test_provisioner_session_searches_only_the_catalog(self):
+        self.assertTrue(self.provision_input().splitlines()[0].endswith(' -c search_path=pg_catalog'))
 
     def test_provision_feeds_the_installed_script_over_stdin(self):
         self.calls.clear()

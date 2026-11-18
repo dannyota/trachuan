@@ -60,8 +60,20 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.state.data['accepted']['corpus']['1'] = {'hash': 'a' * 64, 'status': 'active'}
         self.assertFalse(self.run_phase())
         self.assertEqual(self.result()['status'], 'failed')
-        self.assertTrue(self.result()['message'].startswith(
-            'corpus command failed or run interrupted: oras resolve: exit 1: Error response from registry: '))
+        self.assertEqual(self.result()['message'], 'corpus command failed or run interrupted: oras resolve: exit 1')
+
+    def test_command_output_never_reaches_the_law_result_or_log(self):
+        marker = 'invented dump marker'
+        for detail, message in (('pg_restore: exit 1: pg_restore: error: ' + marker, 'pg_restore: exit 1'),
+                                ('pg_restore: exit 1: error output withheld', 'pg_restore: exit 1'),
+                                ('psql: exit 3: ' + marker, 'psql: exit 3')):
+            with self.subTest(detail=detail):
+                self.setUp()
+                self.db.restore = mock.Mock(side_effect=CommandError('command failed', detail=detail))
+                self.assertFalse(self.run_phase())
+                self.assertEqual(self.result()['message'], 'corpus command failed or run interrupted: ' + message)
+                self.assertNotIn(marker, self.phase.result.path.read_text())
+                self.assertNotIn(marker, self.phase.result.log.read_text())
 
     def test_nested_law_manifest_ends_as_failed_result(self):
         self.directory.joinpath('manifest.json').write_bytes(NESTED)

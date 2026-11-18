@@ -143,8 +143,17 @@ class FrameworksCauseTest(unittest.TestCase):
         error = CommandError('command failed', detail='pg_restore: exit 1: pg_restore: error: invented licensed marker')
         self.assertEqual(FRAMEWORKS.cause(error), 'pg_restore: exit 1')
         self.assertIsNone(FRAMEWORKS.cause(CommandError('command failed')))
-        self.assertEqual(LAW.cause(error), error.detail)
         self.assertIsNone(LAW.cause(CommandError('command failed')))
+
+    def test_law_cause_is_program_and_exit_only(self):
+        for detail, cause in (('pg_restore: exit 1: pg_restore: error: invented dump text', 'pg_restore: exit 1'),
+                              ('pg_restore: exit 1: error output withheld', 'pg_restore: exit 1'),
+                              ('oras resolve: exit 1: Error response from registry: invented', 'oras resolve: exit 1'),
+                              ('cosign verify-blob: exit 1: invented', 'cosign verify-blob: exit 1'),
+                              ('psql: exit 3', 'psql: exit 3'),
+                              ('podman run: exit -9', 'podman run: exit -9')):
+            with self.subTest(detail=detail):
+                self.assertEqual(LAW.cause(CommandError('command failed', detail=detail)), cause)
 
 
 if __name__ == '__main__':
