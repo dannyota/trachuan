@@ -203,7 +203,7 @@ func (s *Stage) resolveInputs(ctx context.Context, env stage.Env, run stage.Run,
 		return frozenInputs{}, err
 	}
 	buildDir := env.Artifacts.Abs(build.Path)
-	knowledge, err := readKnowledge(buildDir)
+	knowledge, err := readKnowledge(buildDir, build.SHA256)
 	if err != nil {
 		return frozenInputs{}, err
 	}
@@ -212,17 +212,6 @@ func (s *Stage) resolveInputs(ctx context.Context, env stage.Env, run stage.Run,
 		return frozenInputs{}, err
 	}
 	return frozenInputs{build: build, buildDir: buildDir, reportPath: reportPath, reportSHA256: bareSHA256(data), dumpSHA256: report.DumpSHA256, gapSnapshot: gaps, knowledge: knowledge, predecessor: previous}, nil
-}
-
-func readKnowledge(buildDir string) ([]byte, error) {
-	data, err := os.ReadFile(filepath.Join(buildDir, knowledgeFile))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read knowledge: %w", err)
-	}
-	return data, nil
 }
 
 func resolvePredecessor(ctx context.Context, env stage.Env, q store.Querier, run stage.Run, decision stage.PreviousReport, compared *evaluation.ComparedRelease) (predecessor, error) {
