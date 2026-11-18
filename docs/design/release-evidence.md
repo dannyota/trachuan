@@ -107,7 +107,8 @@ the report's SHA-256, the detector registry hash, the predecessor's `rel`, or
 `none` without one, and the SHA-256 of its `findings.json`, or `none` when it
 has none); per detector `complete: true` and the number of subjects observed and
 not observable; every finding with key, fingerprint, semantics number,
-`first_rel`, status and `carried`; and the keys that are new, gone and carried.
+`first_rel`, severity, status and `carried`; and the keys that are new, gone and
+carried.
 
 ## `identity.jsonl`
 

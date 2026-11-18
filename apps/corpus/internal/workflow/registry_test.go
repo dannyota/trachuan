@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/evidence"
 )
 
 func TestRegistry_ExpandAfterDiscover(t *testing.T) {
@@ -53,5 +54,16 @@ func TestRecipes_SourceListJSONBFormattingDoesNotChangeDiscover(t *testing.T) {
 	start, worker := registry.Recipes(before)["discover"], registry.Recipes(after)["discover"]
 	if start != worker {
 		t.Fatalf("discover recipe changed after jsonb formatting: %s != %s", start, worker)
+	}
+}
+
+func TestRegistry_EvidenceStageRunsCrossSignalDetectors(t *testing.T) {
+	var snapshot stage.Snapshot
+	got := Default(Deps{}).Recipes(snapshot)["evidence"]
+	if want := evidence.New(evidence.Config{Detectors: evidence.CrossSignal()}).Recipe(snapshot); got != want {
+		t.Fatalf("evidence recipe %s does not freeze the cross-signal detectors (%s)", got, want)
+	}
+	if empty := evidence.New(evidence.Config{}).Recipe(snapshot); got == empty {
+		t.Fatal("evidence recipe ignores the detector list")
 	}
 }

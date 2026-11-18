@@ -49,7 +49,7 @@ func TestProof_RestartReusesAcquisitionsWithRepeatingExpandGap(t *testing.T) {
 			t.Error(e)
 		}
 	}()
-	list, err := source.Parse([]byte("country: vn\nvbpl:\n  selection_version: 1\n  sweep_agencies: ['62']\nrelation_codes:\n  '10': {kind: amends_supplements, label: amends, amending: true}\nstatus_codes: {}\n"))
+	list, err := source.Parse([]byte("country: vn\nvbpl:\n  selection_version: 1\n  sweep_agencies: ['62']\ncentral_issuers:\n  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM\nrelation_codes:\n  '10': {kind: amends_supplements, label: amends, amending: true}\nstatus_codes: {}\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

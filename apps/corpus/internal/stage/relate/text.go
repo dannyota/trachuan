@@ -9,7 +9,6 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
-	"danny.vn/trachuan/apps/corpus/internal/stage/heading"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate/textrule"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/internal/retrieval"
@@ -65,12 +64,9 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 	incomplete := map[string]bool{}
 	blocked := false
 	for _, gap := range gaps {
-		switch gap.Kind {
-		case "tree_headings_only", "tree_headings_partial", "tree_text_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr":
+		if IncompleteGap(gap.Kind) {
 			incomplete[gap.Kind] = true
-			if gap.Kind != "tree_headings_only" && gap.Kind != "tree_headings_partial" {
-				blocked = true
-			}
+			blocked = blocked || BlockingGap(gap.Kind)
 		}
 	}
 	if blocked {
@@ -93,53 +89,43 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 			targets[number] = append(targets[number], row)
 		}
 	}
-	children := map[string][]chunk.Node{}
-	for _, node := range provisions {
-		if node.ParentNodeID != nil {
-			children[*node.ParentNodeID] = append(children[*node.ParentNodeID], node)
-		}
-	}
 	type identity struct{ node, target, anchor, kind string }
 	seen := map[identity]bool{}
 	emitted := []relation{}
-	for _, article := range provisions {
-		if article.Kind != "dieu" || strings.TrimSpace(article.Text) == "" ||
-			(len(incomplete) > 0 && heading.ArticleOnly(article.Kind, article.Label, article.Heading, article.Text, len(children[article.NodeID]) > 0)) {
-			continue
-		}
-		units, ordered := articleReading(article, children)
-		if !ordered {
+	WalkArticles(provisions, len(incomplete) > 0, func(article chunk.Node, state ArticleState, units []textrule.Unit) {
+		switch state {
+		case ArticleUnordered:
 			report.addGap("relation_text_source_order", article.Text, article.NodeID)
-			continue
-		}
-		matches, parseGaps := textrule.ParseUnits(units, issuers, func(number string) string {
-			return targetGap(targets[retrieval.NormalizeNumber(number)])
-		})
-		for _, gap := range parseGaps {
-			report.addGap(gap.Name, gap.Detail, article.NodeID)
-		}
-		for _, match := range matches {
-			for _, target := range match.Targets {
-				linked := targets[retrieval.NormalizeNumber(target.Number)]
-				if len(linked) != 1 {
-					name := "relation_text_unlinked_target"
-					if len(linked) > 1 {
-						name = "relation_text_ambiguous_target"
+		case ArticleRead:
+			matches, parseGaps := textrule.ParseUnits(units, issuers, func(number string) string {
+				return targetGap(targets[retrieval.NormalizeNumber(number)])
+			})
+			for _, gap := range parseGaps {
+				report.addGap(gap.Name, gap.Detail, article.NodeID)
+			}
+			for _, match := range matches {
+				for _, target := range match.Targets {
+					linked := targets[retrieval.NormalizeNumber(target.Number)]
+					if len(linked) != 1 {
+						name := "relation_text_unlinked_target"
+						if len(linked) > 1 {
+							name = "relation_text_ambiguous_target"
+						}
+						report.addGap(name, target.Number, article.NodeID)
+						continue
 					}
-					report.addGap(name, target.Number, article.NodeID)
-					continue
+					key := identity{article.NodeID, linked[0].TargetVBPLID, target.Anchor, match.Kind}
+					if seen[key] {
+						continue
+					}
+					seen[key] = true
+					node := article.NodeID
+					emitted = append(emitted, relation{Kind: match.Kind, RawCode: "text", RawLabel: match.VerbPhrase, Method: "text_rule/1", Evidence: match.Sentence, TargetVBPLID: linked[0].TargetVBPLID, TargetNumber: linked[0].TargetNumber, SourceNodeID: &node, TargetAnchor: target.Anchor, IssuerCode: target.IssuerCode, StatedIssueDate: target.StatedIssueDate})
+					report.Emitted[match.Kind]++
 				}
-				key := identity{article.NodeID, linked[0].TargetVBPLID, target.Anchor, match.Kind}
-				if seen[key] {
-					continue
-				}
-				seen[key] = true
-				node := article.NodeID
-				emitted = append(emitted, relation{Kind: match.Kind, RawCode: "text", RawLabel: match.VerbPhrase, Method: "text_rule/1", Evidence: match.Sentence, TargetVBPLID: linked[0].TargetVBPLID, TargetNumber: linked[0].TargetNumber, SourceNodeID: &node, TargetAnchor: target.Anchor, IssuerCode: target.IssuerCode, StatedIssueDate: target.StatedIssueDate})
-				report.Emitted[match.Kind]++
 			}
 		}
-	}
+	})
 	sortRelations(emitted)
 	for i := range emitted {
 		emitted[i].Ordinal = len(rows) + i

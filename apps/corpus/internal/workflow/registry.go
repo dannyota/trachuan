@@ -71,5 +71,5 @@ type Deps struct {
 }
 
 func Default(deps Deps) Registry {
-	return NewRegistry(discover.New(deps.VBPL, discover.WithChinhphu(deps.Chinhphu)), expand.New(deps.VBPL), fetch.New(deps.VBPL).WithChinhphu(deps.Chinhphu), extract.New().WithWaivers(deps.Waivers), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval), evidence.New(evidence.Config{Build: deps.Eval.Build, Detectors: deps.Detectors}))
+	return NewRegistry(discover.New(deps.VBPL, discover.WithChinhphu(deps.Chinhphu)), expand.New(deps.VBPL), fetch.New(deps.VBPL).WithChinhphu(deps.Chinhphu), extract.New().WithWaivers(deps.Waivers), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval), evidence.New(evidence.Config{Build: deps.Eval.Build, Detectors: append(evidence.CrossSignal(), deps.Detectors...)}))
 }

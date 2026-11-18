@@ -119,7 +119,7 @@ func newHarness(t *testing.T) *harness {
 	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	sources := "country: vn\nvbpl:\n  sweep_agencies: ['62']\n  keyword_agencies: ['62']\n  keywords: ['test']\nrelation_codes:\n  '10':\n    kind: amends_supplements\n    label: amends\nstatus_codes: {}\n"
+	sources := "country: vn\nvbpl:\n  sweep_agencies: ['62']\n  keyword_agencies: ['62']\n  keywords: ['test']\ncentral_issuers:\n  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM\nrelation_codes:\n  '10':\n    kind: amends_supplements\n    label: amends\nstatus_codes: {}\n"
 	if err := os.WriteFile(filepath.Join(h.root, "sources", "vn.yaml"), []byte(sources), 0600); err != nil {
 		t.Fatal(err)
 	}

@@ -80,6 +80,8 @@ chinhphu:
   issuer_policy_version: 1
   central_issuer_forms: ["Chính phủ"]
   named_numbers: ["142/2026/NĐ-CP", "143/2026/NĐ-CP"]
+central_issuers:
+  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM
 relation_codes:
   "10": {kind: amends_supplements, label: amends, amending: true}
 status_codes:

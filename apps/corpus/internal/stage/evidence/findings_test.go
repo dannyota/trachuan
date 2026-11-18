@@ -240,3 +240,63 @@ func TestCompute_IsPureAndOrderIndependent(t *testing.T) {
 		t.Fatalf("output depends on detector order:\n%s\n%s", one, two)
 	}
 }
+
+func TestCompute_SeverityDefaultsToRegistryAndRejectsUnallowed(t *testing.T) {
+	spec := func(sev detector.Severity) detectorRun {
+		r := run("d", 1, always)
+		r.spec.Severity = sev
+		return r
+	}
+	with := func(sev detector.Severity, fired detector.Severity) (File, error) {
+		r := spec(sev)
+		r.observation.Findings = []Fired{{Subject: docSubject("vn:1"), Severity: fired, FingerprintInputs: []string{"x"}}}
+		return compute(computeInput{Rel: "20990102_1", Runs: []detectorRun{r}})
+	}
+	for _, tc := range []struct {
+		registered, fired, want detector.Severity
+		fail                    bool
+	}{
+		{registered: detector.Info, want: detector.Info},
+		{registered: detector.Review, want: detector.Review},
+		{registered: detector.Review, fired: detector.Info, want: detector.Info},
+		{registered: detector.Info, fired: detector.Review, fail: true},
+		{registered: detector.Review, fired: detector.Blocking, fail: true},
+		{registered: detector.Blocking, fired: detector.Blocking, fail: true},
+		{registered: detector.Review, fired: "loud", fail: true},
+	} {
+		file, err := with(tc.registered, tc.fired)
+		if tc.fail {
+			if err == nil {
+				t.Errorf("%+v: no error", tc)
+			}
+			continue
+		}
+		if err != nil || only(t, file).Severity != tc.want {
+			t.Errorf("%+v: %v %+v", tc, err, file.Findings)
+		}
+	}
+}
+
+func severityRun(sev detector.Severity, inputs ...string) detectorRun {
+	r := run("d", 1, always, Fired{Subject: docSubject("vn:1"), Severity: sev, FingerprintInputs: inputs})
+	r.spec.Severity = detector.Review
+	return r
+}
+
+func TestCompute_SeverityChangeUnderSameFingerprintKeepsOccurrence(t *testing.T) {
+	a := mustCompute(t, computeInput{Rel: "20990101_1", Runs: []detectorRun{severityRun(detector.Review, "x")}})
+	b := mustCompute(t, computeInput{Rel: "20990102_1", Runs: []detectorRun{severityRun(detector.Info, "x")}, Previous: &a})
+	got := only(t, b)
+	if got.Key != only(t, a).Key || got.Severity != detector.Info || got.FirstRel != "20990101_1" || len(b.New) != 0 {
+		t.Fatalf("%+v new %v", got, b.New)
+	}
+}
+
+func TestCompute_FingerprintChangeKeepsKeyAndStartsNewOccurrence(t *testing.T) {
+	a := mustCompute(t, computeInput{Rel: "20990101_1", Runs: []detectorRun{severityRun(detector.Review, "x")}})
+	b := mustCompute(t, computeInput{Rel: "20990102_1", Runs: []detectorRun{severityRun(detector.Review, "y")}, Previous: &a})
+	got := only(t, b)
+	if got.Key != only(t, a).Key || got.FirstRel != "20990102_1" || len(b.New) != 1 {
+		t.Fatalf("%+v new %v", got, b.New)
+	}
+}

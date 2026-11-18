@@ -16,11 +16,14 @@ func TestRegistry_MatchesGapKindsInCode(t *testing.T) {
 		t.Fatalf("gap source enumeration incomplete: %d kinds", len(sources))
 	}
 	for kind, dirs := range sources {
-		if _, ok := Lookup(kind); !ok {
+		if err := ValidateKind(kind); err != nil {
 			t.Errorf("gap kind %q written in %v is not registered", kind, dirs)
 		}
 	}
 	for _, d := range All() {
+		if d.Subject != SubjectStageItem {
+			continue
+		}
 		if _, ok := sources[d.ID]; !ok {
 			t.Errorf("registered gap kind %q is never written in code", d.ID)
 		}
