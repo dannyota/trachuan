@@ -228,7 +228,7 @@ the relation cap.
 - [Build normalization](normalization.md): the consolidated derivation is
   unchanged and still counts only source-supplied `in_force` or `partial`
   targets; derived and corrected targets do not count in this release.
-  `validity_rules_version` (`validity/2`) joins the build recipe and the
+  `validity_rules_version` (`validity/3`) joins the build recipe and the
   corrections file hash joins the build input; the shared `normalizer_version`
   is not bumped, because chunk recipes depend on it, so a frozen run is never
   rebuilt under new rules.

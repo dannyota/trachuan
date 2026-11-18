@@ -87,7 +87,7 @@ func ruleCDocuments(t *testing.T, f *loadFixture, diagramRow bool) {
 	addValidityFixture(t, f, "1", knowledgeNumber, "CHL", "2020-01-01", "2020-01-01", "")
 	acting := addValidityFixture(t, f, "2", "2/2021/NĐ-CP", "CHL", "2021-01-01", "2021-02-01", ruleCBody)
 	if diagramRow {
-		f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", acting))
+		f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "method": "vbpl_diagram", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", acting))
 	}
 }
 

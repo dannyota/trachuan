@@ -41,15 +41,15 @@ func TestLoad_ValidityRuleACorrectsNotYet(t *testing.T) {
 		t.Fatalf("%s %s %s: %v", class, basis, from, err)
 	}
 }
-func addReplacementFixture(t *testing.T, f *loadFixture, body string) {
+func addReplacementFixture(t *testing.T, f *loadFixture, body, method string) {
 	t.Helper()
 	addValidityFixture(t, f, "1", "1/2020/NĐ-CP", "CHL", "2020-01-01", "2020-01-01", "")
 	hash := addValidityFixture(t, f, "2", "2/2021/NĐ-CP", "CHL", "2021-01-01", "2021-02-01", body)
-	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", hash))
+	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "method": method, "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", hash))
 }
 func TestLoad_ValidityRuleBSetsPredecessorEnd(t *testing.T) {
 	f := fixture(t)
-	addReplacementFixture(t, f, "Nghị định này có hiệu lực từ ngày 1/2/2021. Nghị định này thay thế Nghị định số 1/2020/NĐ-CP ngày 1/1/2020 của Chính phủ.")
+	addReplacementFixture(t, f, "Nghị định này có hiệu lực từ ngày 1/2/2021. Nghị định này thay thế Nghị định số 1/2020/NĐ-CP ngày 1/1/2020 của Chính phủ.", "vbpl_diagram")
 	if err := loadValidityFixture(t, f, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -59,14 +59,21 @@ func TestLoad_ValidityRuleBSetsPredecessorEnd(t *testing.T) {
 	}
 }
 func TestLoad_ValidityRuleCMarksConflict(t *testing.T) {
-	f := fixture(t)
-	addReplacementFixture(t, f, "Nghị định này có hiệu lực từ ngày 1/2/2021.")
-	if err := loadValidityFixture(t, f, nil); err != nil {
-		t.Fatal(err)
-	}
-	var conflict bool
-	if err := f.corpus.QueryRow(context.Background(), `SELECT validity_conflict FROM document WHERE key='vn:vbpl:1'`).Scan(&conflict); err != nil || !conflict {
-		t.Fatalf("%v: %v", conflict, err)
+	for _, tc := range []struct {
+		method string
+		want   bool
+	}{{"vbpl_diagram", true}, {"vbpl_references,vbpl_diagram", true}, {"vbpl_references", false}} {
+		t.Run(tc.method, func(t *testing.T) {
+			f := fixture(t)
+			addReplacementFixture(t, f, "Nghị định này có hiệu lực từ ngày 1/2/2021.", tc.method)
+			if err := loadValidityFixture(t, f, nil); err != nil {
+				t.Fatal(err)
+			}
+			var conflict bool
+			if err := f.corpus.QueryRow(context.Background(), `SELECT validity_conflict FROM document WHERE key='vn:vbpl:1'`).Scan(&conflict); err != nil || conflict != tc.want {
+				t.Fatalf("%v: %v", conflict, err)
+			}
+		})
 	}
 }
 func correctionFixture() source.Correction {
@@ -110,7 +117,7 @@ func TestLoad_FutureActorNotStartedAtReleaseDate(t *testing.T) {
 	f := fixture(t)
 	addValidityFixture(t, f, "1", "1/2020/NĐ-CP", "CHL", "2020-01-01", "2020-01-01", "")
 	hash := addValidityFixture(t, f, "2", "2/2100/NĐ-CP", "CHL", "2100-01-01", "2100-02-01", "")
-	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", hash))
+	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "method": "vbpl_diagram", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", hash))
 	if err := loadValidityFixture(t, f, nil); err != nil {
 		t.Fatal(err)
 	}

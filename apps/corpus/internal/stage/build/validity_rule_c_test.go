@@ -13,7 +13,7 @@ func TestRuleC_UnresolvedActorArticleMakesNoConflict(t *testing.T) {
 		if article {
 			b.article = testArticle("1/2/2021", "Nghị định này hết hiệu lực theo quy định khác.")
 		}
-		v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}, nil)
+		v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 3}}, nil)
 		if v.documents["a"].values.Conflict || !hasReview(v, "replaces_unverified") {
 			t.Fatalf("article=%v: %+v", article, v)
 		}
@@ -24,7 +24,7 @@ func TestRuleC_UsableArticleSilentOnTargetSetsConflict(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", "")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 3}}, nil)
 	if !v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
@@ -34,7 +34,7 @@ func TestRuleC_UsableArticlePartialMentionNoConflict(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", "Nghị định này bãi bỏ Điều 3 của Nghị định số 1/2020/NĐ-CP.")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 3}}, nil)
 	if v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
@@ -45,7 +45,7 @@ func TestReview_ReplacesUnverifiedEntry(t *testing.T) {
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.quote = strings.Repeat("á", 450) + " Nghị định số 1/2020/NĐ-CP."
 	b.article = testArticle("1/2/2021", "Nghị định này hết hiệu lực theo quy định khác.")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 3}}, nil)
 	data, err := encodeValidityReview(v.reviews)
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestRuleC_WholeMentionWithoutEventNoConflict(t *testing.T) {
 	a.issuer = "Bộ khác"
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", replacement(a.number, "1/1/2020"))
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 3}}, nil)
 	if v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
