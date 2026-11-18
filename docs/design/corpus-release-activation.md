@@ -18,11 +18,15 @@ privilege:
   That prewarm skips a database that `activator` does not own or that has no
   `pg_prewarm` (one activated before this rule); it warms from traffic and the
   operating system's page cache until its successor is activated.
-- Nothing a dump left behind reaches the next activation. Before a target is
-  created, the updater ends every other `activator` backend and drops every
-  `activator`-owned database that no kind protects, whatever its name. It
-  records the new target's `pg_database` OID and every later step, the
-  `postgres` one first, refuses a database with another OID under that name.
+- Nothing a dump left behind reaches the next activation. Before any operation
+  begins, before a target is created or a `retained` database is reactivated,
+  and after an operation ends, the updater ends every other `activator` backend
+  and drops every `activator`-owned database that no kind protects, whatever its
+  name; one it cannot clear makes the phase wait. It records a new target's
+  `pg_database` OID on the host, outside anything `activator` can write, and
+  every later step, the `postgres` one first, refuses a database with another
+  OID under that name. An operation with no record (begun by an older updater)
+  adopts the current OID after the same clearing.
 - Every updater session pins `search_path` at connection start (`pg_catalog`, or
   `pg_catalog, public` where its SQL names corpus tables) and names catalog
   objects with their schema.
@@ -36,9 +40,9 @@ privilege:
   procedure, aggregate, trigger, rule, policy, operator, cast, event trigger,
   explicit type or domain outside those extensions; no `pg_db_role_setting` row
   for the database; and, before the owner's grants, no access-control entry for
-  another role on the database's relations or schema and no default-privilege
-  row. A `retained` database is checked with its reader grants allowed. Any
-  difference aborts the activation, naming only the kind of object.
+  another role on the database, its relations or its schema and no
+  default-privilege row. A `retained` database is checked with its reader grants
+  allowed. Any difference aborts the activation, naming only the kind of object.
 - The updater feeds the provisioner from the activated bundle over stdin,
   because a running container keeps the old file behind its bind mount. It runs
   as `postgres` before each activation and resets `activator`'s role-wide

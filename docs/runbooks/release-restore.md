@@ -127,11 +127,15 @@ GiB memory cap; shared memory is charged to that cap, not an extra allowance.
 Rollback to a hand-restored release within its seven days is the owner's manual
 compare-and-swap of `corpus_release.active_db`.
 
-Prune drops only databases listed in `retired_release`. A database restored by
-hand that never became active through the pipeline, such as
-`corpus_vn_20261112_2`, has no row there and stays until it is dropped once by
-hand. Confirm it is not `active_db`, not in `retired_release`, and has no
-connections, then drop it:
+Prune drops databases listed in `retired_release`. Separately, each activation
+drops every `activator`-owned database that is neither active, retained nor the
+target of an open operation, and ends other `activator` sessions, so a pipeline
+release you rolled away from by hand goes at the next activation unless it is
+listed in `retired_release`, and a manual `activator` prewarm running then is
+ended. A database restored by hand that never became active through the
+pipeline, such as `corpus_vn_20261112_2`, has no row there and stays until it is
+dropped once by hand. Confirm it is not `active_db`, not in `retired_release`,
+and has no connections, then drop it:
 
 ```sh
 DB=corpus_vn_20261112_2
