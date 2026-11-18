@@ -169,5 +169,6 @@ so an effect can explain a partial document. An entry on a document that is on
 The evidence anchor of a `relation` stays in `knowledge.yaml`, so the row reads
 like a diagram row. `raw_label` is shown to readers and is Vietnamese: `repeals`
 bãi bỏ, `amends_supplements` sửa đổi, bổ sung, `replaces` thay thế, `suspends`
-tạm ngưng hiệu lực, `implements` quy định chi tiết, `guided_by` được hướng dẫn
-bởi, `legal_basis` căn cứ, `cites` dẫn chiếu, `references` tham chiếu.
+ngưng hiệu lực, `implements` quy định chi tiết, hướng dẫn thi hành, `guided_by`
+được hướng dẫn bởi, `legal_basis` căn cứ, `cites` dẫn chiếu, `references` liên
+quan.
