@@ -3,13 +3,11 @@ package build
 import (
 	"context"
 	"go/ast"
-	"go/parser"
-	"go/token"
-	"io/fs"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"danny.vn/trachuan/apps/corpus/internal/detector/gapsource"
 )
 
 func TestSummary_UnknownGapRefusesBuild(t *testing.T) {
@@ -31,21 +29,7 @@ func TestSummary_UnknownGapRefusesGapLoad(t *testing.T) {
 }
 
 func TestSummary_AllCorpusGapKindsClassifiedOnce(t *testing.T) {
-	files := map[string]*ast.File{}
-	err := filepath.WalkDir("../../..", func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, ".sql.go") {
-			return nil
-		}
-		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
-		if parseErr != nil {
-			return parseErr
-		}
-		files[path] = file
-		return nil
-	})
+	files, err := gapsource.Parse("../../..")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +43,7 @@ func TestSummary_AllCorpusGapKindsClassifiedOnce(t *testing.T) {
 			ast.Inspect(fn.Body, func(node ast.Node) bool {
 				if branch, ok := node.(*ast.CaseClause); ok {
 					for _, expr := range branch.List {
-						for _, kind := range gapSourceValues(expr, 0, nil, map[ast.Node]bool{}) {
+						for _, kind := range gapsource.ConstantStrings(expr) {
 							classified[kind]++
 						}
 					}
@@ -73,7 +57,7 @@ func TestSummary_AllCorpusGapKindsClassifiedOnce(t *testing.T) {
 			t.Errorf("gap %q classified %d times", kind, count)
 		}
 	}
-	kinds := corpusGapSourceNames(files)
+	kinds := gapsource.Names(files)
 	if len(kinds) < 50 {
 		t.Fatalf("gap source enumeration incomplete: %d names", len(kinds))
 	}

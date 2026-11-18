@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"danny.vn/trachuan/apps/corpus/internal/detector"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"go.temporal.io/sdk/activity"
@@ -34,6 +35,9 @@ type Activities struct {
 func activityError(err error) error {
 	if errors.Is(err, stage.ErrSuperseded) {
 		return temporal.NewNonRetryableApplicationError("superseded", "superseded", err)
+	}
+	if errors.Is(err, detector.ErrUnregisteredGap) {
+		return temporal.NewNonRetryableApplicationError(err.Error(), "unregistered_gap", err)
 	}
 	var recipe *stage.RecipeError
 	if errors.As(err, &recipe) {

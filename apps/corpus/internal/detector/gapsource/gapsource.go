@@ -1,63 +1,42 @@
-package build
+package gapsource
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-	"testing"
 )
 
-func TestSummary_GapSourceEnumeration(t *testing.T) {
-	file, err := parser.ParseFile(token.NewFileSet(), "synthetic.go", `package synthetic
-const namedGap = "constant_gap"
-func reason() (int,string) { return 0,"returned_gap" }
-func record() {
- gaps = append(gaps, Gap{Kind:"literal_gap"}, Gap{Kind:namedGap})
- gaps = []Gap{{Kind:"nested_gap"}}
- selected = selection{gap:"selected_gap"}
- _,gap := reason()
- selected.extraGap = "extra_gap"
- l.addGap("build",key,"build_gap","")
- report.addGap("report_gap","","")
- name := "initial_gap"
- if alternate { name = "alternate_gap" }
- report.addGap(name,"","")
- report.addGap(externalGap,"","")
- l.taxonomyGap(key,"taxonomy_gap","",1)
- stage.RetryableGap(err,"retry_gap")
- result.Gaps = append(result.Gaps,"parsed_gap")
- rejected = Rejected{1,nil,"embedding_gap"}
- value = Relation{Kind:"not_a_gap"}
-}`, parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatal(err)
+func Names(files map[string]*ast.File) []string {
+	sources := Sources(files)
+	result := make([]string, 0, len(sources))
+	for kind := range sources {
+		result = append(result, kind)
 	}
-	external, err := parser.ParseFile(token.NewFileSet(), "external.go", `package synthetic; const externalGap = "external_gap"`, parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := corpusGapSourceNames(map[string]*ast.File{"synthetic.go": file, "external.go": external})
-	want := []string{"alternate_gap", "build_gap", "constant_gap", "embedding_gap", "external_gap", "extra_gap", "initial_gap", "literal_gap", "nested_gap", "parsed_gap", "report_gap", "retry_gap", "returned_gap", "selected_gap", "taxonomy_gap"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("gap names=%v, want %v", got, want)
-	}
+	slices.Sort(result)
+	return result
 }
 
-func corpusGapSourceNames(files map[string]*ast.File) []string {
+func Sources(files map[string]*ast.File) map[string][]string {
 	source := indexGapSources(files)
-	kinds := map[string]bool{}
-	add := func(expr ast.Expr, index int) {
-		for _, value := range gapSourceValues(expr, index, &source, map[ast.Node]bool{}) {
-			if value != "" {
-				kinds[value] = true
+	kinds := map[string]map[string]bool{}
+	for path, file := range files {
+		dir := filepath.ToSlash(filepath.Dir(path))
+		add := func(expr ast.Expr, index int) {
+			for _, value := range gapSourceValues(expr, index, &source, map[ast.Node]bool{}) {
+				if value == "" {
+					continue
+				}
+				if kinds[value] == nil {
+					kinds[value] = map[string]bool{}
+				}
+				kinds[value][dir] = true
 			}
 		}
-	}
-	for _, file := range files {
 		stack := []ast.Node{}
 		ast.Inspect(file, func(node ast.Node) bool {
 			if node == nil {
@@ -92,6 +71,13 @@ func corpusGapSourceNames(files map[string]*ast.File) []string {
 				}
 			case *ast.AssignStmt:
 				for i, left := range n.Lhs {
+					if selector, ok := left.(*ast.SelectorExpr); ok && (selector.Sel.Name == "kind" || (selector.Sel.Name == "Kind" && source.gapBound(selector.X))) {
+						if len(n.Rhs) == 1 {
+							add(n.Rhs[0], i)
+						} else if i < len(n.Rhs) {
+							add(n.Rhs[i], 0)
+						}
+					}
 					if gapSourceField(left) {
 						if len(n.Rhs) == 1 {
 							add(n.Rhs[0], i)
@@ -125,12 +111,50 @@ func corpusGapSourceNames(files map[string]*ast.File) []string {
 			return true
 		})
 	}
-	result := make([]string, 0, len(kinds))
-	for kind := range kinds {
-		result = append(result, kind)
+	result := make(map[string][]string, len(kinds))
+	for kind, dirs := range kinds {
+		for dir := range dirs {
+			result[kind] = append(result[kind], dir)
+		}
+		slices.Sort(result[kind])
 	}
-	slices.Sort(result)
 	return result
+}
+
+func Parse(root string) (map[string]*ast.File, error) {
+	files := map[string]*ast.File{}
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, ".sql.go") {
+			return nil
+		}
+		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		if parseErr != nil {
+			return parseErr
+		}
+		files[path] = file
+		return nil
+	})
+	return files, err
+}
+
+func ConstantStrings(expr ast.Expr) []string {
+	return gapSourceValues(expr, 0, nil, map[ast.Node]bool{})
+}
+
+func (source *gapSourceIndex) gapBound(expr ast.Expr) bool {
+	ident, ok := expr.(*ast.Ident)
+	if !ok || source.references[ident] == nil {
+		return false
+	}
+	for _, value := range source.references[ident].values {
+		if literal, ok := value.expr.(*ast.CompositeLit); ok && strings.HasSuffix(gapSourceName(literal.Type), "Gap") {
+			return true
+		}
+	}
+	return false
 }
 
 func gapSourceField(expr ast.Expr) bool {

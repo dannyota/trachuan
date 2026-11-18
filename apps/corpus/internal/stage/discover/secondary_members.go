@@ -19,7 +19,7 @@ func addSecondaryMembers(ctx context.Context, q *store.Queries, env stage.Env, r
 	for _, o := range obs {
 		for _, c := range o.report.Candidates {
 			if c.State == "conflicting_detail" {
-				if err := q.InsertGap(ctx, store.InsertGapParams{RunID: r.ID, Stage: "discover", ItemKey: o.key, Kind: "invalid_source_data", Detail: "conflicting secondary detail " + c.ID}); err != nil {
+				if err := stage.InsertGap(ctx, q, store.InsertGapParams{RunID: r.ID, Stage: "discover", ItemKey: o.key, Kind: "invalid_source_data", Detail: "conflicting secondary detail " + c.ID}); err != nil {
 					return fmt.Errorf("record conflicting detail: %w", err)
 				}
 				continue

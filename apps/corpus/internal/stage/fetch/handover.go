@@ -140,7 +140,7 @@ func (s *Stage) handOver(ctx context.Context, env stage.Env, q *store.Queries, r
 		if finalized || decision.kind == "" {
 			continue
 		}
-		if err = q.InsertGap(ctx, store.InsertGapParams{RunID: run.ID, Stage: "fetch", ItemKey: entry.DocumentKey, Kind: decision.kind, Detail: detail, Source: &source, Origin: &origin, EvidenceRef: &evidence}); err != nil {
+		if err = stage.InsertGap(ctx, q, store.InsertGapParams{RunID: run.ID, Stage: "fetch", ItemKey: entry.DocumentKey, Kind: decision.kind, Detail: detail, Source: &source, Origin: &origin, EvidenceRef: &evidence}); err != nil {
 			return nil, fmt.Errorf("insert hand-over gap: %w", err)
 		}
 	}
