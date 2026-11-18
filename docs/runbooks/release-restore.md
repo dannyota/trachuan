@@ -114,6 +114,14 @@ Recover by signing the active release again:
 gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<active rel>
 ```
 
+### First release with reviewed knowledge
+
+Before uploading the first release whose `sources/<cc>-knowledge.yaml` holds a
+`provision_effect` or `relation` entry, confirm that production runs v0.1.19 or
+later, which admits relation method `reviewed`, and that the
+[release floor](../design/pull-deployment.md#release-floor) is at or above that
+image, so no rollback can reach an image that drops the warning.
+
 ### Roll back a corpus release
 
 Request a lasting rollback by signing the older release again, within its

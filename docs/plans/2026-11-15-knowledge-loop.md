@@ -23,13 +23,14 @@
 ## 16.3 Knowledge contract
 - [x] One validator (`corpus knowledge check`, build, CI test over `sources/`), all entries together: per-kind target, evidence and `depends` of knowledge-loop.md recomputed from the frozen run, exact-substring quote, refusal of `~k` anchors and URL evidence, stale handling (`knowledge_stale`) for effects and relations; decisions checked for structure only.
 - [x] `review_decision` bound to key, fingerprint, semantics number and `first_rel`.
-- [ ] `provision_effect` and `relation`: relation method `reviewed` (no schema version; `relation.method` is free text); server admits it in `warnings.go`, `warning_sql.go`, `read_sql.go` and `hydrate_tree.go` (dev2) with an evaluation case; identity (S, T, kind), redundant and contradictory rules; that image live and the release floor confirmed at it before the first corpus release that holds such rows; runbook line.
+- [x] `provision_effect` and `relation`: relation method `reviewed` (no schema version; `relation.method` is free text); the server admits it in `warnings.go`, `warning_sql.go`, `read_sql.go` and `hydrate_tree.go` (since v0.1.19); identity (S, T, kind), redundant and contradictory rules; runbook line for the first release that holds such rows.
 
 ## 16.4 Intake and release gate
 - [ ] `sources/<cc>-reports.yaml` with the closed schema, origin registry, 500-record bound, replay idempotence; detector `external_report`; `corpus findings import` converts an export batch into records for a pull request; error-reports.md keeps its batch guarantees.
 - [ ] `identity.jsonl` in the evidence artifact (parent anchors, ambiguity mark, relation ends with `exact` and `named`, validity rows, the one hash format) and `changes.jsonl` from this summary and the predecessor's (bound to the predecessor's `identity.jsonl` hash; cause classes, hand-over key changes, legal and provenance changes, no moves, `baseline` when the predecessor has none), per release-evidence.md; upload of all three files; their hashes in the signed manifest; uploader and signing validator enforce the gate table of release-evidence.md; corpus-release.md updated in the same change.
 
 ## 16.5 First use
+- [ ] Before the first release with `reviewed` rows: the image that admits them is live and the release floor is confirmed at it, and an evaluation case asserts the warning on the target provision. Evaluation has no warning assertion today and no release holds such a row, so the case ships with the first entries.
 - [ ] Triage the first run's findings in batches (model-adjudicated with a 10 percent read sample); operative claims in the 394 partly expired documents and the 196 `ocr_label_flagged` documents first.
 - [ ] Migrate gap kinds to findings one named migration at a time, converting accepted gaps into review decisions.
 - [ ] Rule in instructions/workflow.md and the PR template: a defect found by a person becomes a detector or a knowledge entry before its fix merges.
