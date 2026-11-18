@@ -31,7 +31,8 @@ from reaching more privilege or changing what other sessions run:
   and `corpus_reader`). Any difference fails the activation, naming only the
   kind of object.
 - `activator` owns the law databases too, so a hostile signed dump can still act
-  on them (settings, connection limits, dropping retired ones). This is accepted
+  on them (settings, connection limits, dropping retired ones, or replacing the
+  active or a retained database while it has no connections). This is accepted
   as it is for law dumps, since signing is the boundary for both.
 
 ## Logs

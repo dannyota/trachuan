@@ -18,6 +18,11 @@ privilege:
   That prewarm skips a database that `activator` does not own or that has no
   `pg_prewarm` (one activated before this rule); it warms from traffic and the
   operating system's page cache until its successor is activated.
+- Nothing a dump left behind reaches the next activation. Before a target is
+  created, the updater ends every other `activator` backend and drops every
+  `activator`-owned database that no kind protects, whatever its name. It
+  records the new target's `pg_database` OID and every later step, the
+  `postgres` one first, refuses a database with another OID under that name.
 - Every updater session pins `search_path` at connection start (`pg_catalog`, or
   `pg_catalog, public` where its SQL names corpus tables) and names catalog
   objects with their schema.
@@ -25,15 +30,26 @@ privilege:
   again, a check under `search_path=pg_catalog` compares the database with what
   a law release may hold: only the `public` schema; exactly the template's
   extensions plus `vector` and `ltree`, and `pg_prewarm` if present (a database
-  restored before this rule has none), all owned by `postgres`; no view,
-  function, procedure, aggregate, trigger, rule, policy, operator, cast, event
-  trigger, explicit type or domain outside those extensions; and no
-  `pg_db_role_setting` row for the database. Any difference aborts the
-  activation, naming only the kind of object.
-- The provisioner, which runs as `postgres` before each activation, resets
-  `activator`'s role-wide settings and its settings in every database but the
-  frameworks ones, whose four log settings the
-  [frameworks check](frameworks-release-restore.md) verifies.
+  restored before this rule has none), all owned by `postgres`, at the
+  manifest's versions for a new database (a `retained` one is compared by name,
+  schema and owner, since the image may have moved on); no view, function,
+  procedure, aggregate, trigger, rule, policy, operator, cast, event trigger,
+  explicit type or domain outside those extensions; no `pg_db_role_setting` row
+  for the database; and, before the owner's grants, no access-control entry for
+  another role on the database's relations or schema and no default-privilege
+  row. A `retained` database is checked with its reader grants allowed. Any
+  difference aborts the activation, naming only the kind of object.
+- The updater feeds the provisioner from the activated bundle over stdin,
+  because a running container keeps the old file behind its bind mount. It runs
+  as `postgres` before each activation and resets `activator`'s role-wide
+  settings and its settings in every database but the frameworks ones, whose
+  four log settings the [frameworks check](frameworks-release-restore.md)
+  verifies.
+
+Before an operation starts, the corpus phase refuses to proceed while a role
+other than `postgres` is a superuser or a member of one: the result is
+`waiting`, so no manifest is spent. The same check runs again in the `postgres`
+step.
 
 The [manual restore](../runbooks/release-restore.md#restore-a-corpus-manually)
 is for a dump the owner already trusts and is outside these rules.
@@ -63,8 +79,9 @@ even when the auth migrations ran before the role existed.
      versions the PostgreSQL image provides.
    - As `activator`: create the database. A target that already exists when this
      step starts is dropped and created again if `activator` owns it and the
-     protection rule below allows it, so nothing dump SQL made earlier survives;
-     a target with another owner is refused and left alone.
+     protection rule below allows it, so nothing dump SQL made earlier survives
+     (a target with open connections waits); a target with another owner is
+     refused and left alone.
    - As `postgres`, before any byte of the dump: refuse when a role other than
      `postgres` is a superuser or a member of one, create `vector`, `ltree` and
      `pg_prewarm` in `public`, and revoke `PUBLIC`'s rights on the database.
