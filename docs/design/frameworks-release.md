@@ -67,10 +67,19 @@ be null.
 ## Signing workflow
 
 `.github/workflows/frameworks-release.yml`: `workflow_dispatch` from `main` with
-input `rel`, environment `frameworks-release` (deployments from `main` only),
-which holds `FRAMEWORKS_READ_KEY_ID` and `FRAMEWORKS_READ_KEY_SECRET`. A
-workflow of its own gives the kind its own certificate identity and its own
-`run_number` sequence. The job:
+inputs `rel` and `report_sha256`, environment `frameworks-release` (deployments
+from `main` only), which holds `FRAMEWORKS_READ_KEY_ID`,
+`FRAMEWORKS_READ_KEY_SECRET` and the variable `OCI_S3_ENDPOINT`. The uploader
+dispatches with the hash of the report it validated, and the job refuses a
+downloaded report with any other hash; the report binds the dump and
+`build.json`, so a holder of the upload key cannot swap the objects between
+upload and signing. It does not bind `release.json` or `evaluate.json`: a forged
+recipe, count, schema version or extension version there can be signed, but it
+never activates. The host compares the first three with the restored database
+and the extension versions with the image, and a schema or query hash the server
+does not support ends in `waiting`. Signing a released `rel` again uses
+`report.sha256` from its signed manifest. A workflow of its own gives the kind
+its own certificate identity and its own `run_number` sequence. The job:
 
 1. HEADs and downloads the five objects into `$RUNNER_TEMP` with the law job's
    size bounds and range checks.
@@ -113,8 +122,9 @@ workflow of its own gives the kind its own certificate identity and its own
 
 The certificate identity is
 `https://github.com/dannyota/trachuan/.github/workflows/frameworks-release.yml@refs/heads/main`.
-Dispatching again for the same `rel` signs a new sequence (a retry); dispatching
-for an older retained `rel` is a rollback, as for law.
+Dispatching again for the same `rel`, with its report's hash from the signed
+manifest, signs a new sequence (a retry); dispatching for an older retained
+`rel` is a rollback, as for law.
 
 ## Host
 
@@ -217,10 +227,10 @@ is unaffected, and once B has raised the floor that rollback is refused.
    bucket; the frameworks verify user, group and its read statement; the upload
    group's and the host's statements for the bucket; and the secret name in the
    host's Vault read statement. The verify user's key is created and stored in
-   the `frameworks-release` environment only after the signing workflow's change
-   declares that environment, deployments from `main` only, in
-   `deploy/github/settings.json` and it is applied, so no hand-made environment
-   ever holds it.
+   the `frameworks-release` environment, with the `OCI_S3_ENDPOINT` variable,
+   only after the signing workflow's change declares that environment,
+   deployments from `main` only, in `deploy/github/settings.json` and it is
+   applied, so no hand-made environment ever holds it.
 2. Image A ships the migration, `release-check --kind`, `frameworks-schema`, the
    updater's frameworks phase, and `server_frameworks_key` in the policy's
    secret list and the fetcher's allowlist, and the secret-presence check above.

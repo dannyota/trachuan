@@ -1,6 +1,7 @@
 import uuid
 
 from .deploy_corpus_kind import LAW
+from .deploy_corpus_sql import JournalRefused
 from .deploy_release_target import Leftover
 
 
@@ -70,6 +71,7 @@ class Activation:
         return self.resume(self.begin(hash_value, manifest, mode, expected), dump, image)
 
     def resume(self, row, dump, image, recheck=False):
+        self.kind.sql.journal_row(row)
         if row['step'] in ('activated', 'reverted'):
             return row
         if row['step'] == 'aborted':
@@ -111,7 +113,7 @@ class Activation:
             if row['step'] != 'activated':
                 raise ValueError('unknown ' + self.kind.label + ' activation step')
             return row
-        except Leftover:
+        except (JournalRefused, Leftover):
             raise
         except Exception:
             self.abort(row)

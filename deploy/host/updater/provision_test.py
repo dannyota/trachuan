@@ -14,8 +14,8 @@ FEED = ['/usr/local/bin/postgres-admin.sh', 'bash', '-s']
 class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
     def test_frameworks_pointer_grant_is_guarded_and_excludes_delete(self):
         script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
-        self.assertIn("SELECT 'GRANT SELECT, INSERT, UPDATE ON frameworks_release TO activator'\n"
-                      "WHERE to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
+        self.assertIn("SELECT 'GRANT SELECT, INSERT, UPDATE ON public.frameworks_release TO activator'\n"
+                      "WHERE pg_catalog.to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
         self.assertNotIn("'retired_release','frameworks_release'", script)
 
     def provision_input(self):
@@ -35,11 +35,11 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertIn('ALTER ROLE activator RESET ALL;\n', text)
         self.assertIn("pg_catalog.format('ALTER ROLE activator IN DATABASE %I RESET ALL', d.datname)", text)
         self.assertIn('FROM pg_catalog.pg_db_role_setting s', text)
-        self.assertIn("d.datname !~ '^frameworks_[0-9]{8}(_[0-9]{1,2})?$' \\gexec", text)
+        self.assertIn("d.datname OPERATOR(pg_catalog.!~) '^frameworks_[0-9]{8}(_[0-9]{1,2})?$' \\gexec", text)
         self.assertLess(text.index('ALTER ROLE activator LOGIN'), text.index('ALTER ROLE activator RESET ALL;'))
 
     def test_provisioner_session_pins_search_path(self):
-        self.assertIn('-c search_path=pg_catalog,public', self.provision_input().splitlines()[0])
+        self.assertEqual(self.provision_input().splitlines()[0].split(' -c ')[-1], 'search_path=pg_catalog')
 
     def test_provision_feeds_the_installed_script_over_stdin(self):
         self.calls.clear()
@@ -47,7 +47,8 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertTrue(self.host.provision_activator())
         args = [call for call, _ in self.calls]
         self.assertEqual(args[:2], [['podman', 'exec', 'trachuan-postgres', 'test', '-r', path] for path in PROBES])
-        self.assertEqual(args[2], ['podman', 'exec', '-i', 'trachuan-postgres', *FEED])
+        self.assertEqual(args[2], ['podman', 'exec', '-i', '--env', 'PGREQUIREAUTH=scram-sha-256',
+                                   'trachuan-postgres', *FEED])
         self.assertEqual(self.calls[2][1], b'activated bundle script\n')
 
     def test_missing_installed_script_is_not_provisioned_and_opens_no_container_session(self):

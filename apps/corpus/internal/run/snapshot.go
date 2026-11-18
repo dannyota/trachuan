@@ -4,8 +4,6 @@ package run
 import (
 	"fmt"
 	"regexp"
-	"strconv"
-	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -22,28 +20,7 @@ func validateRel(rel string) error {
 	return nil
 }
 
-// CompareRel orders releases by date, then by sequence number as an integer.
-func CompareRel(a, b string) int {
-	ap := strings.SplitN(a, "_", 2)
-	bp := strings.SplitN(b, "_", 2)
-	if ap[0] != bp[0] {
-		return strings.Compare(ap[0], bp[0])
-	}
-	var ai, bi int
-	if len(ap) == 2 {
-		ai, _ = strconv.Atoi(ap[1])
-	}
-	if len(bp) == 2 {
-		bi, _ = strconv.Atoi(bp[1])
-	}
-	if ai < bi {
-		return -1
-	}
-	if ai > bi {
-		return 1
-	}
-	return 0
-}
+func CompareRel(a, b string) int { return stage.CompareRel(a, b) }
 
 func extendSnapshot(snapshot stage.Snapshot, stages []string, recipes map[string]string) (stage.Snapshot, bool, error) {
 	for _, name := range snapshot.Stages {
@@ -71,6 +48,9 @@ func extendSnapshot(snapshot stage.Snapshot, stages []string, recipes map[string
 		}
 	}
 	for _, name := range stages[start:] {
+		if name == stage.EvidenceStage && snapshot.PreviousReport == nil {
+			continue
+		}
 		if name == "expand" {
 			list, err := source.Parse(snapshot.SourceList)
 			if err != nil {

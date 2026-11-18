@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
 	"danny.vn/trachuan/internal/retrieval"
@@ -227,19 +226,5 @@ func anchorSuffix(s string) bool {
 }
 
 func textRelationIdentity(row relationRow, target fetch.Document, issuers map[string]string) bool {
-	expected := source.NormalizeIssuer(issuers[row.IssuerCode])
-	if expected == "" || source.NormalizeIssuer(target.Issuer) != expected {
-		return false
-	}
-	if row.StatedIssueDate != nil {
-		stated, err := ParseDate(*row.StatedIssueDate)
-		if err != nil || stated == nil {
-			return false
-		}
-		actual, err := ParseDate(target.IssueDate)
-		if err != nil || actual == nil || !stated.Equal(*actual) {
-			return false
-		}
-	}
-	return true
+	return TextTargetIdentity(row.IssuerCode, row.StatedIssueDate, target.Issuer, target.IssueDate, issuers)
 }

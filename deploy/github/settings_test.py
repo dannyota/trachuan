@@ -35,9 +35,10 @@ class SettingsTest(unittest.TestCase):
 
     def test_environments_have_exact_refs_and_no_reviewers(self):
         envs = {e['name']: e for e in self.config['environments']}
-        self.assertEqual(set(envs), {'production', 'corpus-release'})
+        self.assertEqual(set(envs), {'production', 'corpus-release', 'frameworks-release'})
         for name, refs in [('production', [('v*', 'tag'), ('main', 'branch')]),
-                           ('corpus-release', [('main', 'branch')])]:
+                           ('corpus-release', [('main', 'branch')]),
+                           ('frameworks-release', [('main', 'branch')])]:
             with self.subTest(name=name):
                 self.assertEqual(envs[name]['settings']['reviewers'], [])
                 self.assertEqual(envs[name]['settings']['deployment_branch_policy'],

@@ -5,3 +5,6 @@ paths:
   .github/workflows/corpus-release.yml:
     ignore:
       - 'unexpected key "queue" for "concurrency" section'
+  .github/workflows/frameworks-release.yml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'

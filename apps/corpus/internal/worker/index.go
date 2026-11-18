@@ -31,37 +31,10 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("load evaluation fixtures: %w", err)
 	}
-	corrections, err := build.ReadCorrections("sources/vn-corrections.yaml")
-	if err != nil {
-		return workflow.Deps{}, fmt.Errorf("load corrections: %w", err)
-	}
-	exclusions, err := build.ReadHeadingExclusions("sources/vn-heading-exclusions.yaml")
-	if err != nil {
-		return workflow.Deps{}, fmt.Errorf("load heading exclusions: %w", err)
-	}
-	reviewData, err := os.ReadFile("sources/vn-heading-reviews.yaml")
-	if err != nil {
-		return workflow.Deps{}, fmt.Errorf("load heading reviews: %w", err)
-	}
-	if _, err = source.ParseHeadingReviews(reviewData); err != nil {
+	deps := indexDeps(cfg, suite, time.Now)
+	if err = loadSourceInputs(&deps, cfg); err != nil {
 		return workflow.Deps{}, err
 	}
-	taxonomy, err := build.ReadTaxonomy("taxonomy", cfg.PhapdienPackage)
-	if err != nil {
-		return workflow.Deps{}, fmt.Errorf("load taxonomy: %w", err)
-	}
-	waivers, err := extract.ReadWaivers("sources/vn-ocr-waivers.yaml")
-	if err != nil {
-		return workflow.Deps{}, fmt.Errorf("load OCR waivers: %w", err)
-	}
-	deps := indexDeps(cfg, suite, time.Now)
-	deps.Waivers = waivers
-	deps.Build.Taxonomy = taxonomy
-	deps.Eval.Build.Taxonomy = taxonomy
-	deps.Build.Corrections = corrections
-	deps.Build.HeadingExclusions = exclusions
-	deps.Eval.Build.HeadingExclusions = exclusions
-	deps.Eval.Build.Corrections = corrections
 	versions, err := build.InspectVersions(ctx, deps.Build)
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("inspect build versions: %w", err)
@@ -69,6 +42,46 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 	deps.Build.Versions = versions
 	deps.Eval.Build.Versions = versions
 	return deps, nil
+}
+
+func loadSourceInputs(deps *workflow.Deps, cfg config.Config) error {
+	corrections, err := build.ReadCorrections("sources/vn-corrections.yaml")
+	if err != nil {
+		return fmt.Errorf("load corrections: %w", err)
+	}
+	exclusions, err := build.ReadHeadingExclusions("sources/vn-heading-exclusions.yaml")
+	if err != nil {
+		return fmt.Errorf("load heading exclusions: %w", err)
+	}
+	knowledge, err := build.ReadKnowledge("vn", "sources/vn-knowledge.yaml")
+	if err != nil {
+		return fmt.Errorf("load knowledge: %w", err)
+	}
+	reviewData, err := os.ReadFile("sources/vn-heading-reviews.yaml")
+	if err != nil {
+		return fmt.Errorf("load heading reviews: %w", err)
+	}
+	if _, err = source.ParseHeadingReviews(reviewData); err != nil {
+		return err
+	}
+	taxonomy, err := build.ReadTaxonomy("taxonomy", cfg.PhapdienPackage)
+	if err != nil {
+		return fmt.Errorf("load taxonomy: %w", err)
+	}
+	waivers, err := extract.ReadWaivers("sources/vn-ocr-waivers.yaml")
+	if err != nil {
+		return fmt.Errorf("load OCR waivers: %w", err)
+	}
+	deps.Waivers = waivers
+	deps.Build.Taxonomy = taxonomy
+	deps.Eval.Build.Taxonomy = taxonomy
+	deps.Build.Corrections = corrections
+	deps.Eval.Build.Corrections = corrections
+	deps.Build.HeadingExclusions = exclusions
+	deps.Eval.Build.HeadingExclusions = exclusions
+	deps.Build.Knowledge = knowledge
+	deps.Eval.Build.Knowledge = knowledge
+	return nil
 }
 
 func indexDeps(cfg config.Config, suite evaluation.Suite, now func() time.Time) workflow.Deps {

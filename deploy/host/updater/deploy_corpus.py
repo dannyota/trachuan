@@ -13,6 +13,7 @@ from .deploy_corpus_result import ReleaseResult
 from .deploy_corpus_sql import SUPERUSER_REFUSED
 from .deploy_release_target import Leftover
 from .deploy_io import atomic, canonical, CommandError, Busy, interrupted
+from .deploy_verify import match
 
 
 class ActivatorNotProvisioned(Exception):
@@ -51,6 +52,7 @@ class Corpus:
             atomic(target / name, (directory / name).read_bytes())
 
     def load(self, row):
+        match('[0-9a-f]{64}', row['manifest_hash'], 'recovery manifest hash')
         self.hash, self.manifest = self.kind.verify(self.artifacts / row['manifest_hash'], self.rules, self.host.runner)
         if (self.hash != row['manifest_hash'] or self.manifest != row['manifest']
                 or row['database_name'] != self.manifest['database'] or row['rel'] != self.manifest['rel']
@@ -179,6 +181,7 @@ class Corpus:
             self.step = 'provision'
             self.provision()
             self.db.discard_lists()
+            self.step = 'recovery'
             recovered = self.recover(mode)
             if recovered is not None:
                 return recovered

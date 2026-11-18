@@ -56,3 +56,22 @@ func TestActivities_SupersededGenerationChangesNothing(t *testing.T) {
 		t.Fatalf("state=%s next=%s items=%d checkpoints=%d", state, next, count, checkpoint.calls)
 	}
 }
+
+func TestActivities_PlanRefusesRunWithoutDecision(t *testing.T) {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, testdb.New(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	var id int64
+	if err = pool.QueryRow(ctx, `INSERT INTO run (country,rel,state,generation,snapshot,next_stage) VALUES ('vn','20990101','running',1,'{}','fetch') RETURNING id`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	a := Activities{Env: stage.Env{DB: pool}}
+	_, err = a.PlanStage(ctx, stage.StageInput{RunID: id, Generation: 1, Stage: "fetch"})
+	var appErr *temporal.ApplicationError
+	if !errors.As(err, &appErr) || appErr.Type() != "no_previous_report_decision" || !appErr.NonRetryable() {
+		t.Fatalf("err = %v", err)
+	}
+}

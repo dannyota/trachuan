@@ -97,12 +97,21 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 		return errors.New("workflow is open; use corpus cancel or corpus recover")
 	}
 	oldStageCount := 0
-	if row.Generation > 0 {
+	existing := row.Generation > 0
+	if existing {
 		snap = stage.Snapshot{}
 		if err = json.Unmarshal(row.Snapshot, &snap); err != nil {
 			return fmt.Errorf("decode snapshot: %w", err)
 		}
 		oldStageCount = len(snap.Stages)
+	}
+	decisionNote, err := decide(ctx, decisionInput{Choice: d.PreviousReport, Existing: existing, Country: cc, Rel: rel, Snapshot: &snap, Artifacts: d.Artifacts, HasEvalItem: func(ctx context.Context) (bool, error) {
+		return hasEvalItem(ctx, q, row.ID)
+	}})
+	if err != nil {
+		return err
+	}
+	if existing {
 		snap, _, err = extendSnapshot(snap, includedStages(d.Stages, until, oldStageCount), d.RecipesFor(snap))
 		if err != nil {
 			return err
@@ -196,6 +205,9 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit start: %w", err)
 	}
+	if decisionNote != "" && d.Notice != nil {
+		d.Notice(decisionNote)
+	}
 	taskQueue := d.TaskQueue
 	if taskQueue == "" {
 		taskQueue = TaskQueue
@@ -209,6 +221,19 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 		return fmt.Errorf("start workflow: %w", err)
 	}
 	return nil
+}
+
+func hasEvalItem(ctx context.Context, q *store.Queries, runID int64) (bool, error) {
+	counts, err := q.ListRunItemCounts(ctx, runID)
+	if err != nil {
+		return false, fmt.Errorf("list run items: %w", err)
+	}
+	for _, count := range counts {
+		if count.Stage == "eval" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // workerVersion returns the VCS revision the binary was built from, or "unknown".

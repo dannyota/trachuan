@@ -1,10 +1,11 @@
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import subprocess
 
-from corpus_manifest import read_manifest
-from corpus_registry import production
+from corpus_manifest import decode, read_manifest
+from corpus_production import require_signable
 from publish import push
 from signing import sign
 
@@ -16,12 +17,15 @@ def publish(directory, ref, commit):
     obj = read_manifest(path.read_bytes())
     if obj['commit'] != commit:
         raise ValueError('manifest source differs from workflow source')
+    report = (directory / 'report.json').read_bytes()
+    if hashlib.sha256(report).hexdigest() != obj['report']['sha256']:
+        raise ValueError('report differs from corpus manifest')
+    current = require_signable(obj['country'], obj['rel'], decode(report), directory / 'production')
     sign(path, directory / 'manifest.sigstore.json', 'corpus-release.yml', ref, commit)
     repository = 'ghcr.io/dannyota/trachuan-corpus-release'
     tag = obj['country'] + '-' + obj['rel']
     push(directory, repository, tag, 'application/vnd.trachuan.corpus-release.v1')
-    current = production(obj['country'], directory / 'production')
-    if current is None or obj['sequence'] > current['sequence']:
+    if obj['sequence'] > current['sequence']:
         subprocess.run(['oras', 'tag', repository + ':' + tag, obj['country'] + '-production'], check=True)
     else:
         print(f"Production sequence {current['sequence']} is not below release sequence {obj['sequence']}; leaving production unchanged")

@@ -68,7 +68,7 @@ func insertLifecycleRun(t *testing.T, d Deps, state string, updated time.Time, s
 }
 
 func testSnapshot() stage.Snapshot {
-	return stage.Snapshot{SourceList: json.RawMessage(`{}`), Stages: []string{"discover", "fetch"}, Recipes: map[string]string{"discover": "one", "fetch": "two"}}
+	return stage.Snapshot{SourceList: json.RawMessage(`{}`), Stages: []string{"discover", "fetch"}, Recipes: map[string]string{"discover": "one", "fetch": "two"}, PreviousReport: &stage.PreviousReport{SHA256: stage.NoPreviousReport}}
 }
 func startOpen(t *testing.T, d Deps) {
 	t.Helper()
@@ -222,6 +222,7 @@ func TestStart_RecipesUseFrozenSourceList(t *testing.T) {
 		_ = json.Unmarshal(s.SourceList, &source)
 		return map[string]string{"discover": source.Source, "fetch": source.Source}
 	}
+	d.PreviousReport = ReportChoice{None: true}
 	if err := Start(context.Background(), d, "vn", d.TaskQueue, "", ""); err != nil {
 		t.Fatal(err)
 	}

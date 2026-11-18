@@ -52,6 +52,8 @@ func newRegistry() []Detector {
 			Discriminator: DiscriminatorGapDetail, Completeness: CompletenessStageItem,
 		})
 	}
+	detectors = append(detectors, crossSignal()...)
+	slices.SortFunc(detectors, compareByID)
 	return detectors
 }
 
@@ -82,7 +84,7 @@ func Lookup(id string) (Detector, bool) {
 }
 
 func ValidateKind(kind string) error {
-	if _, ok := slices.BinarySearchFunc(registry, kind, compareToID); ok {
+	if i, ok := slices.BinarySearchFunc(registry, kind, compareToID); ok && registry[i].Subject == SubjectStageItem {
 		return nil
 	}
 	return fmt.Errorf("%w: kind %q", ErrUnregisteredGap, kind)

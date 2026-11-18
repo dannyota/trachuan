@@ -114,8 +114,9 @@ class LawCreateTest(LawFixture, unittest.TestCase):
         self.assertEqual(args[args.index('-U') + 1], 'activator')
         self.assertEqual(self.options(args), ADMIN)
         args, _ = self.call('prepare')
-        self.assertEqual(args[:6], ['podman', 'exec', '-i', '--env', ADMIN, 'trachuan-postgres'])
-        self.assertEqual(args[6:], ['/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
+        self.assertEqual(args[:8], ['podman', 'exec', '-i', '--env', ADMIN, '--env', 'PGREQUIREAUTH=scram-sha-256',
+                                    'trachuan-postgres'])
+        self.assertEqual(args[8:], ['/usr/local/bin/postgres-admin.sh', 'psql', '-XqAt', '-h', '127.0.0.1', '-U',
                                     'postgres', '-d', self.name, '-v', 'ON_ERROR_STOP=1'])
         text = self.sql('prepare')
         for statement in ("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public VERSION '0.8.1';",

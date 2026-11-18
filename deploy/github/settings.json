@@ -57,6 +57,15 @@
         "deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}
       },
       "refs": [{"name": "main", "type": "branch"}]
+    },
+    {
+      "name": "frameworks-release",
+      "settings": {
+        "wait_timer": 0,
+        "reviewers": [],
+        "deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}
+      },
+      "refs": [{"name": "main", "type": "branch"}]
     }
   ]
 }

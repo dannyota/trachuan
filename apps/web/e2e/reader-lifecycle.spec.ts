@@ -74,11 +74,12 @@ test('tracks the article in view at desktop width', async ({ page }) => {
   await start(page)
   await navigate(page, '/vn/documents/vn:vbpl:1')
   await expect(page.locator('[data-anchor="dieu-2"]')).toBeVisible()
-  await page.locator('[data-anchor="dieu-2"]').evaluate(element => {
+  await expect.poll(() => page.locator('[data-anchor="dieu-2"]').evaluate(async element => {
     element.scrollIntoView()
     window.scrollBy(0, -50)
-  })
-  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    return window.scrollY
+  })).toBeGreaterThan(1000)
   await page.evaluate(async () => {
     for (let i = 0; i < 20; i++) {
       window.scrollBy(0, 5)

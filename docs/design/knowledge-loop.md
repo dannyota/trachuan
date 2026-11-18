@@ -60,10 +60,14 @@ never reports zero findings.
 | `external_report`                   | intake record      | an intake record is present ([Intake](#intake))                                                                                                                                                | review                                                                      |
 
 `unmatched_operative_claim` applies the grammar of
-[relations from text](relations-text.md) read-only; it writes no relation. No
-cross-signal detector is `blocking` at first. A detector on counts is not
-defined: the evidence carries counts per detector and the uploader prints the
-change from the previous release.
+[relations from text](relations-text.md) read-only; it writes no relation. A
+target resolves as it does [in build](relations-text.md#resolution-in-build),
+and a claim is matched by a relation row from its article or a provision inside
+it, to the target document, with the requested anchor as `target_node_id` and
+the same kind. A claim whose source or target cannot be read in this run is not
+observed, so its finding is carried. No cross-signal detector is `blocking` at
+first. A detector on counts is not defined: the evidence carries counts per
+detector and the uploader prints the change from the previous release.
 
 ## Findings
 
@@ -113,10 +117,11 @@ never reads the current Git tree or other runs.
 
 ### The contract
 
-Entries of the new kinds live in `sources/<cc>-knowledge.yaml`. Build freezes
-the file's bytes in its input and copies them into the build artifact, so
-`evidence` reads them there and never from the Git tree. With no entries the
-build's input hash and artifact stay as they are today.
+Entries of the new kinds live in `sources/<cc>-knowledge.yaml`;
+[knowledge entries](knowledge-entries.md) owns the format. Build freezes the
+file's bytes in its input and copies them into the build artifact, so `evidence`
+reads them there and never from the Git tree. With no entries the build's input
+hash and artifact stay as they are today.
 
 A reviewed entry of a new kind carries `id` (unique in its file), `kind`,
 `target`, `claim`, `evidence`, `depends` and `reviewed` (date, reviewer, and

@@ -10,7 +10,7 @@ def verify(path, bundle, workflow, ref, commit, release=False):
         identity = ['--certificate-identity-regexp',
                     r'^https://github\.com/dannyota/trachuan/\.github/workflows/images\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$']
     else:
-        if workflow not in ('images.yml', 'rollback.yml', 'corpus-release.yml'):
+        if workflow not in ('images.yml', 'rollback.yml', 'corpus-release.yml', 'frameworks-release.yml'):
             raise ValueError('invalid workflow')
         pattern = r'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+' if workflow == 'images.yml' else r'refs/heads/main'
         require_match(pattern, ref, 'workflow ref')
@@ -22,6 +22,6 @@ def verify(path, bundle, workflow, ref, commit, release=False):
                     '--certificate-github-workflow-sha', commit, str(path)], check=True)
 
 
-def sign(path, bundle, workflow, ref, commit):
-    subprocess.run(['cosign', 'sign-blob', '--yes', '--bundle', str(bundle), str(path)], check=True)
+def sign(path, bundle, workflow, ref, commit, stdout=None):
+    subprocess.run(['cosign', 'sign-blob', '--yes', '--bundle', str(bundle), str(path)], check=True, stdout=stdout)
     verify(path, bundle, workflow, ref, commit)

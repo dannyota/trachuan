@@ -15,8 +15,8 @@ type validityDocument struct {
 }
 
 type validityRelation struct {
-	source, target, kind string
-	id                   int64
+	source, target, kind, method string
+	id                           int64
 }
 type validityDecision struct {
 	layer, version                       string

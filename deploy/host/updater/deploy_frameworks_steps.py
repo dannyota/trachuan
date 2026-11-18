@@ -5,6 +5,7 @@ from . import deploy_frameworks_check as check
 from . import deploy_frameworks_sql as sql
 from .deploy_frameworks_schema import objects, toc
 from .deploy_io import decode
+from .deploy_verify import positive
 
 
 STEPS = ('configuration', 'create reader pool', 'connect reader', 'log settings', 'release row',
@@ -26,6 +27,7 @@ class Steps:
         self.db, self.schemas = database, {}
 
     def schema(self, image, version):
+        positive(version, 'frameworks schema version')
         key = (image, version)
         if key not in self.schemas:
             output = text(self.db.server(image, 'frameworks-schema', '--version', str(version)),
@@ -51,10 +53,10 @@ class Steps:
 
     def create(self, row):
         name, manifest = row['database_name'], row['manifest']
-        sql.database(name)
+        statements = sql.configure(name, manifest['extensions'])
         self.db.check_extensions(manifest)
         self.db.make(row)
-        outcome = self.db.target_admin(row, sql.configure(name, manifest['extensions']), sql.ADMIN_OPTIONS)
+        outcome = self.db.target_admin(row, statements, sql.ADMIN_OPTIONS)
         if outcome == 'superuser':
             raise ValueError(law.SUPERUSER_REFUSED)
         if outcome == 'granted':

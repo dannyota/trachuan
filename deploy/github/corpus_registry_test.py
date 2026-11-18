@@ -49,6 +49,27 @@ class CorpusRegistryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.production()
 
+    def existing(self, tags, verify_error=None):
+        responses = [json.dumps(dict(tags=tags)).encode(), ('sha256:' + 'c' * 64).encode(),
+                     json.dumps(self.artifact).encode()]
+        with patch('corpus_registry.command', side_effect=responses) as command, \
+                patch('corpus_registry.fetch_blob', side_effect=[self.data, b'signature']), \
+                patch('corpus_registry.verify', side_effect=verify_error) as verify:
+            return self.module.existing_release('vn', '20990102_1', self.path / 'current'), command, verify
+
+    def test_existing_release_is_none_without_its_tag(self):
+        result, command, verify = self.existing(['vn-production', 'vn-20990101_1'])
+        self.assertIsNone(result)
+        self.assertEqual(command.call_count, 1)
+        verify.assert_not_called()
+
+    def test_existing_release_is_verified_like_release(self):
+        result, _, verify = self.existing(['vn-production', 'vn-20990102_1'])
+        self.assertEqual(result['sequence'], 7)
+        self.assertEqual(verify.call_args.args[2:], ('corpus-release.yml', 'refs/heads/main', 'a' * 40))
+        with self.assertRaises(ValueError):
+            self.existing(['vn-20990102_1'], verify_error=ValueError('signature'))
+
 
 if __name__ == '__main__':
     unittest.main()
