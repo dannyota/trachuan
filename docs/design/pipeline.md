@@ -181,13 +181,14 @@ explicit source-resume command. Neither is an acceptable coverage gap.
 | `release`  | evaluated database                                      | Uploaded dump and signed [corpus release](corpus-release.md) manifest | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
 
 The index baseline appends `chunk`, `embed`, `build`, `eval` to the existing
-registry and frozen run snapshot. `classify` and `release` remain future stages;
-the baseline does not register placeholders for them. Build computes sparse
-vectors because BM25 needs corpus-wide statistics; there is no lexical stage.
-`CloseStage` decides from the frozen snapshot whether the run is `evaluated`:
-after `evidence` for a run with a
-[decision](release-evidence.md#selected-report), after `eval` for an older one,
-even when measured quality fails. The workflow reads that answer behind a
+registry and frozen run snapshot, and the
+[selected report](release-evidence.md#selected-report) rule adds `evidence`.
+`classify` and `release` remain future stages; the baseline does not register
+placeholders for them. Build computes sparse vectors because BM25 needs
+corpus-wide statistics; there is no lexical stage. `CloseStage` decides from the
+frozen snapshot whether the run is `evaluated`: after `evidence` for a run with
+a [decision](release-evidence.md#selected-report), after `eval` for an older
+one, even when measured quality fails. The workflow reads that answer behind a
 Temporal version gate, so executions in flight replay unchanged. Extending a
 snapshot without a decision never appends `evidence`. Status also shows
 `quality_pass` and `release_eligible`, never just "passed". Existing

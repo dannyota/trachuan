@@ -78,9 +78,8 @@ version 1 report.
 The gating report of a release is its run's `eval` report
 ([selected report](release-evidence.md#selected-report)). Scoring an unchanged
 build with a newer evaluation version through `corpus eval` is a diagnostic; to
-gate a release on it takes a new run and `rel`, which reuses unchanged
-artifacts. The report records the versions it used, and a changed stage recipe
-needs a new run ([index](index.md)).
+gate a release on it takes a new run and `rel`. The report records the versions
+it used, and a changed stage recipe needs a new run ([index](index.md)).
 
 ## Validators
 

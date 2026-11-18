@@ -278,11 +278,11 @@ previous report scored by `agent-eval/3` stays comparable with `agent-eval/4`
 for the product cohorts, because the two differ only in legacy matching: the
 non-regression checks and the old product and development case diffs run, the
 diff names both scorers, and legacy cases are left out of it. Every other scorer
-difference skips the comparison with the reason `incompatible scorer version`. A
-previous report under another retrieval recipe version stays comparable: the
-diff and the non-regression checks run, and the report labels the comparison
-with both recipe versions, as for corpus changes. Corpus changes are labeled
-coverage changes, not an isolated model effect. Report low sample size and
-old-cohort reuse; no superiority interval or claim is needed here. MRR@8 on a
-corpus-only release is judged by the
-[MRR@8 tolerance](evaluation-mrr-tolerance.md).
+difference skips the comparison with the reason `incompatible scorer version`,
+which fails the stage for a run that froze a previous report. A previous report
+under another retrieval recipe version stays comparable: the diff and the
+non-regression checks run, and the report labels the comparison with both recipe
+versions, as for corpus changes. Corpus changes are labeled coverage changes,
+not an isolated model effect. Report low sample size and old-cohort reuse; no
+superiority interval or claim is needed here. MRR@8 on a corpus-only release is
+judged by the [MRR@8 tolerance](evaluation-mrr-tolerance.md).
