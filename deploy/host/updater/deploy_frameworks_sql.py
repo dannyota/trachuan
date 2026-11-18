@@ -56,8 +56,7 @@ def configure(name, extensions, activator='activator', reader='corpus_reader'):
             "SELECT 'granted';\n"
             '\\else\n'
             'BEGIN;\n'
-            'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n'
-            'GRANT CONNECT ON DATABASE ' + target + ' TO "' + plain(reader) + '";\n' + settings + created +
+            'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n' + settings + created +
             'COMMIT;\n'
             "SELECT 'configured';\n"
             '\\endif\n')
@@ -67,9 +66,10 @@ def apply(schema):
     return 'BEGIN;\n' + guard() + 'SET LOCAL search_path = public;\n' + schema + '\nCOMMIT;\n'
 
 
-def grants(reader='corpus_reader'):
+def grants(name, reader='corpus_reader'):
     role = '"' + plain(reader) + '"'
-    return ('BEGIN;\n' + guard() + 'REVOKE CREATE ON SCHEMA public FROM PUBLIC;\n'
+    return ('BEGIN;\n' + guard() + 'GRANT CONNECT ON DATABASE ' + database(name) + ' TO ' + role + ';\n'
+            'REVOKE CREATE ON SCHEMA public FROM PUBLIC;\n'
             'GRANT USAGE ON SCHEMA public TO ' + role + ';\n'
             'GRANT SELECT ON ALL TABLES IN SCHEMA public TO ' + role + ';\n'
             'GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ' + role + ';\n'

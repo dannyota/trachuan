@@ -79,7 +79,7 @@ class Steps:
         if outcome != 'ok':
             kind = outcome if outcome in check.KINDS else 'object'
             raise ValueError('frameworks database ' + kind + ' differs from image schema version')
-        self.session(sql.grants(), name, sql.SCHEMA_PATH)
+        self.session(sql.grants(name), name, sql.SCHEMA_PATH)
 
     def validate(self, row):
         name = row['database_name']

@@ -133,10 +133,10 @@ class FrameworksCreateTest(StepsFixture, unittest.TestCase):
                      "privilege_type='SET'", 'rolsuper', 'pg_catalog.unnest(',
                      "pg_catalog.has_parameter_privilege(r.oid,p,'SET')",
                      'REVOKE ALL ON DATABASE ' + target + ' FROM PUBLIC;\n',
-                     'GRANT CONNECT ON DATABASE ' + target + ' TO "corpus_reader";\n',
                      "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public VERSION '0.8.1';",
                      "CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public VERSION '1.3';"):
             self.assertIn(text, sql)
+        self.assertNotIn('GRANT', sql)
         self.assertLess(sql.index('pg_parameter_acl'), sql.index('\\if'))
         self.assertLess(sql.index('\\if'), sql.index('ALTER DATABASE'))
         args, _ = self.call('effective')
@@ -237,7 +237,8 @@ class FrameworksRestoreTest(StepsFixture, unittest.TestCase):
         self.assert_activator(args, self.name, 'pg_catalog,public')
         sql = self.sql('grants')
         self.assert_guard_first(sql, 'REVOKE')
-        for statement in ('REVOKE CREATE ON SCHEMA public FROM PUBLIC;', 'GRANT USAGE ON SCHEMA public TO "corpus_reader";',
+        for statement in ('GRANT CONNECT ON DATABASE "' + self.name + '" TO "corpus_reader";',
+                          'REVOKE CREATE ON SCHEMA public FROM PUBLIC;', 'GRANT USAGE ON SCHEMA public TO "corpus_reader";',
                           'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "corpus_reader";',
                           'GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "corpus_reader";'):
             self.assertIn(statement + '\n', sql)

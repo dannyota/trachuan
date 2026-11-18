@@ -122,12 +122,12 @@ func TestFrameworksRestore_UpdaterCommandsRestoreImageObjectsAndLogSettings(t *t
 	activatorTarget.Database = name
 	effective, _ := frameworksUpdater(t, "sql", "effective")
 	want, _ := frameworksUpdater(t, "sql", "EFFECTIVE")
-	checkSettings := func(t *testing.T) {
+	checkSettings := func(t *testing.T, logins ...string) {
 		t.Helper()
 		if got := frameworksPsql(t, psqlPath, activatorTarget, catalogPath, "SET standard_conforming_strings=on;\n"+effective); got != want {
 			t.Fatalf("activator effective log settings %q", got)
 		}
-		for _, login := range []string{activator.URL, reader.URL} {
+		for _, login := range logins {
 			config, parseErr := pgx.ParseConfig(login)
 			if parseErr != nil {
 				t.Fatal("parse synthetic login")
@@ -149,13 +149,13 @@ func TestFrameworksRestore_UpdaterCommandsRestoreImageObjectsAndLogSettings(t *t
 			}
 		}
 	}
-	checkSettings(t)
+	checkSettings(t, activator.URL)
 	for _, role := range []string{activator.Role, reader.Role} {
 		if _, err = admin.Exec(ctx, "ALTER ROLE "+pgx.Identifier{role}.Sanitize()+" SET log_min_messages = 'warning'"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	checkSettings(t)
+	checkSettings(t, activator.URL)
 	owner, err := pgx.ConnectConfig(ctx, activatorTarget)
 	if err != nil {
 		t.Fatal("connect synthetic activator to target")
@@ -209,9 +209,22 @@ func TestFrameworksRestore_UpdaterCommandsRestoreImageObjectsAndLogSettings(t *t
 	}
 	frameworksPsql(t, psqlPath, activatorTarget, "", "DROP TABLE public.pg_proc;\n")
 	runCheck("ok")
-	grants, _ := frameworksUpdater(t, "sql", "grants", reader.Role)
+	readerConfig, err := pgx.ParseConfig(reader.URL)
+	if err != nil {
+		t.Fatal("parse synthetic reader")
+	}
+	readerConfig.Database = name
+	early, err := pgx.ConnectConfig(ctx, readerConfig)
+	if err == nil {
+		_ = early.Close(ctx)
+		t.Fatal("corpus reader connected before the owner grants")
+	}
+	if !errors.As(err, &pgErr) || pgErr.Code != "42501" {
+		t.Fatalf("corpus reader refused for another reason: %v", err)
+	}
+	grants, _ := frameworksUpdater(t, "sql", "grants", name, reader.Role)
 	frameworksPsql(t, psqlPath, activatorTarget, schemaPath, "SET standard_conforming_strings=on;\n"+grants)
-	checkSettings(t)
+	checkSettings(t, activator.URL, reader.URL)
 
 	restoredURL := *base
 	restoredURL.Path = "/" + name
