@@ -5,6 +5,8 @@ from .deploy_corpus_sql import literal
 
 
 KIND = 'frameworks'
+COUNTRY = 'vn'
+RELEASE = r'[0-9]{8}(?:_[0-9]{1,2})?'
 LOG_SETTINGS = (('log_min_messages', 'panic'), ('log_min_error_statement', 'panic'),
                 ('log_min_duration_statement', '-1'), ('log_statement', 'none'))
 LOG_OPTIONS = ' '.join('-c ' + name + '=' + value for name, value in LOG_SETTINGS)
@@ -15,9 +17,17 @@ SCHEMA_PATH = '-c search_path=pg_catalog,public'
 
 
 def database(name):
-    if not isinstance(name, str) or not re.fullmatch(r'frameworks_[0-9]{8}(?:_[0-9]{1,2})?', name):
+    if not law.shaped('frameworks_' + RELEASE, name):
         raise ValueError('invalid frameworks database name')
     return '"' + name + '"'
+
+
+def journal_row(row):
+    return law.journal_row(row, database, COUNTRY, RELEASE)
+
+
+def activation_values(row):
+    return law.activation_values(row, database, COUNTRY)
 
 
 def plain(name):
@@ -112,7 +122,7 @@ def journal(row, step):
 
 
 def activate(row):
-    country, target, expected = (literal(row[k]) for k in ('country', 'database_name', 'expected_active_db'))
+    country, target, expected = activation_values(row)
     retained = ("DELETE FROM retired_release WHERE corpus_kind='frameworks' AND country=" + country +
                 ' AND db_name=' + target + ';' if row['mode'] == 'retained' else '')
     return f"""BEGIN;

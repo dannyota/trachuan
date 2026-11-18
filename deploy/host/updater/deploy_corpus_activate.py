@@ -1,6 +1,7 @@
 import uuid
 
 from .deploy_corpus_kind import LAW
+from .deploy_corpus_sql import JournalRefused
 
 
 COMPLETE = frozenset(('activated', 'reverted', 'aborted', 'pruned'))
@@ -68,6 +69,7 @@ class Activation:
         return self.resume(self.begin(hash_value, manifest, mode, expected), dump, image)
 
     def resume(self, row, dump, image, recheck=False):
+        self.kind.sql.journal_row(row)
         if row['step'] in ('activated', 'reverted'):
             return row
         if row['step'] == 'aborted':
@@ -108,6 +110,8 @@ class Activation:
             if row['step'] != 'activated':
                 raise ValueError('unknown ' + self.kind.label + ' activation step')
             return row
+        except JournalRefused:
+            raise
         except Exception:
             self.abort(row)
             raise

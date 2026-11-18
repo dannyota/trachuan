@@ -11,8 +11,7 @@ class AdvisoryLock:
         self.db = database
 
     def __enter__(self):
-        args = self.db.host.user_prefix + self.db.arguments('psql', '--no-password', '-XqAt', '-h', '127.0.0.1',
-            '-U', 'activator', '-v', 'ON_ERROR_STOP=1', '-d', 'auth')
+        args = self.db.host.user_prefix + self.db.arguments(*self.db.client('auth'))
         self.process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, start_new_session=True)
         try:

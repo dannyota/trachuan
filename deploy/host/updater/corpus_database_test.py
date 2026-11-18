@@ -50,7 +50,7 @@ class CorpusDatabaseTest(unittest.TestCase):
 
     def test_cas_checks_pointer_and_update_count_before_retirement(self):
         for mode in ('new', 'retained'):
-            self.response = json.dumps(dict(self.row, step='activated')).encode()
+            self.response = json.dumps(dict(self.row, mode=mode, step='activated')).encode()
             self.db.activate(dict(self.row, mode=mode))
             sql = self.calls[-1][1]['input'].decode()
             with self.subTest(mode=mode):

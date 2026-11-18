@@ -44,6 +44,7 @@ class Law:
         return database
 
     def activation(self, database, row):
+        self.sql.activation_values(row)
         return self.sql.activate(row, database.projection(row))
 
     def cause(self, error):
