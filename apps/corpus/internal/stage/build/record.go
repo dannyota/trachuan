@@ -96,6 +96,10 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if err = read("inputs.json", &inventory); err != nil {
 		return record, "", err
 	}
+	knowledgeHash, err := knowledgeArtifactHash(dir)
+	if err != nil {
+		return record, "", err
+	}
 	final, err := DatabaseName(run.Country, run.Rel)
 	if err != nil {
 		return record, "", err
@@ -104,7 +108,7 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if err != nil {
 		return record, "", err
 	}
-	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != recordInputHash(run.Country, run.Rel, inventory, record.IdentityMapSHA256, record.ProvenanceSHA256, record.CorrectionsSHA256, *record.DevelopmentCasesSHA256, record.TaxonomyVersion, record.HeadingExclusionsSHA256) || *record.DevelopmentCasesSHA256 != cfg.Suite.Hashes.Development || record.BuildRecipeHash != recipeHash || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
+	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != withKnowledge(recordInputHash(run.Country, run.Rel, inventory, record.IdentityMapSHA256, record.ProvenanceSHA256, record.CorrectionsSHA256, *record.DevelopmentCasesSHA256, record.TaxonomyVersion, record.HeadingExclusionsSHA256), knowledgeHash) || *record.DevelopmentCasesSHA256 != cfg.Suite.Hashes.Development || record.BuildRecipeHash != recipeHash || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
 		return record, "", fmt.Errorf("build artifact identity mismatch")
 	}
 	if record.Taxonomy == nil || record.Taxonomy.Nodes < 0 || record.Taxonomy.Served < 0 || record.Taxonomy.Seeds < 0 || record.Taxonomy.Overrides < 0 || record.Taxonomy.Excluded < 0 || record.Taxonomy.MissingArticles < 0 || record.Taxonomy.MissingOverrideTargets < 0 || record.Taxonomy.Inherited < 0 || record.Taxonomy.UnmatchedConsolidated < 0 || (record.Taxonomy.Inherited > 0 && record.Taxonomy.Inheritance.Status != "pass") || (record.Taxonomy.Inheritance.Status != "" && !validInheritanceGate(record.Taxonomy.Inheritance)) {

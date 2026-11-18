@@ -14,7 +14,7 @@ func structuralSummaryGap(kind string) (bool, error) {
 		"detail_id_mismatch", "embedding_input_bytes_exceeded", "embedding_input_too_long",
 		"empty_text", "eval_floor_failed", "eval_rejection_failed",
 		"file_format_unsupported", "file_too_large", "image_content", "invalid_date",
-		"invalid_source_data", "invalid_validity_interval", "listing_only",
+		"invalid_source_data", "invalid_validity_interval", "knowledge_stale", "listing_only",
 		"listing_unstable", "missing_attachment", "missing_commencement",
 		"missing_effective_date", "multiple_commencement_sentences", "multiple_effect_articles",
 		"named_document_ambiguous", "named_document_missing", "needs_ocr", "no_chunks",
