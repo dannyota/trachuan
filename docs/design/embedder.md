@@ -25,11 +25,21 @@ without it they compile to stubs whose constructors fail, so `go build ./...`,
 `go test ./...` and lint need no native libraries. Changing the ONNX Runtime or
 tokenizers version changes the query recipe.
 
-`apps/queryembed/native.lock` pins the release assets for `darwin-arm64` and
-`linux-arm64`: the ONNX Runtime shared library and `libtokenizers.a`, each with
-version, URL and SHA-256. `make queryembed-native` fetches and verifies them
-into `work/native/<os>-<arch>/`; the image build uses the same pins. Nothing is
-downloaded at runtime.
+`apps/queryembed/native.lock` pins the ONNX Runtime shared library and
+`libtokenizers.a` for `darwin-arm64` and `linux-arm64`, each with version,
+archive URL, archive SHA-256 and archive member. `make queryembed-native`
+fetches and verifies them into `work/native/<os>-<arch>/`; the image build uses
+the same pins. Nothing is downloaded at runtime.
+
+github.com/microsoft/onnxruntime has answered 404 since 2026-11-17, so the
+`linux-arm64` ONNX Runtime comes from Microsoft's NuGet package
+`Microsoft.ML.OnnxRuntime` 1.31.1, member
+`runtimes/linux-arm64/native/libonnxruntime.so`. That library is byte-identical
+to the GitHub release tarball it replaced (SHA-256
+`7e17c55d675be73f67a218dbecb55522395f61dafb3da03ebc7ade56a4c2f813`); a future
+re-pin of the package checks the library against this hash. The `darwin-arm64`
+entry still names the GitHub asset, whose NuGet counterpart has different bytes,
+and installs only from a verified cached archive.
 
 Start with `queryembed --model-dir DIR --ort-lib FILE --listen ADDR`. Startup
 order:
