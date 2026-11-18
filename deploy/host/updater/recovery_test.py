@@ -198,6 +198,20 @@ class PullRetryTest(unittest.TestCase):
             pull_image(self.image, runner, [])
         self.assertEqual(len(self.pulls), 1)
 
+    def test_stop_request_is_not_retried(self):
+        try:
+            raise InterruptedError('stop')
+        except InterruptedError as stop:
+            try:
+                raise CommandError('command failed') from stop
+            except CommandError as wrapped:
+                error = wrapped
+        runner = self.runner_for([error], [self.image])
+        with self.assertRaises(CommandError) as caught:
+            pull_image(self.image, runner, [])
+        self.assertIs(caught.exception, error)
+        self.assertEqual(len(self.pulls), 1)
+
     def test_digest_mismatch_after_retried_pull_is_rejected(self):
         runner = self.runner_for([timed_out(), None], [])
         with self.assertRaisesRegex(ValueError, 'local digest mismatch'):
