@@ -76,14 +76,24 @@ takes the text colour of its ground.
 
 ## Type
 
-| Role                                       | Face                                     | Size and weight                                                                                           |
-| ------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Chrome, headings, stamps, warnings, labels | Plus Jakarta Sans                        | body 500 16/1.6; descriptions 15/1.5; notes 14/1.5; labels 600; buttons 700                               |
-| Home and page hero h1                      | Plus Jakarta Sans 800, tracking -0.025em | 40/1.18, 48 from 48rem, 60/1.15 from 80rem                                                                |
-| Section h2                                 | Plus Jakarta Sans 800, tracking -0.02em  | 32/1.25, 40/1.18 from 64rem                                                                               |
-| Headings on dense screens                  | Plus Jakarta Sans 700                    | today's sizes                                                                                             |
-| Words of the law                           | Noto Serif                               | reader text 17/1.8; result text 15.5/1.75; reader title 34 (24 under 768 px); provision headings as today |
-| Document numbers                           | Roboto Mono 500, ligatures off           | as today                                                                                                  |
+| Role                                       | Face                                     | Size and weight                                                                                                 |
+| ------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Chrome, headings, stamps, warnings, labels | Plus Jakarta Sans                        | body 500 16/1.6; descriptions 15/1.5; notes 14/1.5; labels 600; buttons 700; page intro 17, home intro 18       |
+| Home and page hero h1                      | Plus Jakarta Sans 800, tracking -0.025em | 30/1.18 below 768 px, 48 from 48rem, 60/1.15 from 80rem                                                         |
+| Section h2                                 | Plus Jakarta Sans 800, tracking -0.02em  | 24/1.25 below 768 px, 32 from 768 px, 40/1.18 from 64rem                                                        |
+| Headings on dense screens                  | Plus Jakarta Sans 700                    | page title 36, sign-in title 28, account title 30, section heading 20, account card heading 17, search count 20 |
+| Words of the law                           | Noto Serif                               | reader text 17/1.8; result text 15.5/1.75; provision heading 20 in the reader, 18 in a result; reader title 34  |
+| Document numbers                           | Roboto Mono 500, ligatures off           | as today                                                                                                        |
+
+These roles are `--type-*` tokens in `tokens.css`, with one override block below
+768 px: hero 30; section h2, page, sign-in and account titles 24; document title
+22; section and reader provision headings 18; account card heading, page and
+home intros, reader text and search count 16; result text and result heading 15.
+The hero and section h2 keep their own steps at the widths above. A few small
+phone adjustments stay with their page's styles: the search filter chips and
+result legend, the coverage counts and the recovery codes. Body text stays 16,
+and links and buttons keep their size and height. Every text field is at least
+16 px below 768 px and on touch devices, so iOS Safari does not zoom on focus.
 
 Fonts are self-hosted woff2 with `font-display: swap`; the CSP keeps
 `font-src 'self'`. Plus Jakarta Sans ships with its OFL licence and covers

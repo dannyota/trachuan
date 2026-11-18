@@ -22,7 +22,7 @@ function luminance(hex: string) {
 it('pins global tokens and their contrast in both themes', () => {
   const css = readFileSync('app/assets/tokens.css', 'utf8')
   const blocks = [...css.matchAll(/(?:@theme static|:root)\s*\{([^}]+)\}/g)]
-  expect(blocks).toHaveLength(2)
+  expect(blocks).toHaveLength(3)
   for (const [index, values] of expected.entries()) {
     const actual = Object.fromEntries([...blocks[index]![1]!.matchAll(/--color-([\w-]+):\s*(#[0-9A-F]{6})/g)].map(match => [match[1], match[2]]))
     expect(actual).toEqual(values)

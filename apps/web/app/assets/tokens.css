@@ -20,6 +20,9 @@
   --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-pill: 999px;
   --color-border: var(--color-control); --color-input-border: var(--color-control);
   --radius-input: 10px; --radius-stamp: var(--radius-sm);
+  --type-hero: 40px; --type-section: 32px; --type-home-lead: 18px; --type-page-title: 36px; --type-auth-title: 28px;
+  --type-account-title: 30px; --type-doc-title: 34px; --type-heading: 20px; --type-card-heading: 17px; --type-lead: 17px;
+  --type-law: 17px; --type-result: 15.5px; --type-result-heading: 18px; --type-count: 20px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -38,5 +41,12 @@
     --color-ink-partial: #F0B565; --color-stamp-partial-bg: #33230B;
     --color-ink-not-yet: #9DB8FF; --color-stamp-not-yet-bg: #16224A;
     --color-ink-expired: #B3B9C4; --color-stamp-expired-bg: #23272E; --color-stamp-neutral-border: #6B7280;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --type-hero: 30px; --type-section: 24px; --type-home-lead: 16px; --type-page-title: 24px; --type-auth-title: 24px;
+    --type-account-title: 24px; --type-doc-title: 22px; --type-heading: 18px; --type-card-heading: 16px; --type-lead: 16px;
+    --type-law: 16px; --type-result: 15px; --type-result-heading: 15px; --type-count: 16px;
   }
 }
