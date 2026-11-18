@@ -270,9 +270,9 @@ func TestRoutes_OAuthRateLimitJSON(t *testing.T) {
 
 func TestRoutes_OAuthRateLimitPage(t *testing.T) {
 	for _, tt := range []struct{ method, path, lang, message string }{
-		{"GET", "/oauth/authorize", "vi", "Dịch vụ tạm thời không khả dụng"},
+		{"GET", "/oauth/authorize", "vi", "Dịch vụ tạm thời chưa dùng được"},
 		{"GET", "/oauth/consent/handle?lang=en", "en", "The service is temporarily unavailable"},
-		{"POST", "/oauth/consent/handle", "vi", "Dịch vụ tạm thời không khả dụng"},
+		{"POST", "/oauth/consent/handle", "vi", "Dịch vụ tạm thời chưa dùng được"},
 	} {
 		t.Run(tt.method+tt.path, func(t *testing.T) {
 			mux, _, _ := routeFixture(t)
