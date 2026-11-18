@@ -76,7 +76,7 @@ func TestPlanStage_ListsBatchesWithHoles(t *testing.T) {
 func TestPlanStage_RecordsSkipGap(t *testing.T) {
 	t.Parallel()
 	env, in, s := controlSetup(t)
-	s.items = []Item{{Key: "skip", Skip: &Gap{Kind: "missing", Detail: "reason"}}}
+	s.items = []Item{{Key: "skip", Skip: &Gap{Kind: "missing_attachment", Detail: "reason"}}}
 	if _, err := controlPlan(env, in, s); err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestPlanStage_RecordsSkipGap(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got map[string]map[string]string
-	if err := json.Unmarshal([]byte(message), &got); err != nil || got["skip"]["kind"] != "missing" || got["skip"]["detail"] != "reason" {
+	if err := json.Unmarshal([]byte(message), &got); err != nil || got["skip"]["kind"] != "missing_attachment" || got["skip"]["detail"] != "reason" {
 		t.Fatalf("message=%s err=%v", message, err)
 	}
 }
@@ -143,11 +143,11 @@ func TestCloseStage_FailedItemsKeepCursor(t *testing.T) {
 	t.Parallel()
 	env, in, _ := controlSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','a','failed',0),($1,'fetch','b','gap',0),($1,'fetch','c','done',0)`, in.RunID)
-	batchExec(t, env.DB, `INSERT INTO gap (run_id,stage,item_key,kind,detail,accepted_at) VALUES ($1,'fetch','b','missing','a',NULL),($1,'fetch','b','missing','b',now())`, in.RunID)
+	batchExec(t, env.DB, `INSERT INTO gap (run_id,stage,item_key,kind,detail,accepted_at) VALUES ($1,'fetch','b','missing_attachment','a',NULL),($1,'fetch','b','missing_attachment','b',now())`, in.RunID)
 	got, err := CloseStage(context.Background(), env, &controlStage{}, in, "extract")
 	var next string
 	queryErr := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next)
-	if err != nil || queryErr != nil || !got.Failed || next != "fetch" || got.Counts.Expected != 3 || got.Counts.Done != 1 || got.Counts.Gap != 1 || got.Counts.Failed != 1 || got.Counts.UnacceptedGaps["missing"] != 1 {
+	if err != nil || queryErr != nil || !got.Failed || next != "fetch" || got.Counts.Expected != 3 || got.Counts.Done != 1 || got.Counts.Gap != 1 || got.Counts.Failed != 1 || got.Counts.UnacceptedGaps["missing_attachment"] != 1 {
 		t.Fatalf("result=%+v next=%s err=%v query=%v", got, next, err, queryErr)
 	}
 }

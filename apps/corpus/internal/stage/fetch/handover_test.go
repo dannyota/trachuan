@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/detector"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
@@ -84,5 +85,26 @@ func TestPrecedenceSkipped_FinalizedGapIsNotProvisional(t *testing.T) {
 	item := store.ListStageItemArtifactsRow{State: "gap"}
 	if precedenceSkipped(item, []store.Gap{{Kind: "source_replaced", EvidenceRef: &evidence}}) {
 		t.Fatal("finalized gap treated as provisional")
+	}
+}
+
+func TestHandOver_EveryDecisionKindIsRegistered(t *testing.T) {
+	states := []string{"match", "ambiguous", "different_date", "different_number"}
+	var cases [][]handOverPair
+	cases = append(cases, nil)
+	for _, a := range states {
+		cases = append(cases, []handOverPair{{key: "vn:vbpl:1", state: a}})
+		for _, b := range states {
+			cases = append(cases, []handOverPair{{key: "vn:vbpl:1", state: a}, {key: "vn:vbpl:2", state: b}})
+		}
+	}
+	for _, pairs := range cases {
+		kind := decideHandOver(pairs).kind
+		if kind == "" {
+			continue
+		}
+		if err := detector.ValidateKind(kind); err != nil {
+			t.Errorf("pairs %+v: %v", pairs, err)
+		}
 	}
 }

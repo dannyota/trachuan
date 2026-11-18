@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/detector"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
@@ -39,6 +40,11 @@ func CommitItem(ctx context.Context, pool *pgxpool.Pool, c Commit) (applied bool
 }
 
 func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied bool, err error) {
+	for _, gap := range c.Gaps {
+		if registryErr := detector.ValidateKind(gap.Kind); registryErr != nil {
+			return false, fmt.Errorf("validate gap: %w", registryErr)
+		}
+	}
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin item commit: %w", err)
@@ -153,7 +159,7 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 		if gap.HTTPStatus != nil {
 			status = pgtype.Int4{Int32: *gap.HTTPStatus, Valid: true}
 		}
-		if gapErr := q.InsertGap(ctx, store.InsertGapParams{
+		if gapErr := InsertGap(ctx, q, store.InsertGapParams{
 			RunID: c.RunID, Stage: c.Stage, ItemKey: c.ItemKey, Kind: gap.Kind, Detail: gap.Detail,
 			Source: optionalString(gap.Source), Origin: optionalString(string(gap.Origin)), Cause: optionalString(string(gap.Cause)), Endpoint: optionalString(gap.Endpoint), HttpStatus: status, EvidenceRef: optionalString(gap.EvidenceRef),
 		}); gapErr != nil {

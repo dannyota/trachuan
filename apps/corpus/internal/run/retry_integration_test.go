@@ -122,7 +122,7 @@ func TestStart_RetryCompleteRunAndFence(t *testing.T) {
 	if err = d.DB.QueryRow(ctx, `SELECT id,next_stage FROM run`).Scan(&id, &next); err != nil || next != "fetch" {
 		t.Fatalf("next=%q err=%v", next, err)
 	}
-	applied, err := stage.CommitItem(ctx, d.DB, stage.Commit{RunID: id, Stage: "fetch", ItemKey: "item", Generation: 1, Attempt: 99, State: "done", Gaps: []stage.Gap{{Kind: "old", Detail: "stale"}}})
+	applied, err := stage.CommitItem(ctx, d.DB, stage.Commit{RunID: id, Stage: "fetch", ItemKey: "item", Generation: 1, Attempt: 99, State: "done", Gaps: []stage.Gap{{Kind: "not_found", Detail: "stale"}}})
 	if err != nil || applied {
 		t.Fatalf("old commit applied=%v err=%v", applied, err)
 	}

@@ -33,7 +33,7 @@ func (s *batchStage) Process(ctx context.Context, env Env, r Run, it Item) (Outp
 	if s.process != nil {
 		return s.process(ctx, env, r, it)
 	}
-	return Output{State: "gap", Gaps: []Gap{{Kind: "missing", Detail: it.Key}}}, nil
+	return Output{State: "gap", Gaps: []Gap{{Kind: "missing_attachment", Detail: it.Key}}}, nil
 }
 func (*batchStage) Rows(_ context.Context, env Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "row"))
@@ -50,7 +50,7 @@ func (*batchStage) Rows(_ context.Context, env Env, art artifact.Result) (func(c
 	}, nil
 }
 func (*batchStage) Resolve(_ context.Context, _ Env, _ Run, it Item, _ artifact.Result) (Resolution, error) {
-	return Resolution{Gaps: []Gap{{Kind: "resolved", Detail: it.Key}}}, nil
+	return Resolution{Gaps: []Gap{{Kind: "not_found", Detail: it.Key}}}, nil
 }
 
 func batchSetup(t *testing.T) (Env, int64, *batchStage) {
@@ -111,7 +111,7 @@ func TestRunBatch_HungItemDoesNotBlockNext(t *testing.T) {
 			<-request.Done()
 			return Output{}, RetryableGap(request.Err(), "source_unavailable")
 		}
-		return Output{State: "gap", Gaps: []Gap{{Kind: "missing", Detail: it.Key}}}, nil
+		return Output{State: "gap", Gaps: []Gap{{Kind: "missing_attachment", Detail: it.Key}}}, nil
 	}
 	result, err := batchRun(env, id, s, 1, func(...any) {})
 	if err != nil || result.Pending != 0 || result.Gap != 2 || s.calls != 2 {

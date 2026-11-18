@@ -1,9 +1,12 @@
 package build
 
 import (
+	"context"
+	"errors"
 	"reflect"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/detector"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 )
 
@@ -23,5 +26,18 @@ func TestGaps_DispositionNotDuplicatedByUpstreamGap(t *testing.T) {
 	want := append(upstream, InventoryGap{Stage: "build", ItemKey: "withdrawn", Kind: "withdrawn"}, InventoryGap{Stage: "build", ItemKey: "removed", Kind: "scope_removed"})
 	if !reflect.DeepEqual(l.gaps, want) {
 		t.Fatalf("gaps=%+v, want %+v", l.gaps, want)
+	}
+}
+
+func TestGaps_UnregisteredKindRefusesGapLoad(t *testing.T) {
+	for _, gap := range []InventoryGap{
+		{Stage: "extract", Kind: "future_structure_gap"},
+		{Stage: "embed", Kind: ""},
+	} {
+		l := loader{gaps: []InventoryGap{gap}}
+		err := l.loadGaps(context.Background())
+		if !errors.Is(err, detector.ErrUnregisteredGap) {
+			t.Errorf("gap %+v: err = %v", gap, err)
+		}
 	}
 }

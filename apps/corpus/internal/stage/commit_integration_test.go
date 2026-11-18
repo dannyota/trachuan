@@ -72,7 +72,7 @@ func TestCommitItem_IgnoresLowerFence(t *testing.T) {
 	}
 	c.Generation, c.Attempt, c.Message = 1, 5, "stale"
 	c.Artifact = &artifact.Result{Path: "stale", SHA256: "stale", InputHash: "stale"}
-	c.Gaps = []Gap{{Kind: "stale", Detail: "stale"}}
+	c.Gaps = []Gap{{Kind: "not_found", Detail: "stale"}}
 	c.RunRows = func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO listing VALUES ($1, 'q', 'item', '{}')`, id)
 		return err
@@ -140,7 +140,7 @@ func TestCommitItem_RunRowsAndGapsIdempotent(t *testing.T) {
 	ctx := context.Background()
 	pool, id := setup(t)
 	c := testCommit(id)
-	c.Gaps = []Gap{{Kind: "missing", Detail: "file"}}
+	c.Gaps = []Gap{{Kind: "missing_attachment", Detail: "file"}}
 	c.RunRows = func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO listing VALUES ($1, 'q', 'item', '{}') ON CONFLICT (run_id, query_key, item_key) DO UPDATE SET payload=excluded.payload`, id)
 		return err
@@ -229,7 +229,7 @@ func TestCommitItem_RecheckPausedSourceFailsItem(t *testing.T) {
 	c := testCommit(id)
 	c.Sources = []string{"chinhphu", "vbpl"}
 	c.Artifact = &artifact.Result{Path: "path", SHA256: "sha", InputHash: "input"}
-	c.Gaps = []Gap{{Kind: "missing", Detail: "missing"}}
+	c.Gaps = []Gap{{Kind: "missing_attachment", Detail: "missing"}}
 	c.RunRows = func(context.Context, pgx.Tx) error { t.Error("run rows called"); return nil }
 	c.ArtifactRows = func(context.Context, pgx.Tx, int64) error { t.Error("artifact rows called"); return nil }
 	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {

@@ -4,10 +4,15 @@ import (
 	"context"
 	"fmt"
 	"sort"
+
+	"danny.vn/trachuan/apps/corpus/internal/detector"
 )
 
 func (l *loader) loadGaps(ctx context.Context) error {
 	for _, gap := range l.gaps {
+		if err := detector.ValidateKind(gap.Kind); err != nil {
+			return fmt.Errorf("validate gap: %w", err)
+		}
 		if _, err := structuralSummaryGap(gap.Kind); err != nil {
 			return err
 		}
