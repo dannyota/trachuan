@@ -35,6 +35,7 @@ type DetectorCounts struct {
 	Complete      bool `json:"complete"`
 	Observed      int  `json:"observed"`
 	NotObservable int  `json:"not_observable"`
+	Excluded      int  `json:"excluded"`
 }
 
 type Finding struct {
@@ -117,7 +118,7 @@ func compute(in computeInput) (File, error) {
 	observed := map[string]func(Subject) bool{}
 	for _, run := range in.Runs {
 		id := run.spec.ID
-		file.Detectors[id] = DetectorCounts{Complete: true, Observed: run.observation.Observed, NotObservable: run.observation.NotObservable}
+		file.Detectors[id] = DetectorCounts{Complete: true, Observed: run.observation.Observed, NotObservable: run.observation.NotObservable, Excluded: run.observation.Excluded}
 		observed[id] = run.observation.ObservedCompletely
 		for _, f := range run.observation.Findings {
 			finding, err := firedFinding(run.spec, f, in.Rel)

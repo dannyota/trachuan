@@ -49,3 +49,10 @@ func TestCountFindings_OrderedByDetectorID(t *testing.T) {
 		t.Fatalf("counts %+v", counts)
 	}
 }
+
+func TestCountFindings_CarriesExcludedPairs(t *testing.T) {
+	counts := CountFindings(context.Background(), Inputs{}, []Detector{stubDetector{id: detector.RelationKindDisagreement, obs: Observation{Excluded: 5, Findings: []Fired{{}}}}})
+	if counts[0].Excluded != 5 || counts[0].Findings != 1 {
+		t.Fatalf("%+v", counts[0])
+	}
+}

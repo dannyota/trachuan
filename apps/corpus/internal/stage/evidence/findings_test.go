@@ -300,3 +300,16 @@ func TestCompute_FingerprintChangeKeepsKeyAndStartsNewOccurrence(t *testing.T) {
 		t.Fatalf("%+v new %v", got, b.New)
 	}
 }
+
+func TestCompute_ExcludedCountIsWrittenAlways(t *testing.T) {
+	r := run("d", 1, always)
+	r.observation.Excluded = 4
+	file := mustCompute(t, computeInput{Runs: []detectorRun{r, run("e", 1, always)}})
+	if file.Detectors["d"].Excluded != 4 || file.Detectors["e"].Excluded != 0 {
+		t.Fatalf("%+v", file.Detectors)
+	}
+	data, err := file.encode()
+	if err != nil || strings.Count(string(data), `"excluded"`) != 2 {
+		t.Fatalf("%v %s", err, data)
+	}
+}

@@ -8,8 +8,10 @@ import (
 type fakeRelease struct {
 	documents  []releaseDocument
 	gaps       map[string]map[string]bool
+	allGaps    map[string]map[string]bool
 	provisions map[int64][]releaseProvision
 	relations  map[relationEnds][]int64
+	pairs      []pairRelation
 	anchorsErr error
 	queries    int
 }
@@ -55,4 +57,25 @@ func (f *fakeRelease) Anchors(_ context.Context, id int64) ([]releaseAnchor, err
 
 func (f *fakeRelease) ProvisionRelations(context.Context) (map[relationEnds][]int64, error) {
 	return f.relations, nil
+}
+
+func (f *fakeRelease) PairRelations(_ context.Context, fn func(pairRelation) error) error {
+	for _, p := range f.pairs {
+		if err := fn(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (f *fakeRelease) TextGaps(context.Context) (map[string]bool, error) {
+	out := map[string]bool{}
+	for key, kinds := range f.allGaps {
+		for _, kind := range textRowGapKinds() {
+			if kinds[kind] {
+				out[key] = true
+			}
+		}
+	}
+	return out, nil
 }
