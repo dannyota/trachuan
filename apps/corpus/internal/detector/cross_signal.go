@@ -8,10 +8,12 @@ const (
 	PartialWithoutProvisionEffect  = "partial_without_provision_effect"
 	UnmatchedOperativeClaim        = "unmatched_operative_claim"
 	WaivedDocumentWithoutRelations = "waived_document_without_relations"
+	ExternalReport                 = "external_report"
 
 	SubjectDocument = "document"
 	SubjectClaim    = "claim"
 	SubjectRelation = "relation"
+	SubjectReport   = "report"
 
 	DiscriminatorNone  = "none"
 	DiscriminatorField = "field"
@@ -20,6 +22,7 @@ const (
 	CompletenessPairRead         = "source_text_fully_read_and_target_in_release"
 	CompletenessClaimRead        = "source_article_read_and_every_target_resolved"
 	CompletenessOCRDocument      = "ocr_document_without_extract_gap_not_baseline_served"
+	CompletenessReportsFile      = "reports_file_of_the_build_artifact_read"
 )
 
 func crossSignal() []Detector {
@@ -55,6 +58,12 @@ func crossSignal() []Detector {
 			Inputs: []string{"release.document", "release.relation", "release.coverage_gap", "extract.text.json"}, Severity: Info,
 			Fingerprint:   []string{"waiver_check_sha256", "extract_sha256"},
 			Discriminator: DiscriminatorNone, Completeness: CompletenessOCRDocument,
+		},
+		{
+			ID: ExternalReport, Version: 1, Semantics: 1, Subject: SubjectReport,
+			Inputs: []string{"build.reports.yaml"}, Severity: Review,
+			Fingerprint:   []string{"kind", "target", "claim"},
+			Discriminator: DiscriminatorNone, Completeness: CompletenessReportsFile,
 		},
 	}
 }

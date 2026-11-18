@@ -24,8 +24,11 @@ func runFindings(ctx context.Context, args []string, stdout, stderr io.Writer) i
 
 func runFindingsWith(ctx context.Context, args []string, stdout, stderr io.Writer, load findingsLoader) int {
 	usage := func() int {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus findings list <cc> <rel> | corpus findings show <cc> <rel> <key>")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus findings list <cc> <rel> | corpus findings show <cc> <rel> <key> | corpus findings import <cc> <export-directory> [--write]")
 		return 2
+	}
+	if len(args) > 0 && args[0] == "import" {
+		return runFindingsImport(args[1:], stdout, stderr)
 	}
 	if len(args) < 3 {
 		return usage()

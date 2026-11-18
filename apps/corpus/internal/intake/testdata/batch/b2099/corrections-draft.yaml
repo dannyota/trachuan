@@ -1,0 +1,9 @@
+- key: vn:vbpl:1
+  number: 1/2099/ND-CP
+  set:
+    eff_to: "2099-01-01"
+    status_class: expired
+  reason: TODO
+  evidence:
+    quote: TODO
+  reviewed: ""

@@ -23,7 +23,7 @@ type Count struct {
 }
 
 func CountInputs(ctx context.Context, q store.Querier, env stage.Env, run stage.Run, release *pgxpool.Pool) Inputs {
-	return Inputs{Run: run, Release: release, ArtifactDir: lazyArtifactDirs(ctx, func() store.Querier { return q }, env, run)}
+	return Inputs{Run: run, Release: release, Build: lazyBuild(ctx, q, env, run), ArtifactDir: lazyArtifactDirs(ctx, func() store.Querier { return q }, env, run)}
 }
 
 func CountFindings(ctx context.Context, in Inputs, detectors []Detector) []Count {

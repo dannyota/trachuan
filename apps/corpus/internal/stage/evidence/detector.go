@@ -41,10 +41,12 @@ type Observation struct {
 }
 
 type Inputs struct {
-	Run        stage.Run
-	BuildDir   string
-	ReportPath string
-	Release    *pgxpool.Pool
+	Run         stage.Run
+	BuildDir    string
+	BuildSHA256 string
+	Build       func() (dir, sha256 string, err error)
+	ReportPath  string
+	Release     *pgxpool.Pool
 
 	ArtifactDir func(stage, itemKey string) (string, bool, error)
 }
