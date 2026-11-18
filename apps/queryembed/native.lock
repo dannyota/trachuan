@@ -14,9 +14,9 @@
       "name": "onnxruntime",
       "version": "1.31.1",
       "platform": "linux-arm64",
-      "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-linux-aarch64-1.31.1.tgz",
-      "sha256": "5317505e2da99be65f8e2775ba3c2afd6d2961fd78aba1bd8f56159f48820c78",
-      "member": "onnxruntime-linux-aarch64-1.31.1/lib/libonnxruntime.so.1.31.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/1.31.1/microsoft.ml.onnxruntime.1.31.1.nupkg",
+      "sha256": "6871ccbc97f3d5bdb4095a1dcec33aa78d56f6ed8de5980ef5fa1d9f2e7c679a",
+      "member": "runtimes/linux-arm64/native/libonnxruntime.so",
       "install": "libonnxruntime.so"
     },
     {
