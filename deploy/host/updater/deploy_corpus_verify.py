@@ -1,12 +1,11 @@
 import copy
 from datetime import datetime
 import hashlib
-import json
 from pathlib import Path
 import re
 
 from .deploy_corpus_heading import validate_headings
-from .deploy_io import canonical
+from .deploy_io import canonical, decode
 from .deploy_verify import flags, match, positive
 
 
@@ -16,7 +15,7 @@ def release_name(value):
 
 
 def manifest(data, rules):
-    obj = json.loads(data)
+    obj = decode(data, 'corpus manifest')
     keys = {'kind', 'version', 'repository', 'commit', 'country', 'rel', 'database',
             'sequence', 'previous', 'dump', 'report', 'build_artifact_sha256',
             'schema_version', 'extensions', 'recipes'}

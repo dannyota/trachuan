@@ -51,6 +51,15 @@ class FrameworksReleaseWatchTest(unittest.TestCase):
         recovered = {item['key'] for item in signals.due(state, NOW + 1920) if item['kind'] == 'recovery'}
         self.assertEqual(recovered, {'frameworks_failed', 'frameworks_waiting'})
 
+    def test_frameworks_signals_exist_only_while_a_frameworks_result_is_observed(self):
+        state = signals.fresh()
+        signals.observe(state, sample() | {'release': record('ok')}, NOW)
+        self.assertFalse([key for key in state['signals'] if key.startswith('frameworks_')])
+        signals.observe(state, sample() | {'frameworks': record('ok')}, NOW + 60)
+        self.assertLessEqual({'frameworks_failed', 'frameworks_waiting'}, set(state['signals']))
+        signals.observe(state, sample(), NOW + 120)
+        self.assertFalse([key for key in state['signals'] if key.startswith('frameworks_')])
+
     def test_state_and_messages_accept_frameworks_signals(self):
         state = signals.fresh()
         signals.observe(state, sample() | {'frameworks': record('waiting', waiting_since=NOW - 86401)}, NOW)

@@ -16,6 +16,7 @@ from updater.deploy_verify import policy
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'frameworks-manifest.json'
 POLICY = Path(__file__).parents[1] / 'deploy-policy.json'
+NESTED = b'{"kind":' + b'[' * 500000 + b']' * 500000 + b'}'
 BLOCK = dict(repository='ghcr.io/dannyota/trachuan-corpus-release',
              identity='^https://github\\.com/dannyota/trachuan/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$',
              namespace='syntheticnamespace', bucket='synthetic-frameworks', min_release_floor=40)
@@ -96,6 +97,13 @@ class FrameworksVerificationTest(unittest.TestCase):
             v.manifest(canonical(dict(self.m, country='vn')), self.rules)
         with self.assertRaises(ValueError):
             v.manifest(FIXTURE.read_bytes() + b'\n', self.rules)
+
+    def test_deeply_nested_or_undecodable_manifest_is_a_verification_refusal(self):
+        for data in (NESTED, b'\xff\xfe', b'{"kind": NaN', b''):
+            for verifier, message in ((v.manifest, 'invalid frameworks manifest JSON'),
+                                      (law_manifest, 'invalid corpus manifest JSON')):
+                with self.subTest(data=data[:12], verifier=message), self.assertRaisesRegex(ValueError, '^' + message + '$'):
+                    verifier(data, self.rules)
 
     def test_law_and_frameworks_verifiers_refuse_each_others_manifests(self):
         with self.assertRaises(ValueError):

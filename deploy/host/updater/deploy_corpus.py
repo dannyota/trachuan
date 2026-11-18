@@ -17,6 +17,16 @@ class ActivatorNotProvisioned(Exception):
     pass
 
 
+def interrupted(error):
+    seen = set()
+    while error is not None and id(error) not in seen:
+        if isinstance(error, InterruptedError):
+            return True
+        seen.add(id(error))
+        error = error.__cause__ or error.__context__
+    return False
+
+
 class Corpus:
     def __init__(self, state, store, host, rules, registry, database=None, prepare=lambda: True, clock=time.time,
                  kind=LAW):
@@ -28,7 +38,7 @@ class Corpus:
         self.result = ReleaseResult(host.paths, clock, kind.result)
         self.hash, self.manifest, self.mode, self.step = None, None, None, kind.label
         self.artifacts = host.paths.state / kind.artifacts
-        self.releases = host.paths.root / 'srv/trachuan/data/releases'
+        self.interrupted = False
 
     def image(self):
         return self.store.load(self.state.data['active']).manifest['images']['server']
@@ -69,7 +79,11 @@ class Corpus:
             raise ValueError(self.label + ' activation needs 10 GB free disk')
 
     def dump_path(self):
-        return self.releases / self.kind.staging(self.manifest) / self.kind.dump
+        return self.host.paths.releases / self.kind.staging(self.manifest) / self.kind.dump
+
+    def stage(self):
+        self.kind.admit(self.mode)
+        return self.download()
 
     def download(self):
         target = self.dump_path()
@@ -146,7 +160,7 @@ class Corpus:
                 if not self.check(image):
                     return True
                 self.step = 'recovery'
-                dump = self.download() if self.mode == 'new' and row['step'] in ('started','creating','created','restoring') else None
+                dump = self.stage() if self.mode == 'new' and row['step'] in ('started','creating','created','restoring') else None
                 return self.finish(self.engine.resume(row, dump, image, recheck=True))
         return None
 
@@ -166,16 +180,6 @@ class Corpus:
                 atomic(marker, canonical(day))
 
     def run(self, directory, mode):
-        outcome = self.attempt(directory, mode)
-        try:
-            self.kind.discard(self.releases)
-        except OSError:
-            self.result.write('failed', 'cleanup', self.label + ' staging cleanup failed',
-                              self.hash, self.manifest, self.mode)
-            return False
-        return outcome
-
-    def attempt(self, directory, mode):
         try:
             if not self.kind.ready(self.state, self.rules):
                 self.result.write('waiting', 'floor', 'release floor')
@@ -222,7 +226,7 @@ class Corpus:
                                       self.hash, self.manifest, self.mode)
                     return True
                 self.step = 'download'
-                dump = self.download() if self.mode == 'new' else None
+                dump = self.stage() if self.mode == 'new' else None
                 self.step = 'activation'
                 return self.finish(self.engine.run(self.hash, self.manifest, dump, image))
         except ActivatorNotProvisioned:
@@ -231,8 +235,11 @@ class Corpus:
         except Busy:
             self.result.write('skipped', self.step, 'activation advisory lock busy; retry later', self.hash, self.manifest, self.mode)
             return True
-        except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError) as error:
+        except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError, RecursionError) as error:
+            self.interrupted = interrupted(error)
             reason = str(error) if isinstance(error, ValueError) else self.label + ' command failed or run interrupted'
+            if isinstance(error, RecursionError):
+                reason = self.label + ' input nested too deeply'
             cause = self.kind.cause(error.detail) if isinstance(error, CommandError) and error.detail else None
             if cause:
                 reason += ': ' + cause
@@ -244,7 +251,7 @@ class Corpus:
                             return self.finish(rows[-1])
                         if rows and rows[-1]['step'] == 'aborted':
                             self.state.fail(self.hash, self.kind.key)
-                except (OSError, ValueError, CommandError, Busy):
-                    pass
+                except (OSError, ValueError, CommandError, Busy) as inner:
+                    self.interrupted = self.interrupted or interrupted(inner)
             self.result.write('failed', self.step, reason, self.hash, self.manifest, self.mode)
             return False

@@ -16,6 +16,13 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
 
 
+def decode(data, what):
+    try:
+        return json.loads(data)
+    except (ValueError, RecursionError) as error:
+        raise ValueError('invalid ' + what + ' JSON') from error
+
+
 def atomic(path, data, mode=0o600):
     path = Path(path)
     descriptor, name = tempfile.mkstemp(prefix='.' + path.name + '.', dir=path.parent)
@@ -112,6 +119,9 @@ def failure_reason(args, stderr):
         if re.search(r'(?:^|[:\n]\s*)(?:name unknown|repository not found)(?::|$)', text):
             return 'not_found'
         if re.search(r'get "[^"\n]+/v2/[^"\n]+/tags/list(?:\?[^"\n]*)?": response status code 404:', text):
+            return 'not_found'
+        if args[1:2] == ['resolve'] and re.search(
+                r'^error response from registry: failed to resolve digest: [a-z0-9._:/@-]+: not found$', text, re.M):
             return 'not_found'
         if 'denied: requested access to the resource is denied' in text:
             return 'denied'

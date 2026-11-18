@@ -1,14 +1,41 @@
+import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 from unittest import mock
 
 from updater import activation_test as fixture
+from updater import deploy_io
 from updater.deploy_corpus import Corpus
 from updater.deploy_corpus_kind import FRAMEWORKS
 from updater.deploy_io import canonical, CommandError
+from updater.deploy_registry import Registry
 from updater.frameworks_activation_test import Database
-from updater.frameworks_verify_test import BLOCK, description, manifest
+from updater.frameworks_verify_test import BLOCK, NESTED, description, manifest
+
+
+MISSING_TAG = Path(__file__).with_name('fixtures') / 'oras-resolve-missing-tag.txt'
+
+
+def missing_tag(args, **kwargs):
+    real = subprocess.Popen
+    def spawn(argv, **options):
+        return real([sys.executable, '-I', '-c', 'import sys; sys.stderr.write(open(sys.argv[1]).read()); sys.exit(1)',
+                     str(MISSING_TAG)], **options)
+    with mock.patch.object(deploy_io.subprocess, 'Popen', side_effect=spawn):
+        return deploy_io.command(args, **kwargs)
+
+
+def interrupted_command():
+    try:
+        try:
+            raise InterruptedError('updater interrupted')
+        except InterruptedError as cause:
+            raise CommandError('command failed') from cause
+    except CommandError as error:
+        return error
 
 
 class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
@@ -50,6 +77,9 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
     def result(self):
         return json.loads(self.paths.result.with_name('release-frameworks.json').read_bytes())
 
+    def result_hash(self):
+        return hashlib.sha256(self.directory.joinpath('manifest.json').read_bytes()).hexdigest()
+
     def test_waits_for_release_floor_before_any_host_or_registry_action(self):
         self.state.data['release_floor'] = BLOCK['min_release_floor'] - 1
         self.calls.clear()
@@ -80,23 +110,33 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.result()['status'], 'failed')
         self.assertFalse(self.paths.result.with_name('release.json').exists())
 
-    def test_new_activation_refuses_at_restore_and_discards_staging(self):
+    def test_new_activation_refuses_before_download_or_journal(self):
         law_before = json.dumps(self.state.data['accepted']['corpus'])
-        self.assertFalse(self.run_phase())
-        result = self.result()
-        self.assertEqual((result['status'], result['step'], result['message'], result['mode']),
-                         ('failed', 'activation', 'frameworks restore not implemented', 'new'))
-        self.assertEqual(result['rel'], self.m['rel'])
-        self.assertEqual(self.downloads, [self.staging])
-        self.assertFalse(self.staging.exists())
-        self.assertEqual(self.state.failed('frameworks'), [result['manifest_hash']])
+        for attempt in range(2):
+            with self.subTest(attempt=attempt):
+                self.assertFalse(self.run_phase())
+                result = self.result()
+                self.assertEqual((result['status'], result['step'], result['message'], result['mode']),
+                                 ('failed', 'download', 'frameworks restore not implemented', 'new'))
+                self.assertEqual(result['rel'], self.m['rel'])
+                self.assertEqual(self.downloads, [])
+                self.assertEqual(self.db.rows, [])
+                self.assertEqual(self.state.decision('frameworks', result['manifest_hash'], self.m['sequence']), 'pending')
         self.assertEqual(self.state.data['failed'], [])
         self.assertEqual(json.dumps(self.state.data['accepted']['corpus']), law_before)
         self.assertEqual(self.db.created, 0)
-        self.assertEqual([r['step'] for r in self.db.rows], ['started', 'aborted'])
-        self.assertTrue(self.run_phase() is False)
-        self.assertEqual(self.result()['message'], 'frameworks manifest failed; re-sign the release to retry')
-        self.prepare.assert_called_once()
+
+    def test_recovery_of_an_open_new_journal_refuses_before_download(self):
+        digest = self.result_hash()
+        self.phase.hash = digest
+        self.phase.remember(self.directory)
+        self.state.accept('frameworks', digest, self.m['sequence'])
+        self.phase.engine.begin(digest, self.m, 'new', None)
+        self.registry.fetch.side_effect = AssertionError('recovery must not fetch')
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['step'], self.result()['message']), ('recovery', 'frameworks restore not implemented'))
+        self.assertEqual(self.downloads, [])
+        self.assertEqual([r['step'] for r in self.db.rows], ['started'])
 
     def test_compatibility_difference_waits_without_download(self):
         for change in (dict(query_recipe_hash='f' * 64), dict(schema_versions=[2]),
@@ -129,16 +169,35 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
         lines = self.paths.log.with_name('release-frameworks.log').read_text().splitlines()
         self.assertFalse(any('synthetic manifest text' in line for line in lines))
 
-    def test_leftover_staging_from_an_interrupted_run_is_removed(self):
-        leftover = self.paths.root / 'srv/trachuan/data/releases/frameworks-20990101_1'
-        leftover.mkdir(parents=True)
-        (leftover / 'frameworks.dump').write_bytes(b'x')
-        law = self.paths.root / 'srv/trachuan/data/releases/vn-20990101_1'
-        law.mkdir()
-        self.db.describe.return_value = dict(description(self.m), query_recipe_hash='f' * 64)
+    def test_missing_production_tag_is_unpublished_until_a_manifest_was_accepted(self):
+        self.phase.registry = Registry(self.rules, missing_tag)
         self.assertTrue(self.run_phase())
-        self.assertFalse(leftover.exists())
-        self.assertTrue(law.exists())
+        self.assertEqual((self.result()['status'], self.result()['message']), ('current', 'no frameworks release published'))
+        self.state.accept('frameworks', 'a' * 64, 1)
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['message']),
+                         ('failed', 'frameworks command failed or run interrupted: oras resolve: exit 1'))
+
+    def test_interruption_is_flagged_directly_or_through_a_command(self):
+        for error, expected in ((InterruptedError('updater interrupted'), True), (interrupted_command(), True),
+                                (CommandError('command failed'), False), (ValueError('refused'), False)):
+            with self.subTest(error=error):
+                self.registry.fetch.side_effect = error
+                phase = Corpus(self.state, self.store, self.host, self.rules, self.registry, database=self.db,
+                               prepare=self.prepare, clock=lambda: 100000, kind=FRAMEWORKS)
+                self.assertFalse(phase.run(self.paths.state / 'run', 'activate'))
+                self.assertEqual(phase.interrupted, expected)
+                self.assertEqual(self.result()['status'], 'failed')
+
+    def test_nested_manifest_and_other_recursion_end_as_failed_results(self):
+        self.directory.joinpath('manifest.json').write_bytes(NESTED)
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
+                         ('failed', 'manifest', 'invalid frameworks manifest JSON'))
+        self.write_manifest()
+        self.db.describe.side_effect = RecursionError('synthetic recursion')
+        self.assertFalse(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['step']), ('failed', 'compatibility'))
 
     def test_download_uses_block_bucket_into_private_staging(self):
         calls = []

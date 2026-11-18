@@ -1,10 +1,13 @@
+import fcntl
 import json
 import unittest
 from unittest import mock
 
 from updater import activation_test as fixture
+from updater.activation_test import Crash
+from updater.deploy_corpus_kind import FRAMEWORKS
 from updater.deploy_io import canonical
-from updater.deploy_run import Updater
+from updater.deploy_run import INTERRUPTED, Updater
 from updater.deploy_state import State
 from updater.frameworks_verify_test import BLOCK
 
@@ -22,6 +25,118 @@ class FrameworksPhaseTest(fixture.ActivationFixture, unittest.TestCase):
         rules = dict(self.rules, frameworks=dict(BLOCK)) if block else self.rules
         self.paths.policy.write_bytes(canonical(rules))
         return Updater(self.paths, self.runner, user_prefix=[])
+
+    def stub(self, app, **outcomes):
+        calls = []
+        def phase(name):
+            def run(*args):
+                calls.append(name)
+                outcome = outcomes.get(name, True)
+                if isinstance(outcome, BaseException):
+                    raise outcome
+                return outcome
+            return run
+        for name in app.phases:
+            setattr(app, name, phase(name))
+        return calls
+
+    def staged(self):
+        releases = self.paths.root / 'srv/trachuan/data/releases'
+        staging = releases / 'frameworks-20990101'
+        staging.mkdir(parents=True, exist_ok=True)
+        (staging / 'frameworks.dump').write_bytes(b'synthetic licensed dump')
+        law = releases / 'vn-20990101'
+        law.mkdir(exist_ok=True)
+        (law / 'corpus.dump').write_bytes(b'synthetic law dump')
+        return staging, law
+
+    def test_interrupted_release_phase_ends_the_run_before_the_next_phase(self):
+        app = self.app()
+        calls = self.stub(app, corpus=INTERRUPTED)
+        self.assertEqual(app.run(), 1)
+        self.assertEqual(calls, ['secrets', 'images', 'corpus'])
+        app = self.app()
+        for name in ('corpus', 'frameworks'):
+            with self.subTest(name=name), mock.patch('updater.deploy_run.Corpus') as phase:
+                phase.return_value.run.return_value = False
+                phase.return_value.interrupted = True
+                self.assertEqual(getattr(app, name)(self.state, self.paths.state, 'activate', None), INTERRUPTED)
+                phase.return_value.interrupted = False
+                self.assertIs(getattr(app, name)(self.state, self.paths.state, 'activate', None), False)
+
+    def test_staging_is_discarded_on_every_locked_run(self):
+        cases = [('success', True, {}), ('secrets failure', True, dict(secrets=False)),
+                 ('image exception', True, dict(images=ValueError('synthetic image failure'))),
+                 ('law failure', True, dict(corpus=False)), ('without block', False, {})]
+        for name, block, outcomes in cases:
+            with self.subTest(name=name):
+                staging, law = self.staged()
+                app = self.app(block)
+                self.stub(app, **outcomes)
+                app.run()
+                self.assertFalse(staging.exists())
+                self.assertTrue((law / 'corpus.dump').exists())
+        staging, _ = self.staged()
+        marker = self.paths.backup_lock.with_name('active-job')
+        marker.touch()
+        self.assertEqual(self.app().run(), 0)
+        self.assertFalse(staging.exists())
+        marker.unlink()
+        staging, _ = self.staged()
+        app = self.app()
+        self.stub(app, corpus=Crash())
+        with self.assertRaises(Crash):
+            app.run()
+        self.assertFalse(staging.exists())
+
+    def test_busy_run_leaves_staging_alone(self):
+        staging, _ = self.staged()
+        with self.paths.lock.open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertEqual(self.app().run(), 0)
+        self.assertTrue(staging.exists())
+
+    def test_discard_never_follows_symlinks(self):
+        releases = self.paths.root / 'srv/trachuan/data/releases'
+        releases.mkdir(parents=True)
+        outside = self.paths.root / 'outside'
+        (outside / 'frameworks-20990103').mkdir(parents=True)
+        (outside / 'frameworks-20990103' / 'keep').write_bytes(b'x')
+        (outside / 'keep').write_bytes(b'x')
+        (releases / 'frameworks-20990102').symlink_to(outside)
+        (releases / 'frameworks-20990104').write_bytes(b'stray file')
+        app = self.app()
+        self.stub(app)
+        app.run()
+        self.assertFalse((releases / 'frameworks-20990102').is_symlink())
+        self.assertFalse((releases / 'frameworks-20990104').exists())
+        self.assertTrue((outside / 'keep').exists())
+        releases.rmdir()
+        releases.symlink_to(outside)
+        app.run()
+        self.assertTrue((outside / 'frameworks-20990103' / 'keep').exists())
+
+    def test_cleanup_failure_is_logged_and_fails_the_run(self):
+        app = self.app()
+        self.stub(app)
+        with mock.patch.object(FRAMEWORKS, 'discard', side_effect=OSError('synthetic')):
+            self.assertEqual(app.run(), 1)
+        lines = [json.loads(line) for line in self.paths.log.read_text().splitlines()]
+        self.assertIn(('warning', 'cleanup', 'frameworks cleanup failed'),
+                      [(line.get('status'), line.get('step'), line.get('message')) for line in lines])
+
+    def test_policy_without_block_removes_stale_frameworks_result_and_marker(self):
+        result = self.paths.result.with_name('release-frameworks.json')
+        marker = self.paths.state / 'frameworks-prune.json'
+        for block in (True, False):
+            with self.subTest(block=block):
+                result.write_text('{"status":"failed"}')
+                marker.write_text('"2099-01-01"')
+                app = self.app(block)
+                self.stub(app, images=ValueError('synthetic image failure'))
+                app.run()
+                self.assertEqual(result.exists(), block)
+                self.assertEqual(marker.exists(), block)
 
     def test_frameworks_runs_after_law_and_each_failure_is_independent(self):
         app = self.app()

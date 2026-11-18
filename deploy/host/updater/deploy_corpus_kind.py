@@ -43,6 +43,9 @@ class Law:
     def steps(self, database):
         return database
 
+    def admit(self, mode):
+        pass
+
     def activation(self, database, row):
         return self.sql.activate(row, database.projection(row))
 
@@ -90,6 +93,10 @@ class Frameworks:
     def steps(self, database):
         return Steps(database)
 
+    def admit(self, mode):
+        if mode == 'new':
+            raise ValueError('frameworks restore not implemented')
+
     def activation(self, database, row):
         return self.sql.activate(row)
 
@@ -98,12 +105,15 @@ class Frameworks:
         return found[0] if found else None
 
     def discard(self, releases):
-        if not releases.is_dir():
+        if releases.is_symlink() or not releases.is_dir():
             return
         for path in releases.iterdir():
-            if (re.fullmatch('frameworks-' + frameworks_verify.RELEASE, path.name)
-                    and path.is_dir() and not path.is_symlink()):
+            if not re.fullmatch('frameworks-' + frameworks_verify.RELEASE, path.name):
+                continue
+            if path.is_dir() and not path.is_symlink():
                 shutil.rmtree(path)
+            else:
+                path.unlink()
 
 
 LAW, FRAMEWORKS = Law(), Frameworks()

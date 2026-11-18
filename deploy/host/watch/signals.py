@@ -74,7 +74,11 @@ def observe(state, data, now):
     update(state, 'deploy_failed', status_value(deploy, ('failed', 'rolled_back'), ('ok', 'current')),
            now, 900, 3, attempt=(deploy or {}).get('started_at'), facts=message(deploy))
     release_signals(state, 'release', release, now, message)
-    release_signals(state, 'frameworks', data['frameworks'], now, message)
+    if data['frameworks'] is None:
+        for key in ('frameworks_failed', 'frameworks_waiting'):
+            state['signals'].pop(key, None)
+    else:
+        release_signals(state, 'frameworks', data['frameworks'], now, message)
     secret_value = status_value(secrets, ('failed',), ('ok', 'current'))
     stale = (secrets or {}).get('last_success_at')
     stale = stale is not None and now-stale > 7200

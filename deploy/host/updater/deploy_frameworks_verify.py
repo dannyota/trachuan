@@ -1,8 +1,7 @@
 import hashlib
-import json
 from pathlib import Path
 
-from .deploy_io import canonical
+from .deploy_io import canonical, decode
 from .deploy_verify import flags, match, positive
 
 
@@ -13,7 +12,7 @@ REPORT = ('schema_versions', 'retrieval_recipe_versions', 'lexical_recipe_versio
 
 
 def manifest(data, rules):
-    obj = json.loads(data)
+    obj = decode(data, 'frameworks manifest')
     if not isinstance(obj, dict) or set(obj) != FIELDS:
         raise ValueError('invalid frameworks manifest fields')
     for key, value in dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks',

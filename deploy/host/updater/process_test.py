@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import select
 import signal
 import subprocess
@@ -33,6 +34,18 @@ class ProcessTest(unittest.TestCase):
                 with self.assertRaises(io.CommandError) as raised:
                     io.command(['/usr/local/libexec/trachuan/bin/oras', 'repo', 'tags', '--format', 'json', 'ghcr.io/example/release'])
                 self.assertEqual(getattr(raised.exception, 'reason', None), expected)
+
+    def test_recorded_missing_tag_is_missing_only_for_resolve(self):
+        oras = '/usr/local/libexec/trachuan/bin/oras'
+        stderr = (Path(__file__).with_name('fixtures') / 'oras-resolve-missing-tag.txt').read_bytes()
+        self.assertEqual(io.failure_reason([oras, 'resolve', 'ghcr.io/dannyota/trachuan-corpus-release:frameworks-production'], stderr),
+                         'not_found')
+        self.assertEqual(io.failure_reason([oras, 'manifest', 'fetch', 'ghcr.io/example/release@sha256:' + 'a' * 64], stderr), 'failed')
+        for other in (b'Error response from registry: failed to resolve digest: ghcr.io/example/release:production: unauthorized\n',
+                      b'Error response from registry: failed to resolve digest: ghcr.io/example/release:production: not found: retry\n',
+                      b'Error: failed to resolve digest: ghcr.io/example/release:production: toomanyrequests\n'):
+            with self.subTest(other=other):
+                self.assertEqual(io.failure_reason([oras, 'resolve', 'ghcr.io/example/release:production'], other), 'failed')
 
     def test_stream_limit_stops_the_writer_before_it_can_finish(self):
         real_popen = subprocess.Popen
