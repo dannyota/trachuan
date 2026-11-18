@@ -58,3 +58,4 @@ One line per item: date, area, finding, source.
 - 2026-11-18, corpus source, the stored text of 211/QĐ-NHNN (`vn:vbpl:hhtquyetdinh_65`) carries a Lào Cai province systematization table from doan-443 onward; no correction rests on it.
 - 2026-11-18, corpus source, repeal lists held in appendices the release lacks: 33 provisions in 25 documents, including 25/2012/TT-NHNN, which repeals 123 documents.
 - 2026-11-18, corpus source, VBPL diagram links that are wrong: 04/2017/TT-NHNN to 181/QĐ-NH1 names the 1991 decision 181/QĐ-NH, a different document; 423/2000/QĐ-NHNN1 to 25/2012/TT-NHNN looks reversed.
+- 2026-11-18, corpus eval, dev-089 first-correct rank at 8 fell 5 to 6 in vn/20261118_2 (within MRR@8 tolerance): #454's 156/2013/NĐ-CP end date removed its chunks from the dense list, lifting consolidated 77/VBHN-NHNN Điều 4 khoản 2 above 198/2026/NĐ-CP Điều 1; review with the evaluation rule change for hits moved by validity (#457).
