@@ -182,7 +182,7 @@ func TestKnowledgeReader_BaselineComesFromBuildGaps(t *testing.T) {
 }
 
 func TestValidityRelations_RulesSkipReviewedPartialReviewReads(t *testing.T) {
-	relations := []validityRelation{{source: "a", target: "t", kind: "repeals", method: knowledge.MethodReviewed, id: 1}, {source: "b", target: "t", kind: "repeals", method: "diagram", id: 2}}
+	relations := []validityRelation{{source: "a", target: "t", kind: "repeals", method: knowledge.MethodReviewed, id: 1}, {source: "b", target: "t", kind: "repeals", method: "vbpl_diagram", id: 2}}
 	rules := ruleRelations(relations)
 	if len(rules) != 1 || rules[0].id != 2 {
 		t.Fatalf("rules = %+v", rules)
@@ -229,7 +229,7 @@ func TestDeriveValidity_ReviewedRowsNeverReachRules(t *testing.T) {
 			row := func(method string) []validityRelation {
 				return []validityRelation{{source: "b", target: "a", kind: tc.kind, method: method, id: 1}}
 			}
-			plain, reviewed, diagram := derive(nil), derive(row(knowledge.MethodReviewed)), derive(row("diagram"))
+			plain, reviewed, diagram := derive(nil), derive(row(knowledge.MethodReviewed)), derive(row("vbpl_diagram"))
 			if reflect.DeepEqual(plain.documents, diagram.documents) {
 				t.Fatal("fixture: a diagram row changes nothing, so the test proves nothing")
 			}

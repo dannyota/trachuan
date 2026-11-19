@@ -116,7 +116,7 @@ func (l *loader) recordCorrectionGaps(result *validityResult, held []heldCorrect
 		before := o.values
 		o.values.Conflict = true
 		if len(o.history) == 0 {
-			o.history = append(o.history, validityDecision{layer: "source", version: "validity/2", before: before, after: before})
+			o.history = append(o.history, validityDecision{layer: "source", version: validityRulesVersion, before: before, after: before})
 		}
 		o.history = append(o.history, validityDecision{layer: "manual", version: "correction_unverified", before: before, after: o.values, actor: h.missing})
 		if len(o.history) > 8 {

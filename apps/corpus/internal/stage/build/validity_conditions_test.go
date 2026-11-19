@@ -87,7 +87,7 @@ func TestValidity_ManualStartPrecedesRuleA(t *testing.T) {
 func TestRuleC_RepealsOnlyReview(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", id: 1}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", method: "vbpl_diagram", id: 1}}, nil)
 	if v.documents["a"].values.Conflict || !hasReview(v, "repeals_current") {
 		t.Fatal(v)
 	}
@@ -122,7 +122,7 @@ func TestRuleB_EarliestEventWins(t *testing.T) {
 func TestRuleC_FutureAndNonCurrentActor(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2027/NĐ-CP", "2027-01-01", "2027-02-01")
-	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}
+	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}
 	v := runTest(t, []validityDocument{a, b}, rel, nil)
 	if v.documents["a"].values.Conflict {
 		t.Fatal(v)
@@ -138,7 +138,7 @@ func TestRuleC_WholeEventConfirmsRelation(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", replacement(a.number, "1/1/2020"))
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, nil)
 	if v.documents["a"].values.Conflict || v.counts.ruleC != 0 {
 		t.Fatal(v)
 	}
@@ -182,7 +182,7 @@ func TestValidity_ShuffledRelations(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	c := testDoc("c", "3/2022/NĐ-CP", "2022-01-01", "2022-02-01")
-	r1 := []validityRelation{{source: "b", target: "a", kind: "replaces", id: 2}, {source: "c", target: "a", kind: "replaces", id: 1}}
+	r1 := []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 2}, {source: "c", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}
 	r2 := []validityRelation{r1[1], r1[0]}
 	x := runTest(t, []validityDocument{a, b, c}, r1, nil)
 	y := runTest(t, []validityDocument{c, a, b}, r2, nil)
@@ -266,7 +266,7 @@ func TestReview_RecordsBothDocumentsEvidence(t *testing.T) {
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.fetchHash = "actor-hash"
 	b.article = testArticle("1/2/2021", "")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, nil)
 	for _, r := range v.reviews {
 		if r.kind == "rule_c_conflict" {
 			if r.targetStatusCode != "CHL" || r.targetRawFrom != "2020-01-01" || r.targetFetchHash != "target-hash" {
@@ -282,7 +282,7 @@ func TestRuleB_RecordsRelationAgreement(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", replacement(a.number, "1/1/2020"))
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 7}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 7}}, nil)
 	h := v.documents["a"].history
 	if len(h) != 2 || h[1].relationID != 7 {
 		t.Fatal(h)
@@ -292,7 +292,7 @@ func TestRuleB_RecordsRelationAgreement(t *testing.T) {
 func TestReview_HoldDoesNotHideCurrentRepeal(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "repeals", method: "vbpl_diagram", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
 	if !hasReview(v, "repeals_current") {
 		t.Fatal(v.reviews)
 	}
@@ -333,7 +333,7 @@ func TestRuleC_PartialWithManyNumbers(t *testing.T) {
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	text := "Điều 3 của " + strings.Repeat("5/2020/NĐ-CP ", 9) + "1/2020/NĐ-CP"
 	b.article = &validity.Result{Usable: true, Commencement: validity.Date{Year: 2021, Month: 2, Day: 1}, Items: []validity.Item{{Scope: "partial", Text: text}}}
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, nil)
 	if v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
@@ -343,7 +343,7 @@ func TestRuleC_PartialNumberRequiresTokenBoundary(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = &validity.Result{Usable: true, Commencement: validity.Date{Year: 2021, Month: 2, Day: 1}, Items: []validity.Item{{Scope: "partial", Text: "Điều 3 của X1/2020/NĐ-CP"}}}
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, nil)
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, nil)
 	if !v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
@@ -353,7 +353,7 @@ func TestReview_HoldDoesNotHidePartialTarget(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	a.sourceClass = "partial"
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
 	if !hasReview(v, "partial_target") {
 		t.Fatal(v.reviews)
 	}
@@ -373,7 +373,7 @@ func TestRuleC_EndedActorMakesNoConflict(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.to = "2025-01-01"
-	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}
+	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}
 	if v := runTest(t, []validityDocument{a, b}, rel, nil); v.documents["a"].values.Conflict {
 		t.Fatal(v.documents)
 	}

@@ -120,12 +120,13 @@ target then keeps its status but is not eligible for the default current list
 and appears in the non-current group as unresolved. When the source's article is
 unresolved or missing, the relation changes nothing and becomes a review entry
 `replaces_unverified` with the article text, so a manual correction can settle
-it. `repeals` relations and `partial` targets only add a review entry. Reason,
-measured on `vn/20261110_4`: the parser read few effect articles (1,081
-unresolved), and rule C fired 24 times on unread articles, hiding texts that are
-only partly replaced, such as `23/2024/TT-NHNN` and `15/2019/TT-NHNN` (the
-replacing circular names single articles). Hiding valid law is as harmful as
-showing replaced law, so an unread article is never evidence.
+it. A diagram `repeals` relation, or a diagram `replaces` relation to a
+`partial` target, only adds a review entry. Reason, measured on `vn/20261110_4`:
+the parser read few effect articles (1,081 unresolved), and rule C fired 24
+times on unread articles, hiding texts that are only partly replaced, such as
+`23/2024/TT-NHNN` and `15/2019/TT-NHNN` (the replacing circular names single
+articles). Hiding valid law is as harmful as showing replaced law, so an unread
+article is never evidence.
 
 Partial effects never change document status in this release; provision-level
 validity is later work.
@@ -199,9 +200,12 @@ The build writes `validity-review.json` beside the build record: every
 unresolved effect article of any non-consolidated document; every date conflict
 from pass 1; every skipped rule B item with its identity or timing failure;
 every rule A candidate blocked by a relation, date gap or status name; every
-rule C conflict; every `repeals` pair with both sides current; every document
-left `unknown`; every correction report; and every document whose source status
-class is `partial`, with the documents that act on it by an inbound `repeals`,
+rule C conflict; every diagram `repeals` pair with both sides current (a text
+repeal names provisions: it is served as a provision warning and enters the
+partial review when the target's source class is `partial`; a whole-document
+repeal in the effect article reaches rule B); every document left `unknown`;
+every correction report; and every document whose source status class is
+`partial`, with the documents that act on it by an inbound `repeals`,
 `replaces`, `suspends` or `amends_supplements` relation (key, number, kind). A
 `partial` document with none of these gets the build coverage gap
 `partial_status_unexplained` (detail: the raw status code), primary and relation
@@ -228,7 +232,7 @@ the relation cap.
 - [Build normalization](normalization.md): the consolidated derivation is
   unchanged and still counts only source-supplied `in_force` or `partial`
   targets; derived and corrected targets do not count in this release.
-  `validity_rules_version` (`validity/2`) joins the build recipe and the
+  `validity_rules_version` (`validity/3`) joins the build recipe and the
   corrections file hash joins the build input; the shared `normalizer_version`
   is not bumped, because chunk recipes depend on it, so a frozen run is never
   rebuilt under new rules.

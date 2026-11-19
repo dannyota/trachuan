@@ -132,7 +132,7 @@ func TestRuleC_OnlyInForceTargetsWithoutPartialMention(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", "")
-	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}
+	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 3}}
 	v := runTest(t, []validityDocument{a, b}, rel, nil)
 	if !v.documents["a"].values.Conflict {
 		t.Fatal(v)
@@ -153,7 +153,7 @@ func TestCorrections_HoldSuppressesRules(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", replacement(a.number, "1/1/2020"))
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, map[string]source.Correction{"a": {Hold: true}})
 	if v.documents["a"].values.To != nil || v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
@@ -163,7 +163,7 @@ func TestValidity_EligibleOverridesConflict(t *testing.T) {
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.article = testArticle("1/2/2021", "")
 	yes := true
-	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, map[string]source.Correction{"a": {Eligible: &yes}})
+	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: 1}}, map[string]source.Correction{"a": {Eligible: &yes}})
 	if v.documents["a"].values.Conflict {
 		t.Fatal(v)
 	}
@@ -174,7 +174,7 @@ func TestDecisions_HistoryOrderAndCap(t *testing.T) {
 	b.article = testArticle("1/2/2021", "")
 	rels := []validityRelation{}
 	for i := int64(1); i <= 8; i++ {
-		rels = append(rels, validityRelation{source: "b", target: "a", kind: "replaces", id: i})
+		rels = append(rels, validityRelation{source: "b", target: "a", kind: "replaces", method: "vbpl_diagram", id: i})
 	}
 	_, err := runValidity([]validityDocument{a, b}, rels, nil, "2026-11-10")
 	if err == nil || !strings.Contains(err.Error(), "a") {
@@ -229,7 +229,7 @@ func TestValidity_ParsedTextIsReviewOnly(t *testing.T) {
 	actor.textSource = "html_transcription"
 	actor.article = testArticle("1/2/2021", replacement(target.number, "1/1/2020"))
 	actor.anchor, actor.quote = "dieu-1", "effect article"
-	result := runTest(t, []validityDocument{actor, target}, []validityRelation{{source: actor.key, target: target.key, kind: "replaces", id: 1}}, nil)
+	result := runTest(t, []validityDocument{actor, target}, []validityRelation{{source: actor.key, target: target.key, kind: "replaces", method: "vbpl_diagram", id: 1}}, nil)
 	if result.documents[target.key].values.To != nil || result.documents[target.key].values.Conflict {
 		t.Fatal(result.documents[target.key])
 	}
