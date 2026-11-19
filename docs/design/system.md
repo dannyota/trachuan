@@ -60,12 +60,12 @@ activates it ([corpus release](corpus-release.md)).
 
 ## Database roles
 
-| Role             | Where             | May                                                                                                                                | May not                             |
-| ---------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                                  | create or drop databases            |
-| `activator`      | host, CLI         | create, restore into and drop `corpus_*` and `frameworks_*` databases; in `auth` only connect, the advisory lock and catalog reads | read or write any `auth` table      |
-| `pipeline`       | MacBook           | read and write the local workshop database                                                                                         | connect to the host                 |
-| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                                   | read auth/workshop; connect to host |
+| Role             | Where             | May                                                                                                                                              | May not                             |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                                                | create or drop databases            |
+| `activator`      | host, CLI         | create, restore into and drop `corpus_*` and `frameworks_*` databases; in `auth` only the advisory lock; catalog reads and drops from `postgres` | read or write any `auth` table      |
+| `pipeline`       | MacBook           | read and write the local workshop database                                                                                                       | connect to the host                 |
+| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                                                 | read auth/workshop; connect to host |
 
 `auth` belongs to `auth_owner`, the role the internet-facing server connects as,
 so a compromised server can plant views, triggers and functions there and set

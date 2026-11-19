@@ -15,9 +15,9 @@ own database (`corpus_<cc>_<rel>`) activated by a pointer; accounts and tokens
 live in a separate auth database that is never reloaded. The server never writes
 corpus data; the pipeline never connects to the host. Release activation uses a
 dedicated `activator` role limited to creating, restoring and dropping corpus
-and frameworks databases; in `auth` it has only the activation lock and catalog
-reads. The updater reads and writes the activation tables in `auth` as
-`auth_owner`, the role that owns them.
+and frameworks databases; in `auth` it holds only the activation lock, and its
+catalog reads and drops run from database `postgres`. The updater reads and
+writes the activation tables in `auth` as `auth_owner`, the role that owns them.
 
 ## Consequences
 

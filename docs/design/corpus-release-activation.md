@@ -79,9 +79,12 @@ database `postgres`, which the server does not own. No `activator` statement in
 from startup: that is the control. A lock that another role holds, or a refused
 connection to `auth`, makes the phase wait and raises an
 [alert](activation-record.md#alerts); a lock still held by a leftover
-`activator` session only makes it wait. Its table, sequence and schema rights
-are revoked as well, so an honest missed path fails at once, but `auth_owner`
-can grant them back and nothing relies on the revoke.
+`activator` session only makes it wait. A refused or lost `activator` session to
+`postgres` or `auth` also waits; a failed session to the target database or a
+failed `pg_restore` aborts, because a signed dump can limit connections to its
+own database and would otherwise stall the phase forever. Its table, sequence
+and schema rights are revoked as well, so an honest missed path fails at once,
+but `auth_owner` can grant them back and nothing relies on the revoke.
 
 **The host holds the operation.** Commands are built from the
 [activation record](activation-record.md) and the manifest verified on the host.
