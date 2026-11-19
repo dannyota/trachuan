@@ -52,7 +52,7 @@ class FixtureHistory:
             git(self.root, 'rev-parse', '--verify', '--quiet', 'refs/heads/main^{commit}')
         except ValueError:
             raise ValueError('fixture history needs the local main branch') from None
-        commits = git(self.root, 'rev-list', '--topo-order', 'refs/heads/main', '--', self.path).split()
+        commits = git(self.root, 'rev-list', '--first-parent', 'refs/heads/main', '--', self.path).split()
         query = b''.join(commit + b':' + self.path.encode() + b'\n' for commit in commits)
         output = git(self.root, 'cat-file', '--batch', data=query) if commits else b''
         versions = {}

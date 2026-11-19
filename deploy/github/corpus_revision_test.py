@@ -161,7 +161,8 @@ class RevisionTest(unittest.TestCase):
         for name, fields, expected in (
                 ('revision', dict(high_water=CANDIDATE_MRR + .002, revision=dict(cases=1, value=CANDIDATE_MRR - .001, revised=[])),
                  CANDIDATE_MRR + ((CANDIDATE_MRR + .002) - (CANDIDATE_MRR - .001))),
-                ('plain', dict(high_water=CANDIDATE_MRR + .002), CANDIDATE_MRR + .002)):
+                ('plain', dict(high_water=CANDIDATE_MRR + .002), CANDIDATE_MRR + .002),
+                ('plain below its value', dict(high_water=CANDIDATE_MRR - .002), CANDIDATE_MRR)):
             with self.subTest(name=name):
                 previous = build_report(3, PREVIOUS_REL, fixture, CURRENT_RANKS)
                 candidate = build_report(3, CANDIDATE_REL, fixture, CURRENT_RANKS)
@@ -169,7 +170,8 @@ class RevisionTest(unittest.TestCase):
                 set_records(previous, 'development', 'mrr', **fields)
                 set_records(candidate, 'development', 'mrr', high_water=expected)
                 self.validate(candidate, previous, fixture)
-                set_records(candidate, 'development', 'mrr', high_water=max(CANDIDATE_MRR, fields['high_water']) if 'revision' in fields else CANDIDATE_MRR)
+                set_records(candidate, 'development', 'mrr', high_water=fields['high_water'] if 'below' in name else
+                            max(CANDIDATE_MRR, fields['high_water']) if 'revision' in fields else CANDIDATE_MRR)
                 self.refused(candidate, previous, fixture, message='MRR tolerance fields differ')
 
     def test_previous_record_without_high_water_follows_the_evaluator(self):

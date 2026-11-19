@@ -79,6 +79,36 @@ class FixtureHistoryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'not in the history'):
             history.require_order(digest(C), digest(B))
 
+    def merges(self, *steps):
+        root = fixture_repository(self.path / 'repo', [A])
+        fixture = root / 'apps/corpus/internal/evaluation/testdata/vn/development.json'
+        for action, name, data in steps:
+            if action == 'branch':
+                git(root, 'switch', '--quiet', '--create', name, 'main')
+                fixture.write_bytes(data)
+                git(root, 'commit', '--quiet', '--all', '-m', name)
+                continue
+            tree = git(root, 'rev-parse', (data or name) + '^{tree}').strip().decode()
+            commit = git(root, 'commit-tree', tree, '-p', 'main', '-p', name, '-m', 'merge ' + name).strip().decode()
+            git(root, 'update-ref', 'refs/heads/main', commit)
+        self.assertEqual(git(root, 'rev-list', '--count', '--merges', 'main').strip(), b'2')
+        return FixtureHistory(root)
+
+    def test_versions_merged_from_parallel_branches_follow_the_main_line(self):
+        history = self.merges(('branch', 'pr-b', C), ('branch', 'pr-a', B), ('merge', 'pr-a', None), ('merge', 'pr-b', None))
+        self.assertEqual(history.fixture(digest(B)), B)
+        history.require_order(digest(C), digest(B))
+        history.require_order(digest(B), digest(A))
+        for stale, previous in ((B, C), (A, B), (A, C)):
+            with self.subTest(stale=stale), self.assertRaisesRegex(ValueError, 'older'):
+                history.require_order(digest(stale), digest(previous))
+
+    def test_a_version_that_never_reached_the_main_line_is_refused(self):
+        history = self.merges(('branch', 'pr-b', C), ('branch', 'pr-a', B), ('merge', 'pr-b', None), ('merge', 'pr-a', 'pr-b'))
+        history.require_order(digest(C), digest(A))
+        with self.assertRaisesRegex(ValueError, 'not in the history'):
+            history.fixture(digest(B))
+
     def test_deleted_fixture_is_skipped(self):
         history = self.history([A, None, B])
         self.assertEqual(history.fixture(digest(A)), A)

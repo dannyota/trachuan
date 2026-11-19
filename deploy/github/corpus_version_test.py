@@ -7,8 +7,9 @@ from corpus_comparison import compatible, versions
 from corpus_comparison_test import reports
 from corpus_fixture_history import REPOSITORY, FixtureHistory
 from corpus_manifest import validate_report
-from corpus_revision_support import (CANDIDATE_REL, CURRENT_CASES, CURRENT_RANKS, PREVIOUS_REL, base_revision_records,
-                                     build_report, encode, history_for, link_period, revision_pair)
+from corpus_revision_support import (CANDIDATE_MRR, CANDIDATE_REL, CURRENT_CASES, CURRENT_RANKS, PREVIOUS_REL,
+                                     base_revision_records, build_report, encode, history_for, link_period, revision_pair,
+                                     set_records)
 from corpus_test_support import recipe_fixture
 
 
@@ -66,7 +67,7 @@ class VersionThreeTest(unittest.TestCase):
         base_revision_records(candidate)
         for target, place in ((candidate, 'top'), (candidate, 'record'), (candidate, 'recipe'), (previous, 'top'),
                               (previous, 'record')):
-            for value, allowed in ((None, True), ('agent', False)):
+            for value, allowed in ((None, True), ('agent', False), ('', False), (False, False)):
                 with self.subTest(target=target['rel'], place=place, value=value):
                     report = copy.deepcopy(target)
                     holder = dict(top=report, record=report['cohorts']['development']['non_regression'][0],
@@ -99,6 +100,62 @@ class VersionThreeTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'fields of another comparison'):
                     validate_report(candidate, 'vn', CANDIDATE_REL, release_row=recipe_fixture()[0],
                                     history=history_for(self.path / f'fields-{index}', after))
+
+    def same_fixture_pair(self):
+        fixture = encode(CURRENT_CASES)
+        previous = build_report(3, PREVIOUS_REL, fixture, CURRENT_RANKS)
+        candidate = build_report(3, CANDIDATE_REL, fixture, CURRENT_RANKS)
+        link_period(candidate, previous)
+        return previous, candidate, fixture
+
+    def test_unrevised_record_cannot_carry_revision_fields(self):
+        for name, fields in (('mrr', dict(revision=dict(cases=4, value=1., revised=[]))),
+                             ('recall', dict(numerator=4, denominator=4, previous_numerator=4, previous_denominator=4))):
+            with self.subTest(name=name):
+                previous, candidate, fixture = self.same_fixture_pair()
+                set_records(candidate, 'development', name, **fields)
+                with self.assertRaisesRegex(ValueError, 'revision fields without'):
+                    self.validate(candidate, previous, fixture)
+
+    def test_unrevised_watermark_does_not_cross_a_recipe_change(self):
+        previous, candidate, fixture = self.same_fixture_pair()
+        set_records(previous, 'development', 'mrr', high_water=CANDIDATE_MRR + .002)
+        candidate['retrieval_recipe']['dense_depth'] = 60
+        candidate['recipes']['retrieval'] = recipe_fixture(candidate['retrieval_recipe'])[1]['retrieval']
+        for cohort in ('old_product', 'development'):
+            set_records(candidate, cohort, 'mrr', tolerance=0)
+        self.validate(candidate, previous, fixture)
+        set_records(candidate, 'development', 'mrr', high_water=CANDIDATE_MRR + .002)
+        with self.assertRaisesRegex(ValueError, 'MRR tolerance fields differ'):
+            self.validate(candidate, previous, fixture)
+
+    def test_previous_revision_must_have_the_evaluator_shape(self):
+        valid = dict(cases=1, value=.7, revised=[dict(case_id='x', reason='added')])
+        for revision in (None, [], dict(valid, cases='1'), dict(valid, cases=None), {k: v for k, v in valid.items() if k != 'value'},
+                         dict(valid, value='0.7'), dict(valid, revised=None), dict(valid, revised=[dict(case_id='', reason='added')]),
+                         dict(valid, revised=[dict(case_id='x', reason='moved')]), dict(valid, revised=['x'])):
+            with self.subTest(revision=revision):
+                previous, candidate, fixture = self.same_fixture_pair()
+                set_records(previous, 'development', 'mrr', high_water=CANDIDATE_MRR + .002, revision=revision)
+                with self.assertRaisesRegex(ValueError, 'invalid previous revis'):
+                    self.validate(candidate, previous, fixture)
+        previous, candidate, fixture = self.same_fixture_pair()
+        set_records(previous, 'development', 'mrr', high_water=CANDIDATE_MRR + .002, revision=dict(valid, value=None))
+        set_records(candidate, 'development', 'mrr', high_water=CANDIDATE_MRR)
+        self.validate(candidate, previous, fixture)
+
+    def test_version_three_record_checks_run_without_a_previous_report(self):
+        mutations = [('retrieval recipe object differs', lambda r: r['retrieval_recipe'].update(dense_depth=60)),
+                     ('missing MRR tolerance fields', lambda r: set_records(r, 'development', 'mrr', losses=None)),
+                     ('missing or non-finite comparison value', lambda r: set_records(r, 'old_product', 'mrr', high_water=None))]
+        for message, mutate in mutations:
+            with self.subTest(message=message):
+                _, candidate, fixture = self.same_fixture_pair()
+                row = recipe_fixture(candidate['retrieval_recipe'])[0]
+                mutate(candidate)
+                with self.assertRaisesRegex(ValueError, message):
+                    validate_report(candidate, 'vn', CANDIDATE_REL, release_row=row,
+                                    history=history_for(self.path / message.replace(' ', '-'), fixture))
 
     def test_default_history_reads_the_checkout_that_holds_the_scripts(self):
         self.assertEqual(REPOSITORY, Path(__file__).resolve().parents[2])

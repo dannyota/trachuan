@@ -52,13 +52,18 @@ def check_partition(report, history):
         wanted[cohort_of(case)].add(case['id'])
         counts[case['id']] = len(case.get('expected_citations') or ())
     found = {name: set() for name in wanted}
+    hybrid = {(name, mode, limit): set() for name in wanted for mode in ('exact', 'ann') for limit in (8, 20)}
     for row in report['cases']:
         if row['cohort'] in found:
             found[row['cohort']].add(row['case_id'])
             if type(row.get('expected')) is not int or row['expected'] != counts.get(row['case_id']):
                 raise ValueError('development case records differ from the fixture partition')
+            if row.get('arms') == 'hybrid' and row.get('mode') in ('exact', 'ann') and row.get('limit') in (8, 20):
+                hybrid[row['cohort'], row['mode'], row['limit']].add(row['case_id'])
     if found != wanted:
         raise ValueError('development cohorts differ from the fixture partition by the historical tag')
+    if any(ids != wanted[key[0]] for key, ids in hybrid.items()):
+        raise ValueError('a fixture case lacks a hybrid row in a mode and limit of the fixture partition')
     return fixture
 
 

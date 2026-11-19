@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +18,8 @@ import (
 
 type releaseEngine struct {
 	periodEngine
-	rel string
+	rel   string
+	ranks map[string]int
 }
 
 var releaseChunkRecipe = json.RawMessage(`{"version":1}`)
@@ -34,6 +36,29 @@ func (e *releaseEngine) Release() retrieval.Release {
 	recipe := releaseEmbedding()
 	r.DenseRecipe = retrieval.DenseRecipe{Version: 1, Model: recipe.Model, Dimensions: recipe.Dimensions, Document: recipe, DocumentHash: recipe.Hash(), Query: recipe, QueryHash: recipe.Hash()}
 	return r
+}
+
+func (e *releaseEngine) Collect(ctx context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	rank := e.ranks[p.Request.Query]
+	if rank == 0 {
+		return e.periodEngine.Collect(ctx, p, d)
+	}
+	p.Request.Query = "Câu hỏi tốt"
+	arms, err := e.periodEngine.Collect(ctx, p, d)
+	for _, list := range []*[]retrieval.Candidate{&arms.Primary.Dense, &arms.Primary.Lexical, &arms.Primary.Members, &arms.Primary.RawANN} {
+		if len(*list) == 0 {
+			continue
+		}
+		var ranked []retrieval.Candidate
+		for i := 1; i <= 10; i++ {
+			if i == rank {
+				ranked = append(ranked, *list...)
+			}
+			ranked = append(ranked, lossCandidate(int64(100+i), fmt.Sprintf("filler-%d", i), "one"))
+		}
+		*list = ranked
+	}
+	return arms, err
 }
 
 func releaseRow(t *testing.T, rel retrieval.Release) map[string]any {
@@ -60,11 +85,11 @@ func releaseRow(t *testing.T, rel retrieval.Release) map[string]any {
 
 func releaseSuite(t *testing.T, cases []Case) (Suite, []byte) {
 	t.Helper()
-	s := periodSuite()
+	s := recordedSuite()
 	s.Hashes.OldProduct = "old-product-fixture"
 	s.Development = cases
 	for _, c := range cases {
-		if len(c.ExpectedCitations) > 0 && c.ID != "development-positive" && c.ID != "period-positive" && c.ID != "transition-positive" {
+		if len(c.ExpectedCitations) > 0 {
 			entry := s.Map.Entries[0]
 			entry.CaseID = c.ID
 			s.Map.Entries = append(s.Map.Entries, entry)
@@ -85,46 +110,105 @@ func writeReleaseFile(t *testing.T, path string, value any) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
 	if err = os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestReleaseValidator_AcceptsRevisedVersionThreeReports(t *testing.T) {
-	ctx := context.Background()
-	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
-	engine := func(rel string) *releaseEngine {
-		return &releaseEngine{periodEngine: periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}}, rel: rel}
-	}
-	base := periodSuite().Development
-	base = append(base, Case{ID: "moving", Question: "Câu hỏi tốt", ExpectedCitations: []Expectation{{DocNumber: "doc"}}, Tags: []string{"multi_document"}})
-	previousSuite, previousFixture := releaseSuite(t, base)
-	revised := append([]Case(nil), base...)
-	revised[0].Tags = []string{"identifier", "transition"}
-	revised[len(revised)-1].Tags = []string{"historical", "multi_document"}
-	revised = append(revised, Case{ID: "added", Question: "Câu hỏi tốt", ExpectedCitations: []Expectation{{DocNumber: "doc"}}, Tags: []string{"clause"}})
-	currentSuite, currentFixture := releaseSuite(t, revised)
-	currentSuite.PreviousDevelopment = map[string][]byte{previousSuite.Hashes.Development: previousFixture}
-
-	dir := t.TempDir()
-	previous, _, err := Run(ctx, engine("20990101_1"), previousSuite, Options{EvaluationDate: date})
+func versionTwoPrevious(t *testing.T, path string, r Report) {
+	t.Helper()
+	data, err := json.Marshal(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = previous.WriteFiles(filepath.Join(dir, "base")); err != nil {
+	var object map[string]any
+	if err = json.Unmarshal(data, &object); err != nil {
 		t.Fatal(err)
 	}
-	options := Options{EvaluationDate: date, PreviousReport: filepath.Join(dir, "base", "report.json")}
-	for name, suite := range map[string]Suite{"compared": previousSuite, "revised": currentSuite} {
-		r, _, runErr := Run(ctx, engine("20990102_1"), suite, options)
+	object["version"], object["scorer"] = 2, "agent-eval/5"
+	delete(object["cohorts"].(map[string]any), "development_period")
+	delete(object["not_run"].(map[string]any), "development_period")
+	writeReleaseFile(t, path, object)
+}
+
+func releaseFixtures(t *testing.T) (Suite, []byte, Suite, []byte) {
+	t.Helper()
+	doc := []Expectation{{DocNumber: "doc"}}
+	base := []Case{
+		{ID: "development-positive", Question: "Câu hỏi tốt", ExpectedCitations: doc, Tags: []string{"identifier"}},
+		{ID: "development-negative", Question: "Câu hỏi không", ExpectAbstain: true, Tags: []string{"negative"}},
+		{ID: "moving", Question: "Câu hỏi tốt", ExpectedCitations: doc, Tags: []string{"multi_document"}},
+		{ID: "falling", Question: "Câu hỏi bảy", ExpectedCitations: doc, Tags: []string{"clause"}},
+		{ID: "steady", Question: "Câu hỏi tốt", ExpectedCitations: doc, Tags: []string{"abbreviation"}},
+	}
+	revised := append([]Case(nil), base...)
+	revised[0].Tags = []string{"identifier", "transition"}
+	revised[2].Tags = []string{"historical", "multi_document"}
+	revised = append(revised, Case{ID: "added", Question: "Câu hỏi tốt", ExpectedCitations: doc, Tags: []string{"identifier"}})
+	previousSuite, previousFixture := releaseSuite(t, base)
+	currentSuite, currentFixture := releaseSuite(t, revised)
+	currentSuite.PreviousDevelopment = map[string][]byte{previousSuite.Hashes.Development: previousFixture}
+	return previousSuite, previousFixture, currentSuite, currentFixture
+}
+
+func exactMRR(t *testing.T, r Report) NonRegression {
+	t.Helper()
+	return developmentRecord(t, r, "exact", "mrr", 8)
+}
+
+func TestReleaseValidator_AcceptsRevisedVersionThreeReports(t *testing.T) {
+	ctx := context.Background()
+	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
+	engine := func(rel string, falling int) *releaseEngine {
+		return &releaseEngine{periodEngine: periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}}, rel: rel, ranks: map[string]int{"Câu hỏi bảy": falling}}
+	}
+	previousSuite, previousFixture, currentSuite, currentFixture := releaseFixtures(t)
+	dir := t.TempDir()
+	base, _, err := Run(ctx, engine("20990101_1", 7), previousSuite, Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	versionTwoPrevious(t, filepath.Join(dir, "r0", "report.json"), base)
+	reports := map[string]Report{}
+	for _, run := range []struct {
+		name, rel, previous string
+		suite               Suite
+	}{
+		{"r1", "20990102_1", "r0", previousSuite},
+		{"r2", "20990103_1", "r1", currentSuite},
+		{"r3", "20990103_2", "r1", previousSuite},
+		{"r4", "20990104_1", "r2", currentSuite},
+	} {
+		r, _, runErr := Run(ctx, engine(run.rel, 8), run.suite, Options{EvaluationDate: date, PreviousReport: filepath.Join(dir, run.previous, "report.json")})
 		if runErr != nil {
 			t.Fatal(runErr)
 		}
 		if r.Version != 3 || !r.QualityPass {
-			t.Fatalf("%s: version %d quality %v", name, r.Version, r.QualityPass)
+			t.Fatalf("%s: version %d quality %v", run.name, r.Version, r.QualityPass)
 		}
-		if err = r.WriteFiles(filepath.Join(dir, name)); err != nil {
+		if err = r.WriteFiles(filepath.Join(dir, run.name)); err != nil {
 			t.Fatal(err)
+		}
+		reports[run.name] = r
+	}
+	r1, r2, r3, r4 := exactMRR(t, reports["r1"]), exactMRR(t, reports["r2"]), exactMRR(t, reports["r3"]), exactMRR(t, reports["r4"])
+	if !r1.WithinTolerance || r1.Tolerance != mrrTolerance || len(r1.Losses) != 1 || r1.Losses[0] != (MRRLoss{"falling", 7, 8}) || !(*r1.Value < *r1.PreviousValue) {
+		t.Fatalf("r1 has no tolerated fall: %+v", r1.MRRComparison)
+	}
+	for name, n := range map[string]NonRegression{"r2": r2, "r3": r3, "r4": r4} {
+		if !(*n.HighWater > *n.Previous) || n.Tolerance != mrrTolerance {
+			t.Fatalf("%s carries no watermark: %+v", name, n.MRRComparison)
+		}
+	}
+	if r2.Revision == nil || r3.Revision != nil || r4.Revision != nil {
+		t.Fatal("only r2 compares a revised fixture")
+	}
+	for _, n := range reports["r4"].Cohorts["development_period"].NonRegression {
+		if n.PreviousValue == nil {
+			t.Fatalf("r4 period record has no previous value: %+v", n)
 		}
 	}
 	if err = os.WriteFile(filepath.Join(dir, "fixture-1.json"), previousFixture, 0600); err != nil {
@@ -133,7 +217,8 @@ func TestReleaseValidator_AcceptsRevisedVersionThreeReports(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(dir, "fixture-2.json"), currentFixture, 0600); err != nil {
 		t.Fatal(err)
 	}
-	writeReleaseFile(t, filepath.Join(dir, "release.json"), releaseRow(t, engine("20990102_1").Release()))
+	writeReleaseFile(t, filepath.Join(dir, "pairs.json"), [][2]string{{"r1", "r0"}, {"r2", "r1"}, {"r3", "r1"}, {"r4", "r2"}})
+	writeReleaseFile(t, filepath.Join(dir, "release.json"), releaseRow(t, engine("20990102_1", 8).Release()))
 	command := exec.CommandContext(ctx, "python3", "-c", "import sys; from corpus_revision_support import validate_go_reports; print(validate_go_reports(sys.argv[1]))", dir)
 	command.Dir = filepath.Join("..", "..", "..", "..", "deploy", "github")
 	command.Env = append(os.Environ(), "PYTHONDONTWRITEBYTECODE=1")
@@ -141,7 +226,7 @@ func TestReleaseValidator_AcceptsRevisedVersionThreeReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Python release validator refused Go reports: %v: %s", err, data)
 	}
-	if got := string(data); got != "compared revised\n" {
+	if got := string(data); got != "r1 r2 r3 r4\n" {
 		t.Fatalf("Python release validator output %q", got)
 	}
 }

@@ -180,24 +180,28 @@ def validate_go_reports(directory):
     fixtures = [(directory / name).read_bytes() for name in ('fixture-1.json', 'fixture-2.json')]
     history = FixtureHistory(fixture_repository(directory / 'repository', fixtures))
     row = decode((directory / 'release.json').read_bytes())
-    previous = decode((directory / 'base' / 'report.json').read_bytes())
-    reports = {name: decode((directory / name / 'report.json').read_bytes()) for name in ('compared', 'revised')}
-    for report in reports.values():
-        validate_report(report, 'vn', report['rel'], previous_report=previous, release_row=row, history=history)
-    tampers = [('compared', 'development_period', 'mrr', lambda r: r.update(previous_value=None)),
-               ('compared', 'development', 'mrr', lambda r: r.update(high_water=r['high_water'] + 1e-9)),
-               ('revised', 'development', 'mrr', lambda r: r['revision'].update(value=r['revision']['value'] - 1e-9)),
-               ('revised', 'development', 'mrr', lambda r: r['revision'].update(revised=[])),
-               ('revised', 'development', 'recall', lambda r: r.update(previous_numerator=r['previous_numerator'] + 1))]
+    pairs = decode((directory / 'pairs.json').read_bytes())
+    reports = {name: decode((directory / name / 'report.json').read_bytes()) for pair in pairs for name in pair}
+    if reports['r0']['version'] != 2:
+        raise AssertionError('the first previous report is not version 2')
+    for name, previous in pairs:
+        validate_report(reports[name], 'vn', reports[name]['rel'], previous_report=reports[previous], release_row=row,
+                        history=history)
+    tampers = [('r1', 'development', 'mrr', lambda r: r.update(within_tolerance=False)),
+               ('r1', 'development', 'mrr', lambda r: r.update(losses=[])),
+               ('r2', 'development', 'mrr', lambda r: r['revision'].update(value=r['revision']['value'] - 1e-9)),
+               ('r2', 'development', 'mrr', lambda r: r['revision'].update(revised=[])),
+               ('r2', 'development', 'mrr', lambda r: r.update(high_water=r['previous'])),
+               ('r2', 'development', 'recall', lambda r: r.update(previous_numerator=r['previous_numerator'] + 1)),
+               ('r3', 'development', 'mrr', lambda r: r.update(high_water=r['high_water'] + 1e-9)),
+               ('r4', 'development', 'mrr', lambda r: r.update(high_water=r['previous'])),
+               ('r4', 'development_period', 'mrr', lambda r: r.update(previous_value=None))]
+    previous = dict(pairs)
     for name, cohort, metric, mutate in tampers:
         report = copy.deepcopy(reports[name])
         for record in report['cohorts'][cohort]['non_regression']:
             if (record['mode'], record['name']) == ('exact', metric):
                 mutate(record)
-        if not refuses(report, previous, row, history):
+        if not refuses(report, reports[previous[name]], row, history):
             raise AssertionError(f'tampered {name} {cohort} {metric} record accepted')
-    revised = reports['revised']['cohorts']['development']['non_regression']
-    if [record['revision']['revised'] for record in revised if record['gating']] != \
-            [[dict(case_id='added', reason='added'), dict(case_id='moving', reason='cohort')]] * 4:
-        raise AssertionError('revised report does not list the added and moved cases')
-    return ' '.join(reports)
+    return ' '.join(name for name, _ in pairs)
