@@ -258,6 +258,7 @@ class Corpus:
         oid = None
         if adopting:
             self.mode = 'retained'
+            self.engine.refuse_other_digest(self.manifest)
         else:
             self.mode, oid = self.engine.choose(self.manifest, self.pointer, self.catalog)
         if not self.newest():
@@ -332,6 +333,7 @@ class Corpus:
             return self.start(mode)
 
     def run(self, directory, mode):
+        self.run_mode = mode
         try:
             if not self.kind.ready(self.state, self.rules):
                 self.result.write('waiting', 'floor', 'release floor')
@@ -361,7 +363,8 @@ class Corpus:
             self.result.write('waiting', self.step, REFUSED, self.hash, self.manifest, self.mode)
             return True
         except Refused as error:
-            self.state.fail(self.hash, self.kind.key)
+            if self.run_mode == 'activate':
+                self.state.fail(self.hash, self.kind.key)
             self.result.write('failed', self.step, str(error), self.hash, self.manifest, self.mode)
             return False
         except Waiting as error:

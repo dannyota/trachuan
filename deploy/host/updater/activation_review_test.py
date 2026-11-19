@@ -259,6 +259,54 @@ class RetiredDigest(Helpers):
         self.assertEqual(self.result()['message'], self.kind.label + ' manifest failed; re-sign the release to retry')
 
 
+class RefusalModes(Helpers):
+    def other_digest(self, adoptable):
+        self.baseline()
+        oid = self.db.add(self.name)
+        self.skip_prune()
+        self.write_record(active=self.active_entry(),
+                          retired=[self.retired(self.name, oid, age=DAY, dump='f' * 64)])
+        if adoptable:
+            self.db.pointer_value = self.name
+
+    def refused_in(self, mode):
+        self.assertFalse(self.run_phase(mode))
+        self.assertEqual((self.result()['status'], self.result()['message']),
+                         ('failed', 'retained database dump digest differs'))
+        self.assertEqual((self.db.rows, self.db.swaps, self.db.log, self.db.created), ([], [], [], 0))
+        self.assertIn(self.name, self.db.databases)
+
+    def test_mode_refusal_fails_the_manifest_only_in_activate_mode(self):
+        for mode, status in (('verify', 'pending'), ('activate', 'failed')):
+            with self.subTest(mode=mode):
+                self.setUp()
+                self.other_digest(adoptable=False)
+                self.refused_in(mode)
+                self.assertEqual(self.status(), status)
+                self.assertEqual(self.digest in self.state.failed(self.kind.key), mode == 'activate')
+
+    def test_adoption_refuses_a_retired_entry_with_another_digest(self):
+        for mode, status in (('verify', 'pending'), ('activate', 'failed')):
+            with self.subTest(mode=mode):
+                self.setUp()
+                self.other_digest(adoptable=True)
+                self.refused_in(mode)
+                self.assertEqual(self.status(), status)
+                self.assertEqual(self.db.pointer_value, self.name)
+                self.assertIsNone(self.stored()['operation'])
+
+    def test_adoption_with_an_open_operation_refuses_a_retired_entry_with_another_digest(self):
+        oid = self.db.add(self.name)
+        self.open_operation('validated', oid)
+        self.write_record(active=self.active_entry(), operation=self.operation('validated', oid),
+                          retired=[self.retired(self.name, oid, age=DAY, dump='f' * 64)])
+        self.db.pointer_value = self.name
+        self.refused_in('activate')
+        self.assertEqual(self.status(), 'failed')
+        self.assertFalse(self.again())
+        self.assertIsNone(self.stored()['operation'])
+
+
 class PruneIdentity(Helpers):
     def test_prune_drops_only_the_recorded_oid(self):
         self.baseline()
@@ -280,7 +328,8 @@ def concrete(name, *bases):
     return type(name, bases, {})
 
 
-for mixin in (SessionFaults, LockOutcomes, ModeAlerts, JournalCatchUp, AbortIdentity, RetiredDigest, PruneIdentity):
+for mixin in (SessionFaults, LockOutcomes, ModeAlerts, JournalCatchUp, AbortIdentity, RetiredDigest, RefusalModes,
+              PruneIdentity):
     for label, case in (('Law', LawCase), ('Frameworks', FrameworksCase)):
         globals()[label + mixin.__name__] = concrete(label + mixin.__name__, mixin, case, unittest.TestCase)
 

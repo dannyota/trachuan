@@ -43,12 +43,16 @@ class Activation:
                     expected_active_db=operation['expected'], manifest=manifest, step=operation['step'],
                     oid=operation['oid'])
 
-    def choose(self, manifest, pointer, catalog):
-        name, label = manifest['database'], self.kind.label
-        record, entry = self.record, self.record.entry(name)
-        info = catalog.get(name)
+    def refuse_other_digest(self, manifest):
+        entry = self.record.entry(manifest['database'])
         if entry is not None and entry['dump_sha256'] != manifest['dump']['sha256']:
             raise Refused('retained database dump digest differs')
+        return entry
+
+    def choose(self, manifest, pointer, catalog):
+        name, label = manifest['database'], self.kind.label
+        record, entry = self.record, self.refuse_other_digest(manifest)
+        info = catalog.get(name)
         fresh = entry is not None and self.records.clock() - moment(entry['retired_at']) < RETENTION_SECONDS
         if fresh and info is not None and info['oid'] == entry['oid'] and info['owner'] == OWNER:
             if pointer is None:
@@ -181,6 +185,7 @@ class Activation:
         raise Held(ADOPTION_FAILED) from cause
 
     def adopt(self, digest, manifest, image, pointer, catalog):
+        self.refuse_other_digest(manifest)
         operation = self.record.operation
         name = manifest['database']
         info, known = catalog.get(name), self.known_oid(operation, name)
