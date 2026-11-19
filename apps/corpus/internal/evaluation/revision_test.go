@@ -1,9 +1,12 @@
 package evaluation
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
+
+	"danny.vn/trachuan/internal/retrieval"
 )
 
 func fixtureCase(id, question string, citations int, tags ...string) Case {
@@ -91,6 +94,7 @@ func TestCompareFixtures_RefusesInconsistentPreviousCohorts(t *testing.T) {
 	for name, cohorts := range map[string]map[string]string{
 		"missing case": {"a": "development"},
 		"extra case":   {"a": "development", "b": "development", "z": "development"},
+		"renamed case": {"a": "development", "z": "development"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := compareFixtures(previous, previous, cohorts); err == nil {
@@ -131,5 +135,95 @@ func TestVNFixtures_AdoptionRevision(t *testing.T) {
 	}
 	if len(got.comparable) != 58 || !reflect.DeepEqual(got.revised, want) {
 		t.Fatalf("comparable %d, revised %v", len(got.comparable), got.revised)
+	}
+}
+
+func TestCompareFixtures_AbsentListEqualsEmpty(t *testing.T) {
+	previous, err := LoadDevelopment(strings.NewReader(`[{"id":"n","question":"Câu hỏi không","expected_citations":[],"expect_abstain":true,"tags":["negative"]}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := LoadDevelopment(strings.NewReader(`[{"id":"n","question":"Câu hỏi không","expect_abstain":true,"tags":["negative"]}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := compareFixtures(previous, current, map[string]string{"n": "development"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.comparable, []string{"n"}) || len(got.revised) != 0 {
+		t.Fatalf("revision = %+v", got)
+	}
+}
+
+func TestPreviousCohorts_RefusesCaseInBothCohorts(t *testing.T) {
+	previous := Report{Cases: []CaseResult{
+		{CaseID: "a", Cohort: "development", Mode: "exact", Arms: "hybrid", Limit: 8},
+		{CaseID: "a", Cohort: "development_period", Mode: "exact", Arms: "hybrid", Limit: 20},
+	}}
+	if _, err := previousCohorts(&previous); err == nil || !strings.Contains(err.Error(), "two development cohorts") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestResolveRevision_RefusesRecordsThatDifferFromFixture(t *testing.T) {
+	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
+	previousSuite, currentSuite := revisedSuites(t)
+	baseline, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, previousSuite, Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*CaseResult)
+	}{
+		{"intact", func(*CaseResult) {}},
+		{"expected count differs", func(c *CaseResult) { c.Expected = 2 }},
+		{"rank count differs", func(c *CaseResult) { c.Ranks = append(append([]int(nil), c.Ranks...), 0) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			previous := baseline
+			previous.Cases = append([]CaseResult(nil), baseline.Cases...)
+			for i, c := range previous.Cases {
+				if c.CaseID == "moving" && c.Mode == "exact" && c.Arms == "hybrid" && c.Limit == 8 {
+					tc.mutate(&previous.Cases[i])
+				}
+			}
+			_, err := resolveRevision(currentSuite, &previous)
+			if tc.name == "intact" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), "differs from its development fixture") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestRevision_PreviousReportWithPeriodCohort(t *testing.T) {
+	previous := []revisionCase{
+		{id: "a", r8: []int{1}, r20: []int{1}},
+		{id: "h", r8: []int{1}, r20: []int{1}, cohort: "development_period"},
+		{id: "j", r8: []int{1}, r20: []int{1}, cohort: "development_period"},
+		{id: "k", r8: []int{1}, r20: []int{1}, cohort: "development_period"},
+	}
+	current := []revisionCase{
+		{id: "a", r8: []int{1}, r20: []int{1}},
+		{id: "h", r8: []int{1}, r20: []int{1}, cohort: "development_period"},
+		{id: "j", r8: []int{1}, r20: []int{1}, cohort: "development_period", question: "changed"},
+		{id: "k", r8: []int{1}, r20: []int{1}},
+	}
+	p, r := revisionPair(t, previous, current)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []retrieval.Mode{"exact", "ann"} {
+		n := developmentRecord(t, r, mode, "mrr", 8)
+		if n.Revision == nil || n.Revision.Cases != 1 || !reflect.DeepEqual(n.Revision.Revised, []RevisedCase{{"k", "cohort"}}) || n.Status != "pass" {
+			t.Fatalf("%s: %+v revision %+v", mode, n, n.Revision)
+		}
 	}
 }

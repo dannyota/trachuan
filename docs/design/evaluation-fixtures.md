@@ -100,7 +100,10 @@ rename is a removal: a revision that removes a case is refused.
 - The previous value and the candidate value are both recomputed from the case
   records over the comparable cases, in fixture order, with the metric's own
   definition. Recall@20 compares integer matched counts over the same
-  denominator.
+  denominator. A value that cannot be recomputed (a missing or duplicate case
+  record, a mapping issue, or no comparable case to score) makes the record
+  `unavailable`, except that when only the previous value is missing and the
+  previous report's metric is null, the status is `no_previous`.
 - `high_water` is the recomputed previous value plus the
   [tolerance used](evaluation-mrr-tolerance.md#rule) by the previous record. A
   tag-only revision so keeps the watermark exactly, and a revision never resets
@@ -115,16 +118,18 @@ rename is a removal: a revision that removes a case is refused.
   between cohorts under an unchanged fixture hash.
 - A revision record's `previous` and `high_water` hold the comparable values its
   status is judged on, and its `value` stays the value over all its cases. Its
-  `revision` is `{cases, value, revised}`: the comparable case count, the
-  comparable candidate value, and every case of either report's `development`
-  cohort outside the comparable set as `{case_id, reason}`, sorted by ID, with
-  one reason chosen in the order `added`, `cohort`, `changed`. A recall record
-  also states `numerator` and `denominator` over the candidate's comparable
-  cases and `previous_numerator` and `previous_denominator` over the previous
-  ones; `previous_value` holds the comparable previous value on every record.
-  `within_tolerance`, `losses` and tolerance condition 4 use the comparable
-  cases. When the recipes differ, `high_water` is the recomputed previous value
-  alone, since a watermark never crosses a recipe change.
+  `revision` is `{cases, value, revised}`: the count of comparable `development`
+  cases, the comparable candidate value, and every case of either report's
+  `development` cohort outside the comparable set as `{case_id, reason}`, sorted
+  by ID, with one reason chosen in the order `added`, `cohort`, `changed`. A
+  recall record also states `numerator` and `denominator` over the candidate's
+  comparable cases and `previous_numerator` and `previous_denominator` over the
+  previous ones; `previous_value` holds the comparable previous value on every
+  gated record, while a non-gating record such as abstention keeps the previous
+  value over all its cases. `within_tolerance`, `losses` and tolerance condition
+  4 use the comparable cases. When the recipes differ, `high_water` is the
+  recomputed previous value alone, since a watermark never crosses a recipe
+  change.
 - The uploader and the signing validator take each fixture from the main
   branch's history: the version of `development.json` whose SHA-256 equals that
   report's development fixture hash, refusing when there is none. The

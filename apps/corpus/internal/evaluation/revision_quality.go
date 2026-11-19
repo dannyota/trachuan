@@ -62,10 +62,14 @@ func unresolvedRevision(r, previous *Report) error {
 
 func applyRevision(r, p *Report, n *NonRegression) {
 	rev := r.revision
-	current, _ := cohortCases(r, "development")
-	previous, _ := cohortCases(p, "development")
-	candidate := comparableMetric(current, rev.comparable, n.Mode, n.Name, n.Limit)
-	prior := comparableMetric(previous, rev.previousOrder, n.Mode, n.Name, n.Limit)
+	stated := n.PreviousValue
+	var candidate, prior comparableValue
+	if current, ok := cohortCases(r, "development"); ok {
+		candidate = comparableMetric(current, rev.comparable, n.Mode, n.Name, n.Limit)
+	}
+	if previous, ok := cohortCases(p, "development"); ok {
+		prior = comparableMetric(previous, rev.previousOrder, n.Mode, n.Name, n.Limit)
+	}
 	n.PreviousValue = prior.value
 	n.Revision = &Revision{Cases: len(rev.comparable), Value: candidate.value, Revised: append([]RevisedCase{}, rev.revised...)}
 	if n.Name == "recall" {
@@ -80,6 +84,9 @@ func applyRevision(r, p *Report, n *NonRegression) {
 	}
 	switch {
 	case !finite(n.Value) || !finite(candidate.value):
+		n.Status = "unavailable"
+		return
+	case !finite(prior.value) && finite(stated):
 		n.Status = "unavailable"
 		return
 	case !finite(prior.value):

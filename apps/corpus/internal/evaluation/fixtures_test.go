@@ -137,3 +137,19 @@ func TestLoadSuiteFS_DevelopmentMetadata(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadSuiteFS_RefusesStrayPreviousDevelopmentEntries(t *testing.T) {
+	for name, path := range map[string]string{
+		"stray file":                     "development-previous/notes.txt",
+		"subdirectory":                   "development-previous/nested/old.json",
+		"directory named like a fixture": "development-previous/old.json/inner.json",
+	} {
+		t.Run(name, func(t *testing.T) {
+			files := suiteFiles(t)
+			files[path] = &fstest.MapFile{Data: []byte("[]")}
+			if _, err := LoadSuiteFS(files, "."); err == nil || !strings.Contains(err.Error(), "unexpected previous development fixture") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}

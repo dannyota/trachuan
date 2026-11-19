@@ -220,3 +220,55 @@ func TestCalibrate_FitsPeriodCasesUnderDefaultRequest(t *testing.T) {
 		}
 	}
 }
+
+func TestPeriodCohort_PreviousValueFromPeriodCohort(t *testing.T) {
+	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
+	s := periodSuite()
+	baseline, _, err := Run(context.Background(), &periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}, miss: true}, s, Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, _, err := Run(context.Background(), &periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}}, s, Options{EvaluationDate: date, PreviousReport: previousReportPath(t, baseline)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range readDevelopmentSummary(t, baseline).NonRegression {
+		if n.Value == nil || *n.Value != 1 {
+			t.Fatalf("baseline development record = %+v", n)
+		}
+	}
+	records := r.Cohorts["development_period"].NonRegression
+	if len(records) != 6 {
+		t.Fatalf("period records = %+v", records)
+	}
+	for _, n := range records {
+		if n.Value == nil || *n.Value != 1 || n.PreviousValue == nil || *n.PreviousValue != 0 {
+			t.Fatalf("%s %s@%d: value %v previous %v", n.Mode, n.Name, n.Limit, n.Value, n.PreviousValue)
+		}
+	}
+}
+
+func TestPeriodCohort_ArmRowsUsePeriodEligibility(t *testing.T) {
+	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
+	_, cache, err := Run(context.Background(), &periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}}, periodSuite(), Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, period := 0, 0
+	for _, row := range cache.Arms {
+		if row.Cohort == "development_period" {
+			period++
+			if row.EligibilityHash == eligibilityHash(date) {
+				t.Fatalf("period row %s %s carries the in-force eligibility hash", row.CaseID, row.Mode)
+			}
+			continue
+		}
+		current++
+		if row.EligibilityHash != eligibilityHash(date) {
+			t.Fatalf("%s row %s %s eligibility hash differs", row.Cohort, row.CaseID, row.Mode)
+		}
+	}
+	if period != 2 || current == 0 {
+		t.Fatalf("arm rows: %d period, %d other", period, current)
+	}
+}

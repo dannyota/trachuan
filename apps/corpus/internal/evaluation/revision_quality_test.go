@@ -284,3 +284,27 @@ func TestRevision_UnresolvedRevisionRefused(t *testing.T) {
 		t.Fatal("revised fixture compared without a revision")
 	}
 }
+
+func TestRevision_RanksBeyondLimit(t *testing.T) {
+	cases := []revisionCase{
+		{id: "a", r8: []int{9}, r20: []int{21}},
+		{id: "b", r8: []int{2}, r20: []int{2}},
+		{id: "x", r8: []int{1}, r20: []int{1}},
+	}
+	current := append([]revisionCase(nil), cases...)
+	current[2].question = "changed"
+	p, r := revisionPair(t, cases, current)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []retrieval.Mode{"exact", "ann"} {
+		mrr := developmentRecord(t, r, mode, "mrr", 8)
+		if !near(mrr.PreviousValue, .25) || mrr.Revision == nil || !near(mrr.Revision.Value, .25) || mrr.Status != "pass" {
+			t.Fatalf("%s mrr = %+v revision %+v", mode, mrr, mrr.Revision)
+		}
+		recall := developmentRecord(t, r, mode, "recall", 20)
+		if recall.Numerator == nil || *recall.Numerator != 1 || *recall.Denominator != 2 || *recall.PreviousNumerator != 1 || *recall.PreviousDenominator != 2 || recall.Status != "pass" {
+			t.Fatalf("%s recall = %+v", mode, recall)
+		}
+	}
+}

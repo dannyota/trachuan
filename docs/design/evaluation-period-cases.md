@@ -94,12 +94,13 @@ like the correction, and the release lists the case as revised.
 ## Adoption
 
 The release that adopts this note is a development fixture revision: six cases
-change tags only, and the seven period cases change cohort. ADR 0010's History
-of 2026-11-19 names them. Compared under the revision rule, `vn/20261118_1`
-would have passed. On the 43 positive gated cases recall@20 stays at 80 of 92.
-MRR@8 falls from 0.750997 to 0.750221, with dev-089 the only fall. In exact mode
-`high_water` is 0.754330, carrying the 0.003333 of tolerance already used, and
-the value stays above 0.749330.
+change tags only and the seven period cases change cohort, as ADR 0010's History
+of 2026-11-19 names them, and dev-018's expected number `19/2016 /TT-NHNN` loses
+its stray space in the fixture and the identity map. Compared under the revision
+rule, `vn/20261118_1` would have passed. On the 43 positive gated cases
+recall@20 stays at 80 of 92. MRR@8 falls from 0.750997 to 0.750221, with dev-089
+the only fall. In exact mode `high_water` is 0.754330, carrying the 0.003333 of
+tolerance already used, and the value stays above 0.749330.
 
 ## Versions
 
