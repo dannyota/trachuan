@@ -1,9 +1,14 @@
 package build
 
 import (
+	"slices"
+	"strings"
+
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/validity"
 )
+
+const validityRulesVersion = "validity/3"
 
 type validityDocument struct {
 	key, number, class, numberNorm, docType, issuer, issue   string
@@ -18,6 +23,11 @@ type validityRelation struct {
 	source, target, kind, method string
 	id                           int64
 }
+
+func (r validityRelation) diagram() bool {
+	return slices.Contains(strings.Split(r.method, ","), "vbpl_diagram")
+}
+
 type validityDecision struct {
 	layer, version                       string
 	before, after                        validityValues

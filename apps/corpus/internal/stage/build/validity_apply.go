@@ -18,12 +18,12 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		actor := e.docs[event.actor]
 		agreement := int64(0)
 		for _, rel := range e.relations {
-			if rel.source == event.actor && rel.target == event.target && rel.kind == event.item.Verb {
+			if rel.source == event.actor && rel.target == event.target && rel.kind == event.item.Verb && rel.diagram() {
 				agreement = rel.id
 				break
 			}
 		}
-		o.history = append(o.history, validityDecision{layer: "B", version: "validity/2", before: before, after: o.values, actor: event.actor, date: event.date, relationID: agreement, anchor: actor.anchor, quote: truncateQuote(event.item.Sentence), artifact: actor.extractHash})
+		o.history = append(o.history, validityDecision{layer: "B", version: validityRulesVersion, before: before, after: o.values, actor: event.actor, date: event.date, relationID: agreement, anchor: actor.anchor, quote: truncateQuote(event.item.Sentence), artifact: actor.extractHash})
 		e.outputs[event.target] = o
 	}
 	for _, rel := range e.relations {
@@ -35,7 +35,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		if !ok || actor.consolidated || target.consolidated {
 			continue
 		}
-		if rel.kind != "replaces" && rel.kind != "repeals" {
+		if (rel.kind != "replaces" && rel.kind != "repeals") || !rel.diagram() {
 			continue
 		}
 		a := e.outputs[actor.key].values
@@ -72,7 +72,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		t.Conflict = true
 		o := e.outputs[target.key]
 		o.values = t
-		o.history = append(o.history, validityDecision{layer: "C", version: "validity/2", before: before, after: t, actor: actor.key, date: date, relationID: rel.id, anchor: actor.anchor, quote: truncateQuote(actor.quote), artifact: actor.extractHash})
+		o.history = append(o.history, validityDecision{layer: "C", version: validityRulesVersion, before: before, after: t, actor: actor.key, date: date, relationID: rel.id, anchor: actor.anchor, quote: truncateQuote(actor.quote), artifact: actor.extractHash})
 		e.outputs[target.key] = o
 		e.counts.ruleC++
 		e.review("rule_c_conflict", actor, target.key, target.number, "")
@@ -107,7 +107,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 				} else if c.Evidence.Key != "" {
 					artifact = e.docs[c.Evidence.Key].extractHash
 				}
-				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, actor: c.Evidence.Key, anchor: anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
+				o.history = append(o.history, validityDecision{layer: "manual", version: validityRulesVersion, before: before, after: after, actor: c.Evidence.Key, anchor: anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
 			}
 		}
 		if err := validateCorrectionInterval(key, o.values); err != nil {
@@ -115,7 +115,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		}
 		if len(o.history) > 0 {
 			base := o.history[0].before
-			o.history = append([]validityDecision{{layer: "source", version: "validity/2", before: base, after: base}}, o.history...)
+			o.history = append([]validityDecision{{layer: "source", version: validityRulesVersion, before: base, after: base}}, o.history...)
 		}
 		if len(o.history) > 8 {
 			return fmt.Errorf("validity %s: decision history exceeds 8", key)
