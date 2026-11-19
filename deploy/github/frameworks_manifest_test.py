@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / 'deploy/host'))
 HOST = importlib.import_module('updater.deploy_frameworks_verify')
 POLICY = importlib.import_module('updater.deploy_verify').policy(ROOT / 'deploy/host/deploy-policy.json')
-IDENTITY = '^https://github\\.com/dannyota/trachuan/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$'
+IDENTITY = {name: '^https://github\\.com/' + name + '/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$'
+            for name in POLICY['repositories']}
 RULES = dict(POLICY, frameworks=dict(repository='ghcr.io/dannyota/trachuan-corpus-release', identity=IDENTITY,
                                      namespace='syntheticnamespace', bucket='synthetic-frameworks', min_release_floor=40))
 
@@ -28,7 +29,7 @@ class FrameworksManifestTest(unittest.TestCase):
     def document(self, value=None, sequence=3, commit=COMMIT):
         value = value or state()
         facts = self.release.validate_release(REL, write_objects(self.path / 'objects', value))
-        return self.module.document(commit, sequence, REL, facts)
+        return self.module.document('dannyota/trachuan', commit, sequence, REL, facts)
 
     def test_document_has_the_exact_design_fields_and_values(self):
         value = state()
@@ -54,7 +55,7 @@ class FrameworksManifestTest(unittest.TestCase):
         self.assertEqual(digest_value, digest(data))
         self.assertEqual(obj['commit'], COMMIT)
         command = calls[0]
-        self.assertEqual(command[command.index('--certificate-identity-regexp') + 1], IDENTITY)
+        self.assertEqual(command[command.index('--certificate-identity-regexp') + 1], IDENTITY['dannyota/trachuan'])
         self.assertEqual(command[command.index('--certificate-github-workflow-ref') + 1], 'refs/heads/main')
 
     def test_host_fixture_is_readable_by_the_workflow_validator(self):

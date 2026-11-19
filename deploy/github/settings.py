@@ -3,9 +3,11 @@ import json
 from pathlib import Path
 import subprocess
 
+from repositories import workflow
 
-def apply(config, request, dry_run=False):
-    base = 'repos/dannyota/trachuan'
+
+def apply(config, request, repository, dry_run=False):
+    base = 'repos/' + repository
     existing = request('GET', base + '/rulesets?includes_parents=false&per_page=100')
     for ruleset in config['rulesets']:
         matches = [item for item in existing if item['name'] == ruleset['name']]
@@ -54,9 +56,12 @@ def gh_request(method, path, body=None, dry_run=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--repository')
     args = parser.parse_args()
+    repository = workflow(args.repository)
     config = json.loads(Path(__file__).with_name('settings.json').read_text())
-    apply(config, lambda method, path, body=None: gh_request(method, path, body, args.dry_run), args.dry_run)
+    apply(config, lambda method, path, body=None: gh_request(method, path, body, args.dry_run), repository,
+          args.dry_run)
 
 
 if __name__ == '__main__':

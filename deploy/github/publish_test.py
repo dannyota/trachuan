@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 from unittest.mock import patch
 
 import manifest
+from repositories_test import one_repository
 
 
 class PublishTest(unittest.TestCase):
@@ -16,7 +17,7 @@ class PublishTest(unittest.TestCase):
         self.publisher = importlib.import_module('publish')
 
     def test_release_publishes_three_layers_then_tags_production(self):
-        data = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+        data = manifest.release('dannyota/trachuan', 'a' * 40, 'refs/tags/v1.2.3', 4,
                                 {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                 'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
         with tempfile.TemporaryDirectory() as work, patch('publish.sign') as sign, \
@@ -24,7 +25,7 @@ class PublishTest(unittest.TestCase):
                 patch('publish.subprocess.run') as run:
             path = Path(work)
             (path / 'manifest.json').write_bytes(data)
-            self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40)
+            self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40, 'dannyota/trachuan')
             self.assertEqual(sign.call_count, 1)
             push = run.call_args_list[0].args[0]
             self.assertEqual(push[:3], ['oras', 'push', 'ghcr.io/dannyota/trachuan-release:v1.2.3'])
@@ -34,7 +35,7 @@ class PublishTest(unittest.TestCase):
                              ['oras', 'tag', 'ghcr.io/dannyota/trachuan-release:v1.2.3', 'production'])
 
     def test_failed_verification_prevents_publication(self):
-        data = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+        data = manifest.release('dannyota/trachuan', 'a' * 40, 'refs/tags/v1.2.3', 4,
                                 {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                 'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
         with tempfile.TemporaryDirectory() as work, patch('publish.sign', side_effect=ValueError('signature')), \
@@ -42,11 +43,11 @@ class PublishTest(unittest.TestCase):
             path = Path(work)
             (path / 'manifest.json').write_bytes(data)
             with self.assertRaises(ValueError):
-                self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40)
+                self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40, 'dannyota/trachuan')
             run.assert_not_called()
 
     def test_reversed_completion_keeps_newer_production_sequence(self):
-        data = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+        data = manifest.release('dannyota/trachuan', 'a' * 40, 'refs/tags/v1.2.3', 4,
                                 {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                 'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
         pointer = {'sequence': 3}
@@ -56,7 +57,7 @@ class PublishTest(unittest.TestCase):
                 pointer['sequence'] = int(args[2].rsplit('.', 1)[1])
 
         with tempfile.TemporaryDirectory() as work, patch('publish.sign'), \
-                patch('publish.production', side_effect=lambda directory: pointer.copy()), \
+                patch('publish.production', side_effect=lambda channel, directory: pointer.copy()), \
                 patch('publish.subprocess.run', side_effect=run), redirect_stdout(io.StringIO()) as output:
             path = Path(work)
             sequences = []
@@ -64,13 +65,13 @@ class PublishTest(unittest.TestCase):
                 obj = json.loads(data) | {'sequence': sequence, 'release': f'v1.2.{sequence}',
                                           'ref': f'refs/tags/v1.2.{sequence}'}
                 (path / 'manifest.json').write_bytes(manifest.canonical(obj))
-                self.publisher.release(path, obj['ref'], 'a' * 40)
+                self.publisher.release(path, obj['ref'], 'a' * 40, 'dannyota/trachuan')
                 sequences.append(pointer['sequence'])
             self.assertEqual(sequences, [5, 5, 5])
             self.assertEqual(len(output.getvalue().splitlines()), 2)
 
     def test_unverified_production_never_moves_pointer(self):
-        data = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+        data = manifest.release('dannyota/trachuan', 'a' * 40, 'refs/tags/v1.2.3', 4,
                                 {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                 'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
         with tempfile.TemporaryDirectory() as work, patch('publish.sign'), \
@@ -79,23 +80,23 @@ class PublishTest(unittest.TestCase):
             path = Path(work)
             (path / 'manifest.json').write_bytes(data)
             with self.assertRaises(ValueError):
-                self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40)
+                self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40, 'dannyota/trachuan')
             self.assertFalse(any(call.args[0][:2] == ['oras', 'tag'] for call in run.call_args_list))
 
     def test_rollback_publishes_only_verified_authorization(self):
-        current = json.loads(manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+        current = json.loads(manifest.release('dannyota/trachuan', 'a' * 40, 'refs/tags/v1.2.3', 4,
                                              {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                              'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle'))
         target = current | {'sequence': 3}
-        with tempfile.TemporaryDirectory() as work, \
+        with tempfile.TemporaryDirectory() as work, one_repository(work, 'dannyota/trachuan'), \
                 patch('publish.find', return_value={'a' * 64: current, 'b' * 64: target}), \
                 patch('publish.sign') as sign, patch('publish.subprocess.run') as run:
             path = Path(work)
-            self.publisher.rollback(path, 'a' * 64, 'b' * 64, 9, 'refs/heads/main', 'c' * 40)
+            self.publisher.rollback(path, 'a' * 64, 'b' * 64, 9, 'refs/heads/main', 'c' * 40, 'dannyota/trachuan')
             self.assertEqual((path / 'manifest.json').read_bytes(),
                              ('{"current":"' + 'a' * 64 + '","kind":"trachuan.rollback",'
                               '"sequence":9,"target":"' + 'b' * 64 + '","version":1}').encode())
-            self.assertEqual(sign.call_args.args[2:], ('rollback.yml', 'refs/heads/main', 'c' * 40))
+            self.assertEqual(sign.call_args.args[2:], ('dannyota/trachuan', 'rollback.yml', 'refs/heads/main', 'c' * 40))
             command = run.call_args.args[0]
             self.assertEqual(command[:3], ['oras', 'push', 'ghcr.io/dannyota/trachuan-rollback:9'])
             self.assertIn('application/vnd.trachuan.rollback.v1', command)
@@ -105,7 +106,7 @@ class PublishTest(unittest.TestCase):
         with patch('publish.find') as find:
             for current, ref in [('a' * 64, 'refs/tags/v1.2.3'), ('x' * 64, 'refs/heads/main')]:
                 with self.subTest(current=current, ref=ref), self.assertRaises(ValueError):
-                    self.publisher.rollback(Path('/unused'), current, 'b' * 64, 9, ref, 'c' * 40)
+                    self.publisher.rollback(Path('/unused'), current, 'b' * 64, 9, ref, 'c' * 40, 'dannyota/trachuan')
             find.assert_not_called()
 
 

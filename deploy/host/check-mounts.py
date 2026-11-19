@@ -1,3 +1,6 @@
+import argparse
+import json
+import os
 from pathlib import Path
 import shlex
 import subprocess
@@ -113,21 +116,23 @@ def probe_script(mounts):
     return '\n'.join(commands)
 
 
+def render(policy, work):
+    rules = json.loads(Path(policy).read_bytes())
+    names = dict(rules['images'][rules['repositories'][-1]], **rules['upstream'])
+    pins = work / 'images.env'
+    pins.write_text(''.join(f'{name.upper()}_IMAGE={repo}@sha256:{"1" * 64}\n' for name, repo in names.items()))
+    units = work / 'units'
+    subprocess.run(['bash', str(HOST / 'render-units.sh'), str(pins), str(units)], check=True,
+                   env=dict(os.environ, DEPLOY_POLICY=str(policy)))
+    return units
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('policy', type=Path)
+    args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='trachuan-mounts-test-') as work:
-        work = Path(work)
-        pins = work / 'images.env'
-        repositories = {
-            'SERVER': 'ghcr.io/dannyota/trachuan-server',
-            'WEB': 'ghcr.io/dannyota/trachuan-web',
-            'QUERYEMBED': 'ghcr.io/dannyota/trachuan-queryembed',
-            'CADDY': 'docker.io/library/caddy',
-            'POSTGRES': 'ghcr.io/dannyota/trachuan-postgres',
-        }
-        pins.write_text(''.join(f'{name}_IMAGE={repo}@sha256:{"1" * 64}\n'
-                                for name, repo in repositories.items()))
-        units = work / 'units'
-        subprocess.run(['bash', str(HOST / 'render-units.sh'), str(pins), str(units)], check=True)
+        units = render(args.policy, Path(work))
         mounts = required(quadlet_mounts(units), 'trachuan-postgres.container', {'/run/pgbackrest'}) + required(
             script_mounts(HOST / 'restore-check.sh'), 'restore-check.sh', {'/run/pgbackrest', '/run/restore-check', '/tmp'})
         subprocess.run(['docker', 'run', '--rm', '--privileged', '--entrypoint=/bin/sh',

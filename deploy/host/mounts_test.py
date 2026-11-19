@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import runpy
 import tempfile
@@ -57,6 +58,17 @@ class MountExtractionTest(unittest.TestCase):
                 ('restore-check.sh', '999:999', '--mount', 'type=tmpfs,dst=/extra'),
             ])
 
+
+    def test_units_render_from_the_policy_path_given(self):
+        policy = HOST / 'deploy-policy.json'
+        with tempfile.TemporaryDirectory() as work:
+            units = self.check['render'](policy, Path(work))
+            server = (units / 'trachuan-server.container').read_text()
+            rules = json.loads(policy.read_bytes())
+            self.assertIn('Image=' + rules['images'][rules['repositories'][-1]]['server'] + '@sha256:', server)
+            self.assertTrue(self.check['quadlet_mounts'](units))
+            with self.assertRaises(OSError):
+                self.check['render'](Path(work) / 'absent.json', Path(work))
 
     def test_each_source_must_yield_its_mounts(self):
         with self.assertRaises(ValueError):

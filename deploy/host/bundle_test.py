@@ -1,5 +1,6 @@
 import configparser
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -194,7 +195,8 @@ class ListenerTest(unittest.TestCase):
             (work / "units").mkdir()
             for name in ["trachuan.network", "trachuan-db.network"]:
                 (work / "units" / name).write_text("[Network]\n")
-            subprocess.run(["bash", str(HOST / "render-units.sh"), str(pins), str(work / "units")], check=True)
+            subprocess.run(["bash", str(HOST / "render-units.sh"), str(pins), str(work / "units")], check=True,
+                           env=dict(os.environ, DEPLOY_POLICY=str(HOST / "deploy-policy.json")))
             for unit in (work / "units").iterdir():
                 with self.subTest(signup_gate=unit.name):
                     self.assertIsNone(re.search(

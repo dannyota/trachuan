@@ -10,7 +10,7 @@ class ManifestTest(unittest.TestCase):
     def setUp(self):
         self.assertTrue(Path(__file__).with_name('manifest.py').exists(), 'manifest builder missing')
         self.m = importlib.import_module('manifest')
-        self.args = dict(commit='a' * 40, ref='refs/tags/v1.2.3', sequence=12,
+        self.args = dict(repository='dannyota/trachuan', commit='a' * 40, ref='refs/tags/v1.2.3', sequence=12,
                          images={name: 'sha256:' + 'b' * 64
                                  for name in ('server', 'web', 'queryembed', 'postgres')},
                          caddy='docker.io/library/caddy@sha256:' + 'c' * 64,

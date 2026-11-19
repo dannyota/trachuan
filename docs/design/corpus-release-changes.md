@@ -10,9 +10,9 @@ image cannot read. A version change ships in this order:
 1. Tag and deploy the first image whose server reads the new version; it keeps
    serving the active release. Confirm it live and healthy.
 2. Tag the next image with `release_floor` in its policy set to the sequence of
-   the image from step 1 ([release floor](pull-deployment.md#release-floor)) and
-   confirm `deploy_release_floor` reports it, so no rollback can reach an image
-   that cannot read the new version.
+   the image from step 1 ([release floor](release-floor.md)) and confirm
+   `deploy_release_floor` reports it, so no rollback can reach an image that
+   cannot read the new version.
 3. Upload and sign the corpus release of the new version; the host activates it
    as usual. The retained previous-version release, still readable, stays the
    corpus rollback for seven days.

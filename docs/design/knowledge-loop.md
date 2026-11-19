@@ -194,8 +194,7 @@ such a row as a plain document-level relation and gives no warning on the
 provision; nothing fails, but the warning is lost. So before a corpus release
 that holds such rows is published, the first image that admits the method is
 live and the release floor is confirmed at that image
-([pull deployment](pull-deployment.md#release-floor)), so no rollback can reach
-an older one.
+([release floor](release-floor.md)), so no rollback can reach an older one.
 
 ### Control frameworks
 

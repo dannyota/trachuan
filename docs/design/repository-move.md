@@ -59,7 +59,8 @@ run, the `trachuan-rollback` package does not exist, and the host policy has no
      manifest's images must be that repository's images. The signature binds the
      manifest bytes, so a manifest cannot claim the other owner.
    - A rollback manifest carries no `repository`. It is verified against each
-     entry in turn, with that entry's rollback identity.
+     entry in turn, with that entry's rollback identity. Only a positive
+     non-zero cosign exit moves on to the next entry; any other error stops.
 3. **The host reads one channel per kind, switched once by a copy.**
    - `release_repository`, `rollback_repository`, `corpus_repository` and, when
      the policy has it, `frameworks.repository` stay single values. The first
@@ -196,6 +197,19 @@ Packages under `ghcr.io/dannyota` stay as they are. Nothing reads them after C.
 
 - **A fails to verify or activate.** It is an ordinary failed release, and the
   transfer waits.
+- **The host stops between A's policy and A's updater.** `install.sh` writes the
+  policy before it installs the updater, and neither updater reads the other's
+  policy, so a crash or power loss in that second leaves every later run failing
+  at `configuration` while the old images keep serving. The owner runs the
+  previous release's `install.sh` under the updater lock, so no timer run
+  recovers concurrently:
+  `sudo flock -o /run/trachuan-deploy.lock bash /srv/trachuan/bundles/<sha>/install.sh /srv/trachuan/bundles/<sha>`,
+  where `<sha>` is the active manifest's `host_bundle.sha256` (`status` cannot
+  read it while the policy is wrong); a timer run that finds the lock busy exits
+  and the next one proceeds. The next run recovers as for any failed activation:
+  it stops Caddy briefly, reinstalls the previous release, writes `rolled_back`
+  and marks A failed. A then ships again under a new patch tag. A one-time
+  window does not justify an old-shape branch in the policy validator.
 - **The transfer drops a secret, variable, environment or ruleset.** Re-create
   it before B: the image and corpus workflows read the release bucket with those
   secrets.

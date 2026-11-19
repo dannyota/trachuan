@@ -39,7 +39,7 @@ class FrameworksPublishTest(unittest.TestCase):
     def run_release(self, sequence=5, ref=MAIN, commit=COMMIT, report_sha256=None):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
-            self.module.release(REL, report_sha256 or report_hash(self.value), self.directory, ref, commit, sequence)
+            self.module.release(REL, report_sha256 or report_hash(self.value), self.directory, ref, commit, sequence, 'dannyota/trachuan')
         return output.getvalue()
 
     def command(self):
@@ -139,7 +139,7 @@ class FrameworksPublishTest(unittest.TestCase):
         sign.mkdir()
         (sign / 'manifest.json').write_bytes(canonical(manifest_object(self.value)))
         with self.assertRaises(ValueError):
-            self.module.publish(sign, self.directory / 'production', MAIN, 'b' * 40)
+            self.module.publish(sign, self.directory / 'production', MAIN, 'b' * 40, 'dannyota/trachuan')
         self.assertEqual(calls(self.log), [])
 
     def test_failed_signing_pushes_nothing(self):
@@ -149,7 +149,7 @@ class FrameworksPublishTest(unittest.TestCase):
 
     def test_log_holds_no_signature_or_release_content(self):
         result = subprocess.run(self.command(),
-                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5',
+                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_REPOSITORY='dannyota/trachuan',
                                                       PYTHONDONTWRITEBYTECODE='1'),
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -161,7 +161,7 @@ class FrameworksPublishTest(unittest.TestCase):
         self.value['report']['quality_pass'] = SENTINEL
         write_objects(self.directory / 'objects', self.value)
         result = subprocess.run(self.command(),
-                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5',
+                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_REPOSITORY='dannyota/trachuan',
                                                       PYTHONDONTWRITEBYTECODE='1'),
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 1)

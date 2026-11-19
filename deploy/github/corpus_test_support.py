@@ -133,7 +133,7 @@ def write_fixture(path):
     (path / 'corpus.dump').write_bytes(dump)
     (path / 'MANIFEST.sha256').write_bytes(manifest)
     save_fixture(path, row, report)
-    manifest = json.loads(create('a' * 40, 1, 'vn', row['rel'], path, path / 'report.json'))
+    manifest = json.loads(create('dannyota/trachuan', 'a' * 40, 1, 'vn', row['rel'], path, path / 'report.json'))
     manifest.pop('evidence', None)
     manifest.update(rel='20990101_1', database='corpus_vn_20990101_1', previous='20981231_1')
     manifest['dump']['object'] = 'vn/20990101_1/corpus.dump'

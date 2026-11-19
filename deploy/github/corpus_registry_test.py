@@ -16,7 +16,7 @@ class CorpusRegistryTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)
         write_fixture(self.path)
-        self.data = create('a' * 40, 7, 'vn', '20990102_1', self.path, self.path / 'report.json')
+        self.data = create('dannyota/trachuan', 'a' * 40, 7, 'vn', '20990102_1', self.path, self.path / 'report.json')
         self.artifact = dict(artifactType='application/vnd.trachuan.corpus-release.v1',
                              layers=[dict(digest='sha256:' + 'b' * 64, size=20,
                                           annotations={'org.opencontainers.image.title': name})
@@ -28,17 +28,17 @@ class CorpusRegistryTest(unittest.TestCase):
         with patch('corpus_registry.command', side_effect=responses), \
                 patch('corpus_registry.fetch_blob', side_effect=[self.data, b'signature']), \
                 patch('corpus_registry.verify', side_effect=verify_error) as verify:
-            result = self.module.production('vn', self.path / 'current')
+            result = self.module.production('dannyota/trachuan', 'vn', self.path / 'current')
         return result, verify
 
     def test_current_pointer_is_verified_against_corpus_workflow_and_commit(self):
         result, verify = self.production()
         self.assertEqual(result['sequence'], 7)
-        self.assertEqual(verify.call_args.args[2:], ('corpus-release.yml', 'refs/heads/main', 'a' * 40))
+        self.assertEqual(verify.call_args.args[2:], ('dannyota/trachuan', 'corpus-release.yml', 'refs/heads/main', 'a' * 40))
 
     def test_no_pointer_is_allowed_but_bad_type_layers_country_or_signature_fails(self):
         with patch('corpus_registry.command', return_value=b'{"tags":["vn-20990102_1"]}'):
-            self.assertIsNone(self.module.production('vn', self.path))
+            self.assertIsNone(self.module.production('dannyota/trachuan', 'vn', self.path))
         for artifact in [self.artifact | {'artifactType': 'wrong'},
                          self.artifact | {'layers': self.artifact['layers'] * 2}]:
             with self.assertRaises(ValueError):
@@ -55,7 +55,7 @@ class CorpusRegistryTest(unittest.TestCase):
         with patch('corpus_registry.command', side_effect=responses) as command, \
                 patch('corpus_registry.fetch_blob', side_effect=[self.data, b'signature']), \
                 patch('corpus_registry.verify', side_effect=verify_error) as verify:
-            return self.module.existing_release('vn', '20990102_1', self.path / 'current'), command, verify
+            return self.module.existing_release('dannyota/trachuan', 'vn', '20990102_1', self.path / 'current'), command, verify
 
     def test_existing_release_is_none_without_its_tag(self):
         result, command, verify = self.existing(['vn-production', 'vn-20990101_1'])
@@ -66,7 +66,7 @@ class CorpusRegistryTest(unittest.TestCase):
     def test_existing_release_is_verified_like_release(self):
         result, _, verify = self.existing(['vn-production', 'vn-20990102_1'])
         self.assertEqual(result['sequence'], 7)
-        self.assertEqual(verify.call_args.args[2:], ('corpus-release.yml', 'refs/heads/main', 'a' * 40))
+        self.assertEqual(verify.call_args.args[2:], ('dannyota/trachuan', 'corpus-release.yml', 'refs/heads/main', 'a' * 40))
         with self.assertRaises(ValueError):
             self.existing(['vn-20990102_1'], verify_error=ValueError('signature'))
 

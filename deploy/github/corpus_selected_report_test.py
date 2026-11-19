@@ -26,7 +26,7 @@ class SelectedReportTest(unittest.TestCase):
         return validate_inputs('vn', REL, self.path, self.path / 'report.json')
 
     def sign(self):
-        return create('a' * 40, 2, 'vn', REL, self.path, self.path / 'report.json')
+        return create('dannyota/trachuan', 'a' * 40, 2, 'vn', REL, self.path, self.path / 'report.json')
 
     def save_run(self, **fields):
         row = copy.deepcopy(self.row)
@@ -100,7 +100,7 @@ class SelectedReportTest(unittest.TestCase):
         self.assert_both_refuse()
 
     def run_cli(self, command, country='vn', list_files=False, check=True):
-        environment = dict(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='2')
+        environment = dict(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='2', GITHUB_REPOSITORY='dannyota/trachuan')
         argv = ['corpus_manifest.py', command, country, REL, str(self.path), str(self.path / 'report.json')]
         argv += ['--list-files'] if list_files else []
         with patch.dict(os.environ, environment), patch('sys.argv', argv):
@@ -137,7 +137,7 @@ class SelectedReportTest(unittest.TestCase):
                 patch('corpus_upload.require_settled') as settled, \
                 patch('corpus_upload.subprocess.run') as run, \
                 self.assertRaisesRegex(ValueError, 'detector not complete'):
-            upload('vn', REL, self.path, self.path / 'report.json')
+            upload('vn', REL, self.path, self.path / 'report.json', 'dannyota/trachuan')
         settled.assert_not_called()
         run.assert_not_called()
 

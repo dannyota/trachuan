@@ -12,12 +12,12 @@ from manifest import canonical
 from object_store import fetch_checked
 
 
-def verified_previous(report, directory, client, release_row=None, sidecars=None):
+def verified_previous(report, directory, client, repository, release_row=None, sidecars=None):
     from corpus_registry import release
 
     previous = report['previous_diff']['previous']
     country, rel = previous['country'], previous['rel']
-    manifest = release(country, rel, directory / 'previous-manifest')
+    manifest = release(repository, country, rel, directory / 'previous-manifest')
     if manifest['country'] != country or manifest['rel'] != rel:
         raise ValueError('previous manifest identity differs from report')
     if release_row is not None and has_decision(release_row.get('run') or {}):
@@ -42,7 +42,7 @@ def verified_previous(report, directory, client, release_row=None, sidecars=None
     return prior
 
 
-def remote_previous(report, directory, release_row=None, sidecars=None):
+def remote_previous(report, directory, repository, release_row=None, sidecars=None):
     endpoint = os.environ['OCI_S3_ENDPOINT']
     if not endpoint.startswith('https://') or '@' in endpoint:
         raise ValueError('OCI_S3_ENDPOINT must be HTTPS without credentials')
@@ -60,9 +60,9 @@ def remote_previous(report, directory, release_row=None, sidecars=None):
                                 capture_output=True, text=True, env=env)
         return json.loads(result.stdout)
 
-    return verified_previous(report, directory, client, release_row=release_row, sidecars=sidecars)
+    return verified_previous(report, directory, client, repository, release_row=release_row, sidecars=sidecars)
 
 
-def check_remote(report, release_row=None, sidecars=None):
+def check_remote(report, repository, release_row=None, sidecars=None):
     with tempfile.TemporaryDirectory() as temporary:
-        return remote_previous(report, Path(temporary), release_row=release_row, sidecars=sidecars)
+        return remote_previous(report, Path(temporary), repository, release_row=release_row, sidecars=sidecars)

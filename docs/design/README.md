@@ -62,6 +62,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [deployment](deployment.md)                                                      | Host, deploy, secrets, release activation, backups, observability                                                |
 | [backups](backups.md)                                                            | pgBackRest image, configuration, schedules, restore proof and results                                            |
 | [pull deployment](pull-deployment.md)                                            | Signed release from a tag, host updater, rollback, remote execution                                              |
+| [release floor](release-floor.md)                                                | Image release floor: stored maximum, refusals, first floor-aware release                                         |
 | [corpus release](corpus-release.md)                                              | Upload, signed corpus manifest, host restore and activation                                                      |
 | [corpus activation](corpus-release-activation.md)                                | What a dump may do on the host, activation steps, recovery and cleanup                                           |
 | [corpus signing](corpus-signing.md)                                              | The signing workflow and the signed corpus manifest                                                              |

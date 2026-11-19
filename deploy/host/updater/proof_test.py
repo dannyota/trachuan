@@ -1,6 +1,7 @@
 import base64
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 import unittest
@@ -30,7 +31,7 @@ class ProofTest(fixture.ActivationFixture, unittest.TestCase):
         self.paths.policy.parent.mkdir(parents=True, exist_ok=True)
         self.paths.policy.write_text(json.dumps(self.rules))
         self.paths.mode.write_text('verify\n')
-        self.dispatch = self.rules['images']['server'] + '@sha256:' + '0' * 64
+        self.dispatch = self.rules['images']['dannyota/trachuan']['server'] + '@sha256:' + '0' * 64
 
     def attestation(self, args, **kwargs):
         if 'verify-blob' in args:
@@ -70,6 +71,26 @@ class ProofTest(fixture.ActivationFixture, unittest.TestCase):
         with self.assertRaises(CommandError):
             proof.run(self.paths, self.dispatch, unavailable)
         self.assertFalse(self.paths.log.exists())
+
+    def test_dispatch_identity_follows_the_repository_whose_images_hold_the_dispatch(self):
+        for repository in self.rules['repositories']:
+            calls = []
+
+            def record(args, **kwargs):
+                calls.append(args)
+                raise CommandError('stop after flags')
+
+            image = self.rules['images'][repository]['web'] + '@sha256:' + '0' * 64
+            with self.subTest(repository=repository), self.assertRaises(CommandError):
+                proof.dispatch_manifest(image, self.rules, record)
+            args = calls[0]
+            self.assertEqual(args[args.index('--certificate-github-workflow-repository') + 1], repository)
+            self.assertEqual(args[args.index('--certificate-identity-regexp') + 1],
+                             '^' + re.escape('https://github.com/' + repository + '/.github/workflows/images.yml')
+                             + '@refs/heads/main$')
+        for image in ('ghcr.io/attacker/trachuan-web@sha256:' + '0' * 64, self.rules['images']['dannyota/trachuan']['web']):
+            with self.subTest(image=image), self.assertRaisesRegex(ValueError, 'invalid dispatch image'):
+                proof.dispatch_manifest(image, self.rules, lambda *args, **kwargs: self.fail('ran command'))
 
     def test_proofs_refuse_activate_mode_before_commands_or_logs(self):
         self.paths.mode.parent.mkdir(parents=True, exist_ok=True)

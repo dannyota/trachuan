@@ -30,9 +30,9 @@ the bucket.
 
 ## Upload
 
-`scripts/corpus-upload.sh [--dry-run] frameworks <rel>` takes the run's files
-from `FRAMEWORKS_WORK_DIR/<rel>/` with the law uploader's lock, AWS CLI
-settings, size receipts and no-overwrite rule:
+`scripts/corpus-upload.sh [--dry-run] --repository <owner/name> frameworks <rel>`
+takes the run's files from `FRAMEWORKS_WORK_DIR/<rel>/` with the law uploader's
+lock, AWS CLI settings, size receipts and no-overwrite rule:
 
 | Object            | Source                                                                   |
 | ----------------- | ------------------------------------------------------------------------ |
@@ -129,12 +129,12 @@ manifest, signs a new sequence (a retry); dispatching for an older retained
 ## Host
 
 The updater runs a `frameworks` phase after the law `corpus` phase, under the
-same locks, only when the policy has a `frameworks` block (repository, identity,
-namespace, bucket, `min_release_floor`). Each phase's result is its own: a
-waiting or failed law phase does not skip the frameworks phase, nor the reverse.
-`state.json` gains a `frameworks` key with its own accepted sequence, retained
-and failed lists. The phase waits, with reason `release floor`, until the stored
-[release floor](pull-deployment.md#release-floor) is at least
+same locks, only when the policy has a `frameworks` block (repository, identity
+keyed by repository, namespace, bucket, `min_release_floor`). Each phase's
+result is its own: a waiting or failed law phase does not skip the frameworks
+phase, nor the reverse. `state.json` gains a `frameworks` key with its own
+accepted sequence, retained and failed lists. The phase waits, with reason
+`release floor`, until the stored [release floor](release-floor.md) is at least
 `min_release_floor`, so no updater that ignores frameworks state can run once it
 exists.
 

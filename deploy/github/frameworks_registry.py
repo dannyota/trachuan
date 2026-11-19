@@ -1,6 +1,6 @@
 import subprocess
 
-from corpus_registry import REPOSITORY, signed_artifact
+from corpus_registry import channel, signed_artifact
 from frameworks_manifest import read_manifest
 from frameworks_release import release_id
 
@@ -13,8 +13,8 @@ def missing_tag(stderr, reference):
     return expected in (line.strip() for line in stderr.splitlines())
 
 
-def resolve(tag):
-    reference = REPOSITORY + ':' + tag
+def resolve(repository, tag):
+    reference = channel(repository) + ':' + tag
     result = subprocess.run(['oras', 'resolve', reference], capture_output=True, text=True, errors='replace')
     if result.returncode == 0:
         return result.stdout.strip()
@@ -23,20 +23,20 @@ def resolve(tag):
     raise ValueError('registry lookup failed: ' + tag)
 
 
-def production(directory):
-    digest = resolve(PRODUCTION)
+def production(repository, directory):
+    digest = resolve(repository, PRODUCTION)
     if digest is None:
         return None
-    return signed_artifact(digest, directory, read_manifest, WORKFLOW)
+    return signed_artifact(channel(repository), digest, directory, read_manifest, WORKFLOW)
 
 
-def release(rel, directory):
+def release(repository, rel, directory):
     release_id(rel)
     tag = 'frameworks-' + rel
-    digest = resolve(tag)
+    digest = resolve(repository, tag)
     if digest is None:
         raise ValueError('signed frameworks manifest missing: ' + tag)
-    obj = signed_artifact(digest, directory, read_manifest, WORKFLOW)
+    obj = signed_artifact(channel(repository), digest, directory, read_manifest, WORKFLOW)
     if obj['rel'] != rel:
         raise ValueError('signed frameworks manifest differs from its tag: ' + tag)
     return obj

@@ -2,6 +2,8 @@ from pathlib import Path
 import re
 import unittest
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -65,6 +67,42 @@ class WorkflowsTest(unittest.TestCase):
                 continue
             for flag in ('--insecure-ignore-tlog', '--insecure-ignore-sct', '--allow-insecure-registry'):
                 self.assertNotIn(flag, path.read_text(), str(path))
+
+    def test_workflows_name_no_owner_and_publish_under_the_repository_owner(self):
+        for path in (ROOT / '.github/workflows').glob('*.yml'):
+            text = path.read_text()
+            for owner in ('dannyota', 'dntmakers'):
+                self.assertNotIn(owner, text, path.name)
+            self.assertEqual(set(re.findall(r'ghcr\.io/(?:\$\{\{[^}]*\}\}|\S)*', text)) - {'ghcr.io/${{ github.repository_owner }}'},
+                             set(), path.name)
+        images = (ROOT / '.github/workflows/images.yml').read_text().split('\n  release:\n', 1)[0]
+        self.assertIn('\n      REGISTRY: ghcr.io/${{ github.repository_owner }}\n', images)
+        self.assertEqual(re.findall(r'subject-name: (.+)', images),
+                         ['${{ env.REGISTRY }}/trachuan-' + name for name in ('server', 'web', 'queryembed', 'postgres')])
+        self.assertEqual(len(re.findall(r'\$REGISTRY/trachuan-', images)), 9)
+
+    def test_rollback_workflow_publishes_only_through_publish_py_rollback(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/rollback.yml').read_text())
+        self.assertEqual(list(workflow), ['name', True, 'permissions', 'concurrency', 'jobs'])
+        self.assertEqual(list(workflow['jobs']), ['rollback'])
+        job = workflow['jobs']['rollback']
+        self.assertEqual(set(job), {'if', 'environment', 'runs-on', 'timeout-minutes', 'permissions', 'env', 'steps'})
+        self.assertEqual(sorted(job['env']), ['CURRENT', 'PYTHONDONTWRITEBYTECODE', 'TARGET'])
+        steps = job['steps']
+        self.assertEqual([step.get('uses', '').split('@')[0] for step in steps if 'uses' in step], ['actions/checkout'])
+        self.assertTrue(all(set(step) <= {'name', 'uses', 'with', 'run', 'env'} for step in steps))
+        self.assertEqual([step.get('with') for step in steps], [None, {'persist-credentials': False}, None, None])
+        self.assertEqual([sorted(step.get('env', {})) for step in steps], [[], [], [], ['ACTOR', 'GITHUB_TOKEN']])
+        lines = [line.strip() for step in steps for line in step.get('run', '').splitlines() if line.strip()]
+        self.assertEqual(lines, [
+            '[[ $GITHUB_REF == refs/heads/main ]]',
+            '[[ $CURRENT =~ ^[0-9a-f]{64}$ && $TARGET =~ ^[0-9a-f]{64}$ ]]',
+            'echo "RELEASE_DIR=$RUNNER_TEMP/trachuan-rollback" >> "$GITHUB_ENV"',
+            'bash deploy/github/install-tools.sh',
+            'printf \'%s\' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin',
+            "trap 'oras logout ghcr.io' EXIT",
+            'python3 deploy/github/publish.py rollback "$RELEASE_DIR"',
+        ])
 
     def test_cache_prune_schedule_and_permissions(self):
         path = ROOT / '.github/workflows/cache-prune.yml'

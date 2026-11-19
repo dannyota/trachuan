@@ -16,7 +16,7 @@ class HeadingEvidenceTest(unittest.TestCase):
         self.row, self.report = write_fixture(self.path)
 
     def create(self):
-        return json.loads(create('a' * 40, 1, 'vn', self.row['rel'], self.path,
+        return json.loads(create('dannyota/trachuan', 'a' * 40, 1, 'vn', self.row['rel'], self.path,
                                  self.path / 'report.json'))
 
     def test_schema_eight_copies_verified_build_values(self):
@@ -115,7 +115,7 @@ class HeadingEvidenceTest(unittest.TestCase):
                       exclusions_sha256='d' * 64, reviewer='coordinator', date='2026-11-16')
         reviews = self.path / 'reviews.yaml'
         reviews.write_text(json.dumps([review]))
-        obj = json.loads(create('a' * 40, 1, 'vn', self.row['rel'], self.path,
+        obj = json.loads(create('dannyota/trachuan', 'a' * 40, 1, 'vn', self.row['rel'], self.path,
                                self.path / 'report.json', heading_reviews_path=reviews))
         self.assertEqual(obj['heading_review'], {key: value for key, value in review.items() if key != 'release'})
         self.assertEqual(obj.get('heading_evidence'), dict(projection=1, scan_sha256='a' * 64, exclusions_sha256='b' * 64))

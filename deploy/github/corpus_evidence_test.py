@@ -26,7 +26,7 @@ class EvidenceGateTest(unittest.TestCase):
         return validated_inputs('vn', REL, self.path, self.path / 'report.json')[3]
 
     def sign(self):
-        return json.loads(create('a' * 40, 2, 'vn', REL, self.path, self.path / 'report.json'))
+        return json.loads(create('dannyota/trachuan', 'a' * 40, 2, 'vn', REL, self.path, self.path / 'report.json'))
 
     def assert_both_refuse(self, message=''):
         with self.assertRaisesRegex(ValueError, message):
@@ -324,7 +324,7 @@ class LineOrderTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'order'):
             validated_inputs('vn', REL, directory, directory / 'report.json')
         with self.assertRaisesRegex(ValueError, 'order'):
-            create('a' * 40, 2, 'vn', REL, directory, directory / 'report.json')
+            create('dannyota/trachuan', 'a' * 40, 2, 'vn', REL, directory, directory / 'report.json')
 
 
 class PredecessorEvidenceTest(unittest.TestCase):
@@ -351,7 +351,7 @@ class ManifestEvidenceFieldTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.path = Path(temporary.name)
         write_fixture(self.path)
-        self.manifest = json.loads(create('a' * 40, 2, 'vn', REL, self.path, self.path / 'report.json'))
+        self.manifest = json.loads(create('dannyota/trachuan', 'a' * 40, 2, 'vn', REL, self.path, self.path / 'report.json'))
 
     def test_evidence_field_is_optional_and_closed(self):
         validate_manifest(self.manifest)

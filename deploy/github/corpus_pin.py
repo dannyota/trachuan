@@ -5,15 +5,16 @@ import tempfile
 from corpus_manifest import identity
 from corpus_registry import existing_release
 from manifest import require_match
+from repositories import workflow
 
 
-def require_pinned_or_signed(country, rel, release_sha256):
+def require_pinned_or_signed(country, rel, release_sha256, repository):
     identity(country, rel)
     if release_sha256 != '':
         require_match(r'[0-9a-f]{64}', release_sha256, 'release SHA-256')
         return
     with tempfile.TemporaryDirectory() as temporary:
-        if existing_release(country, rel, Path(temporary)) is None:
+        if existing_release(repository, country, rel, Path(temporary)) is None:
             raise ValueError(f'an empty release SHA-256 signs only an already signed {country}-{rel}')
 
 
@@ -23,7 +24,7 @@ def main():
     parser.add_argument('rel')
     parser.add_argument('release_sha256')
     args = parser.parse_args()
-    require_pinned_or_signed(args.country, args.rel, args.release_sha256)
+    require_pinned_or_signed(args.country, args.rel, args.release_sha256, workflow())
 
 
 if __name__ == '__main__':

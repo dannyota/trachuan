@@ -18,7 +18,8 @@ FIXTURE = Path(__file__).with_name('fixtures') / 'frameworks-manifest.json'
 POLICY = Path(__file__).parents[1] / 'deploy-policy.json'
 NESTED = b'{"kind":' + b'[' * 500000 + b']' * 500000 + b'}'
 BLOCK = dict(repository='ghcr.io/dannyota/trachuan-corpus-release',
-             identity='^https://github\\.com/dannyota/trachuan/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$',
+             identity={name: '^https://github\\.com/' + name + '/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$'
+                       for name in json.loads(POLICY.read_bytes())['repositories']},
              namespace='syntheticnamespace', bucket='synthetic-frameworks', min_release_floor=40)
 
 
@@ -125,12 +126,13 @@ class FrameworksVerificationTest(unittest.TestCase):
             digest, obj = v.verify(path, self.rules, lambda args: calls.append(args))
             self.assertEqual(obj, self.m)
             args = calls[0]
-            for flag, value in [('--certificate-identity-regexp', BLOCK['identity']),
+            for flag, value in [('--certificate-identity-regexp', BLOCK['identity'][self.m['repository']]),
+                                ('--certificate-github-workflow-repository', self.m['repository']),
                                 ('--certificate-github-workflow-ref', 'refs/heads/main'),
                                 ('--certificate-github-workflow-sha', self.m['commit']),
                                 ('--certificate-oidc-issuer', self.rules['issuer'])]:
                 self.assertEqual(args[args.index(flag) + 1], value)
-            self.assertNotIn(self.rules['corpus_identity'], args)
+            self.assertNotIn(self.rules['corpus_identity'][self.m['repository']], args)
             def reject(args):
                 raise CommandError('wrong identity')
             with self.assertRaises(CommandError):

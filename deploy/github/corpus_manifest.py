@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 
 from manifest import canonical, positive, require_match
+from repositories import require_listed, workflow
 from corpus_cohorts import cohort_counts
 from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
@@ -291,7 +292,8 @@ def validate_manifest(obj):
         validate_heading_review(obj['heading_review'])
     if 'evidence' in obj:
         validate_evidence_field(obj['evidence'])
-    for key, value in dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan').items():
+    require_listed(obj['repository'])
+    for key, value in dict(kind='trachuan.corpus-release', version=1).items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError(f'invalid {key}')
     identity(obj['country'], obj['rel'])
@@ -330,11 +332,11 @@ def read_manifest(data):
     return obj
 
 
-def manifest_fields(commit, sequence, country, rel, directory, report_path, previous_report=None):
+def manifest_fields(repository, commit, sequence, country, rel, directory, report_path, previous_report=None):
     row, report, evidence, sidecars, expected, _ = validated_inputs(country, rel, directory, report_path, signing=True)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
-    obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
+    obj = dict(kind='trachuan.corpus-release', version=1, repository=repository,
                commit=commit, country=country, rel=rel, database=f'corpus_{country}_{rel}',
                sequence=sequence, previous=report['previous_diff']['previous']['rel'],
                dump=dict(object=f'{country}/{rel}/corpus.dump', sha256=report['dump_sha256'],
@@ -350,8 +352,9 @@ def manifest_fields(commit, sequence, country, rel, directory, report_path, prev
     return obj
 
 
-def create(commit, sequence, country, rel, directory, report_path, previous_report=None, heading_reviews_path=None):
-    obj = manifest_fields(commit, sequence, country, rel, directory, report_path, previous_report)
+def create(repository, commit, sequence, country, rel, directory, report_path, previous_report=None,
+           heading_reviews_path=None):
+    obj = manifest_fields(repository, commit, sequence, country, rel, directory, report_path, previous_report)
     review = heading_review(rel, heading_reviews_path)
     if review is not None:
         obj['heading_review'] = review
@@ -382,9 +385,10 @@ def main():
         if sidecars is not None:
             print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
             print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))
-        previous_report = check_remote(report, release_row=row, sidecars=sidecars)
+        repository = workflow()
+        previous_report = check_remote(report, repository, release_row=row, sidecars=sidecars)
         (args.directory / 'manifest.json').write_bytes(create(
-            os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),
+            repository, os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),
             args.country, args.rel, args.directory, args.report, previous_report=previous_report))
 
 

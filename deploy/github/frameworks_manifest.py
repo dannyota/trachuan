@@ -2,6 +2,7 @@ from frameworks_recipe_shapes import check_recipe_shapes
 from frameworks_recipes import decode
 from frameworks_release import HASH, RELEASE, object_key, release_id
 from manifest import canonical, positive, require_match
+from repositories import require_listed
 
 FIELDS = {'kind', 'version', 'corpus_kind', 'repository', 'commit', 'rel', 'database', 'sequence', 'previous',
           'dump', 'report', 'build_artifact_sha256', 'schema_version', 'extensions', 'recipes', 'counts'}
@@ -10,8 +11,8 @@ FIELDS = {'kind', 'version', 'corpus_kind', 'repository', 'commit', 'rel', 'data
 def validate_manifest(obj):
     if not isinstance(obj, dict) or set(obj) != FIELDS:
         raise ValueError('invalid frameworks manifest fields')
-    for key, value in dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks',
-                           repository='dannyota/trachuan').items():
+    require_listed(obj['repository'])
+    for key, value in dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError('invalid frameworks ' + key)
     require_match(r'[0-9a-f]{40}', obj['commit'], 'frameworks commit')
@@ -61,10 +62,10 @@ def read_manifest(data):
     return obj
 
 
-def document(commit, sequence, rel, facts):
+def document(repository, commit, sequence, rel, facts):
     row, report = facts.row, facts.report
     previous = report['previous']['rel'] if report['previous'] is not None else None
-    obj = dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks', repository='dannyota/trachuan',
+    obj = dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks', repository=repository,
                commit=commit, rel=rel, database='frameworks_' + rel, sequence=sequence, previous=previous,
                dump=dict(object=object_key(rel, 'frameworks.dump'), sha256=facts.dump_sha256, size=facts.dump_size),
                report=dict(sha256=facts.report_sha256, quality_pass=True),

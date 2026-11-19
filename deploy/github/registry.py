@@ -45,8 +45,8 @@ def artifact_layers(artifact):
     return by_name
 
 
-def verified_release(repository, layers, directory):
-    data = fetch_blob(repository, layers['manifest.json'], 1024 * 1024)
+def verified_release(channel, layers, directory):
+    data = fetch_blob(channel, layers['manifest.json'], 1024 * 1024)
     manifest_hash = hashlib.sha256(data).hexdigest()
     obj = read_release(data)
     path = Path(directory) / manifest_hash
@@ -54,47 +54,45 @@ def verified_release(repository, layers, directory):
     manifest_path = path / 'manifest.json'
     signature_path = path / 'manifest.sigstore.json'
     manifest_path.write_bytes(data)
-    signature_path.write_bytes(fetch_blob(repository, layers['manifest.sigstore.json'], 2 * 1024 * 1024))
-    verify(manifest_path, signature_path, 'images.yml', obj['ref'], obj['commit'], release=True)
+    signature_path.write_bytes(fetch_blob(channel, layers['manifest.sigstore.json'], 2 * 1024 * 1024))
+    verify(manifest_path, signature_path, obj['repository'], 'images.yml', obj['ref'], obj['commit'], release=True)
     return manifest_hash, obj
 
 
-def production(directory):
-    repository = 'ghcr.io/dannyota/trachuan-release'
-    tags = json.loads(command(['oras', 'repo', 'tags', '--format', 'json', repository]))['tags']
+def production(channel, directory):
+    tags = json.loads(command(['oras', 'repo', 'tags', '--format', 'json', channel]))['tags']
     if 'production' not in tags:
         return None
-    digest = command(['oras', 'resolve', repository + ':production']).decode().strip()
+    digest = command(['oras', 'resolve', channel + ':production']).decode().strip()
     require_match(r'sha256:[0-9a-f]{64}', digest, 'artifact digest')
-    artifact = json.loads(command(['oras', 'manifest', 'fetch', repository + '@' + digest]))
+    artifact = json.loads(command(['oras', 'manifest', 'fetch', channel + '@' + digest]))
     layers = artifact_layers(artifact)
     if layers is None:
         raise ValueError('invalid production artifact type')
-    return verified_release(repository, layers, directory)[1]
+    return verified_release(channel, layers, directory)[1]
 
 
-def find(hashes, directory):
+def find(channel, hashes, directory):
     for digest in hashes:
         require_match(r'[0-9a-f]{64}', digest, 'manifest hash')
-    repository = 'ghcr.io/dannyota/trachuan-release'
-    tags = json.loads(command(['oras', 'repo', 'tags', '--format', 'json', repository]))['tags']
+    tags = json.loads(command(['oras', 'repo', 'tags', '--format', 'json', channel]))['tags']
     found = {}
     seen = set()
     for tag in tags:
         require_match(r'[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}', tag, 'artifact tag')
-        digest = command(['oras', 'resolve', repository + ':' + tag]).decode().strip()
+        digest = command(['oras', 'resolve', channel + ':' + tag]).decode().strip()
         require_match(r'sha256:[0-9a-f]{64}', digest, 'artifact digest')
         if digest in seen:
             continue
         seen.add(digest)
-        artifact = json.loads(command(['oras', 'manifest', 'fetch', repository + '@' + digest]))
+        artifact = json.loads(command(['oras', 'manifest', 'fetch', channel + '@' + digest]))
         by_name = artifact_layers(artifact)
         if by_name is None:
             continue
         manifest_layer = by_name['manifest.json']
         if manifest_layer['digest'].removeprefix('sha256:') not in hashes:
             continue
-        manifest_hash, obj = verified_release(repository, by_name, directory)
+        manifest_hash, obj = verified_release(channel, by_name, directory)
         found[manifest_hash] = obj
         if set(found) == hashes:
             return found

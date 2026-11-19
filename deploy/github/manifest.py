@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import re
 
+from repositories import package, require_listed, workflow
+
 
 def canonical(obj):
     return json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
@@ -34,8 +36,8 @@ def validate_release(obj):
             'target', 'images', 'upstream', 'host_bundle', 'corpus_release', 'rollback_target'}
     if not isinstance(obj, dict) or set(obj) != keys:
         raise ValueError('invalid release fields')
-    for key, value in {'kind': 'trachuan.image-release', 'version': 1,
-                       'repository': 'dannyota/trachuan', 'target': 'production',
+    repository = require_listed(obj['repository'])
+    for key, value in {'kind': 'trachuan.image-release', 'version': 1, 'target': 'production',
                        'corpus_release': None, 'rollback_target': None}.items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError(f'invalid {key}')
@@ -48,8 +50,7 @@ def validate_release(obj):
     if not isinstance(obj['images'], dict) or set(obj['images']) != names:
         raise ValueError('expected four images')
     for name in names:
-        require_match(rf'ghcr\.io/dannyota/trachuan-{name}@sha256:[0-9a-f]{{64}}',
-                      obj['images'][name], name)
+        require_match(re.escape(package(repository, name)) + r'@sha256:[0-9a-f]{64}', obj['images'][name], name)
     if not isinstance(obj['upstream'], dict) or set(obj['upstream']) != {'caddy'}:
         raise ValueError('invalid upstream')
     caddy_from_env('CADDY_IMAGE=' + str(obj['upstream']['caddy']))
@@ -61,14 +62,14 @@ def validate_release(obj):
     return obj
 
 
-def release(commit, ref, sequence, images, caddy, bundle):
+def release(repository, commit, ref, sequence, images, caddy, bundle):
     if set(images) != {'server', 'web', 'queryembed', 'postgres'}:
         raise ValueError('expected four images')
     for name, digest in images.items():
         require_match(r'sha256:[0-9a-f]{64}', digest, name)
-    obj = dict(kind='trachuan.image-release', version=1, repository='dannyota/trachuan',
+    obj = dict(kind='trachuan.image-release', version=1, repository=repository,
                commit=commit, ref=ref, release=ref.removeprefix('refs/tags/'), sequence=sequence,
-               target='production', images={name: f'ghcr.io/dannyota/trachuan-{name}@{digest}'
+               target='production', images={name: package(repository, name) + '@' + digest
                                             for name, digest in images.items()},
                upstream={'caddy': caddy},
                host_bundle={'sha256': hashlib.sha256(bundle).hexdigest(), 'size': len(bundle)},
@@ -102,7 +103,7 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     args.output.write_bytes(release(
-        commit=os.environ['GITHUB_SHA'], ref=os.environ['GITHUB_REF'],
+        repository=workflow(), commit=os.environ['GITHUB_SHA'], ref=os.environ['GITHUB_REF'],
         sequence=int(os.environ['GITHUB_RUN_NUMBER']),
         images={name: os.environ[name.upper()] for name in ('server', 'web', 'queryembed', 'postgres')},
         caddy=caddy_from_env(args.images_env.read_text()), bundle=args.bundle.read_bytes()))

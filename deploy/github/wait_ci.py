@@ -5,11 +5,12 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from manifest import require_match
+from repositories import workflow
 
 
 def fetch_runs(commit):
     query = urlencode(dict(branch='main', event='push', head_sha=commit, per_page=100))
-    request = Request('https://api.github.com/repos/dannyota/trachuan/actions/workflows/ci.yml/runs?' + query,
+    request = Request('https://api.github.com/repos/' + workflow() + '/actions/workflows/ci.yml/runs?' + query,
                       headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'],
                                'Accept': 'application/vnd.github+json',
                                'X-GitHub-Api-Version': '2026-03-10'})

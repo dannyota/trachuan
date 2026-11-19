@@ -61,7 +61,7 @@ class SettingsTest(unittest.TestCase):
                         {'id': 22, 'name': '*', 'type': 'tag'}]
             return {}
 
-        settings.apply(self.config, request)
+        settings.apply(self.config, request, 'dannyota/trachuan')
         self.assertIn(('PUT', 'repos/dannyota/trachuan/rulesets/17', self.config['rulesets'][0]), requests)
         writes = [(method, path) for method, path, body in requests if method != 'GET']
         self.assertEqual(writes.count(('POST', 'repos/dannyota/trachuan/rulesets')), 2)
@@ -93,7 +93,7 @@ class SettingsTest(unittest.TestCase):
                 return [obj | {'id': index} for index, obj in enumerate(refs)]
             return {}
 
-        settings.apply(self.config, request)
+        settings.apply(self.config, request, 'dannyota/trachuan')
         self.assertEqual({method for method, path, body in requests}, {'GET', 'PUT'})
 
     def test_enables_custom_policies_before_listing_them(self):
@@ -112,7 +112,7 @@ class SettingsTest(unittest.TestCase):
                 return []
             return {}
 
-        settings.apply(self.config, request)
+        settings.apply(self.config, request, 'dannyota/trachuan')
 
 
 if __name__ == '__main__':

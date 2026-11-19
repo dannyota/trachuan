@@ -50,7 +50,7 @@ class CorpusStorageTest(unittest.TestCase):
             executable.chmod(0o755)
 
     def sign_remote_release(self):
-        signed = create('c' * 40, 7, 'vn', '20990102_1', self.remote, self.remote / 'report.json')
+        signed = create('dannyota/trachuan', 'c' * 40, 7, 'vn', '20990102_1', self.remote, self.remote / 'report.json')
         (self.remote / 'signed-manifest.json').write_bytes(signed)
 
     def gets(self):
@@ -346,7 +346,7 @@ class CorpusStorageTest(unittest.TestCase):
         self.install_registry_fakes()
         env = dict(PATH=self.env['PATH'], FAKE_BUILD=str(self.remote), FAKE_LOG=str(self.log), FAKE_AWS_VERSION='2.40.0',
                    PYTHONDONTWRITEBYTECODE='1', COUNTRY='vn', REL='20990102_1', REPORT_SHA256=self.report_sha256(),
-                   RELEASE_SHA256='', RELEASE_DIR=str(self.path / 'unsigned'))
+                   RELEASE_SHA256='', RELEASE_DIR=str(self.path / 'unsigned'), GITHUB_REPOSITORY='dannyota/trachuan')
         refused = self.run_step(runnable[0], env)
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn('empty release SHA-256 signs only an already signed vn-20990102_1', refused.stderr)
