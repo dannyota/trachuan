@@ -131,12 +131,13 @@ pushed one. Once another release holds production with a higher sequence, the
 pushed release is exempt too: signing it moves the tag, the host refuses it
 because its `previous` is not the active release, and uploads stay blocked.
 Recover by signing the active release again. Every re-sign passes
-`report.sha256` from that release's signed manifest and an empty
-`release_sha256`, which the job accepts only for a release already signed;
-`resign-check` verifies the manifest and prints the exact command as its last
-line, with or without the upload directory. A re-sign that fails at "Require a
-signed release for an empty release pin" names a release that was never signed;
-sign it first from its upload, with its pins:
+`report.sha256` from that release's signed manifest and no `release_sha256`,
+which the job accepts only for a release already signed; `resign-check` verifies
+the manifest and prints the exact command as its last line, with or without the
+upload directory. A re-sign that fails at "Require a signed release for an empty
+release pin" names a release that was never signed, or a registry that could not
+be read anonymously or verified (an `oras` or `cosign` error there); sign a new
+release first from its upload, with its pins:
 
 ```sh
 python3 deploy/github/corpus_production.py resign-check vn <active rel> [<upload-dir>]

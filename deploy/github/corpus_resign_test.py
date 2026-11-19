@@ -237,7 +237,7 @@ class ResignCheckTest(unittest.TestCase):
 
     def dispatch(self):
         return ('gh workflow run corpus-release.yml --ref main -f country=vn '
-                f"-f rel={REL} -f report_sha256={self.signed['report']['sha256']} -f release_sha256=\n")
+                f"-f rel={REL} -f report_sha256={self.signed['report']['sha256']}\n")
 
     def test_without_an_upload_directory_prints_only_the_dispatch_of_the_verified_manifest(self):
         self.signed['report']['sha256'] = 'f' * 64
