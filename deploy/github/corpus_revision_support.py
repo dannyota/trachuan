@@ -2,11 +2,13 @@ import copy
 import json
 from pathlib import Path
 
-from corpus_test_support import digest, fixture_repository, recipe_fixture
+from corpus_test_support import digest, fixture_repository, git, recipe_fixture
 
 PREVIOUS_REL, CANDIDATE_REL = '20990101_1', '20990102_1'
 MODES = ('exact', 'ann')
 SCORERS = {2: 'agent-eval/5', 3: 'agent-eval/6'}
+LEGACY_PATH = 'apps/corpus/internal/evaluation/testdata/vn/legacy.json'
+OLD_PRODUCT_PATH = 'apps/corpus/internal/evaluation/testdata/vn/old-product.json'
 
 
 def fixture_case(case_id, citations=1, *tags, question=None):
@@ -20,6 +22,12 @@ def fixture_case(case_id, citations=1, *tags, question=None):
 
 def encode(cases):
     return json.dumps(cases, ensure_ascii=False).encode()
+
+
+LEGACY_FIXTURE = encode([dict(id=case_id, question='q-' + case_id, expected_citations=[dict(doc_number='doc')])
+                         for case_id in ('o1', 'o2', 'r0', 'r1', 'r2')])
+OLD_PRODUCT_FIXTURE = encode(dict(legacy_sha256=digest(LEGACY_FIXTURE), rejection_ids=['r0', 'r1', 'r2']))
+OLD_RANKS = dict(o1=([1], [1]), o2=([1], [1]))
 
 
 def case_rows(case_id, cohort, r8, r20):
@@ -76,15 +84,17 @@ def period_records(report):
             for mode in MODES for name, limit in (('recall', 20), ('recall', 8), ('mrr', 8))]
 
 
-def build_report(version, rel, fixture, ranks, cohorts=None):
+def build_report(version, rel, fixture, ranks, cohorts=None, old_ranks=None):
     row, hashes = recipe_fixture()
     report = dict(version=version, scorer=SCORERS[version], country='vn', rel=rel,
                   retrieval_recipe=row['retrieval_recipe'], recipes=hashes, status='complete', quality_pass=True,
                   release_eligible=False,
                   previous_diff={'previous': dict(country='vn', rel=PREVIOUS_REL, report_sha256='a' * 64)},
-                  fixture_hashes=dict(Legacy='legacy', OldProduct='old', Development=digest(fixture)),
+                  fixture_hashes=dict(Legacy=digest(LEGACY_FIXTURE), OldProduct=digest(OLD_PRODUCT_FIXTURE),
+                                      Development=digest(fixture)),
                   rejections=[dict(case_id=f'r{i}', passed=True) for i in range(3)], not_run={}, cases=[])
-    report['cases'] += case_rows('o1', 'old_product', [1], [1]) + case_rows('o2', 'old_product', [1], [1])
+    for case_id, case_ranks in (OLD_RANKS | (old_ranks or {})).items():
+        report['cases'] += case_rows(case_id, 'old_product', *case_ranks)
     for case in json.loads(fixture):
         cohort = 'development_period' if version >= 3 and 'historical' in case['tags'] else 'development'
         report['cases'] += case_rows(case['id'], (cohorts or {}).get(case['id'], cohort), *ranks[case['id']])
@@ -159,9 +169,19 @@ def base_revision_records(candidate):
                 losses=[dict(case_id='p2', previous_rank=3, rank=4), dict(case_id='p3', previous_rank=5, rank=6)])
 
 
-def history_for(path, *fixtures):
+def add_old_product(root, legacy=LEGACY_FIXTURE, old_product=OLD_PRODUCT_FIXTURE):
+    for name, data in ((LEGACY_PATH, legacy), (OLD_PRODUCT_PATH, old_product)):
+        if data is not None:
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_bytes(data)
+            git(root, 'add', name)
+    git(root, 'commit', '--quiet', '--allow-empty', '-m', 'old product fixtures')
+    return root
+
+
+def history_for(path, *fixtures, legacy=LEGACY_FIXTURE, old_product=OLD_PRODUCT_FIXTURE):
     from corpus_fixture_history import FixtureHistory
-    return FixtureHistory(fixture_repository(path, fixtures))
+    return FixtureHistory(add_old_product(fixture_repository(path, fixtures), legacy, old_product))
 
 
 def refuses(report, previous, row, history):
@@ -178,7 +198,8 @@ def validate_go_reports(directory):
     from corpus_manifest import decode, validate_report
     directory = Path(directory)
     fixtures = [(directory / name).read_bytes() for name in ('fixture-1.json', 'fixture-2.json')]
-    history = FixtureHistory(fixture_repository(directory / 'repository', fixtures))
+    legacy, old_product = ((directory / name).read_bytes() for name in ('legacy.json', 'old-product.json'))
+    history = FixtureHistory(add_old_product(fixture_repository(directory / 'repository', fixtures), legacy, old_product))
     row = decode((directory / 'release.json').read_bytes())
     pairs = decode((directory / 'pairs.json').read_bytes())
     reports = {name: decode((directory / name / 'report.json').read_bytes()) for pair in pairs for name in pair}

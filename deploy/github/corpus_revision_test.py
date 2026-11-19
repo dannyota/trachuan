@@ -202,10 +202,10 @@ class RevisionTest(unittest.TestCase):
         self.assertEqual(candidate['cohorts']['old_product']['non_regression'][1]['tolerance'], .005)
         self.validate(candidate, previous, before, after)
         for key in ('Legacy', 'OldProduct'):
-            changed = copy.deepcopy(candidate)
+            changed = copy.deepcopy(previous)
             changed['fixture_hashes'][key] = 'other'
             with self.subTest(key=key):
-                self.refused(changed, previous, before, after, message='incompatible previous legacy or old product fixture')
+                self.refused(candidate, changed, before, after, message='incompatible previous legacy or old product fixture')
 
     def test_tampered_revision_fields_are_refused(self):
         mutations = [('mrr', lambda r: r['revision'].update(value=r['revision']['value'] + 1e-9)),

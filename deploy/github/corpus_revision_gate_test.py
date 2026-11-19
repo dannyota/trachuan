@@ -98,7 +98,7 @@ class RevisionGateTest(unittest.TestCase):
                     row = next(row for row in candidate['cases'] if row['case_id'] == 'p1')
                     candidate['cases'].append(row | dict(arms='dense'))
                 else:
-                    candidate['rejections'][0]['case_id'] = 'r9'
+                    previous['rejections'][0]['case_id'] = 'r9'
                     set_records(candidate, 'old_product', 'mrr', tolerance=0)
                 self.refused(candidate, previous, before, after, message='revised comparison differs')
                 set_records(candidate, 'development', 'mrr', tolerance=0)

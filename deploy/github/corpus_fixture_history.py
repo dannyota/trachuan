@@ -20,7 +20,7 @@ def git(root, *args, data=None):
     return result.stdout
 
 
-def blobs(output, count):
+def blobs(output, count, name):
     out, offset = [], 0
     for _ in range(count):
         end = output.index(b'\n', offset)
@@ -30,7 +30,7 @@ def blobs(output, count):
             out.append(None)
             continue
         if len(header) != 3 or header[1] != b'blob':
-            raise ValueError('development fixture path is not a file in main history')
+            raise ValueError(f'{name} fixture path is not a file in main history')
         size = int(header[2])
         out.append(output[offset:offset + size])
         offset += size + 1
@@ -42,6 +42,7 @@ def blobs(output, count):
 class FixtureHistory:
     def __init__(self, root=REPOSITORY, path=DEVELOPMENT):
         self.root, self.path, self.versions = Path(root), path, None
+        self.name = Path(path).stem
 
     def load(self):
         if self.versions is not None:
@@ -56,7 +57,7 @@ class FixtureHistory:
         query = b''.join(commit + b':' + self.path.encode() + b'\n' for commit in commits)
         output = git(self.root, 'cat-file', '--batch', data=query) if commits else b''
         versions = {}
-        for position, data in enumerate(blobs(output, len(commits))):
+        for position, data in enumerate(blobs(output, len(commits), self.name)):
             if data is not None:
                 versions.setdefault(hashlib.sha256(data).hexdigest(), (position, data))
         self.versions = versions
@@ -65,7 +66,7 @@ class FixtureHistory:
     def version(self, digest):
         versions = self.load()
         if digest not in versions:
-            raise ValueError(f'development fixture {digest} is not in the history of the local main branch; '
+            raise ValueError(f'{self.name} fixture {digest} is not in the history of the local main branch; '
                              'update main to include it and retry')
         return versions[digest]
 
@@ -81,7 +82,7 @@ def unique_object(pairs):
     obj = {}
     for key, value in pairs:
         if key in obj:
-            raise ValueError('duplicate JSON field in development fixture')
+            raise ValueError('duplicate JSON field in fixture')
         obj[key] = value
     return obj
 

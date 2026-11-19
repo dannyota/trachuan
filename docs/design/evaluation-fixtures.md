@@ -139,7 +139,14 @@ rename is a removal: a revision that removes a case is refused.
   both values, `high_water`, the tolerance check and the status, and refuse a
   record whose stated fields differ from theirs. They also check that the
   candidate's `development_period` holds exactly the fixture's cases tagged
-  `historical`, and `development` exactly the others.
+  `historical` and `development` exactly the others, and that `old_product`
+  holds exactly the legacy fixture's cases less the old product fixture's
+  `rejection_ids`, both taken from the same history by the report's `Legacy` and
+  `OldProduct` hashes. In each of these cohorts every case has a `hybrid` row in
+  both modes at limits 8 and 20, with `expected` equal to its citation count,
+  and `rejections` names exactly the rejection IDs. An old product fixture whose
+  `legacy_sha256` is not the legacy fixture's hash is refused. The `legacy`
+  cohort is not checked, since no gate reads it.
 
 Accepted costs: a loss on an added or changed case is not gated in the release
 that revises it, and a case moved into `development_period` leaves the gate for

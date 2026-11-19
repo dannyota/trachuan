@@ -83,10 +83,30 @@ func releaseRow(t *testing.T, rel retrieval.Release) map[string]any {
 	}
 }
 
+func fixtureHash(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func releaseLegacyFixtures(t *testing.T, s Suite) ([]byte, []byte) {
+	t.Helper()
+	legacy, err := json.Marshal(s.Legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := json.Marshal(map[string]any{"legacy_sha256": fixtureHash(legacy), "rejection_ids": s.Rejections})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return legacy, old
+}
+
 func releaseSuite(t *testing.T, cases []Case) (Suite, []byte) {
 	t.Helper()
 	s := recordedSuite()
-	s.Hashes.OldProduct = "old-product-fixture"
+	legacy, old := releaseLegacyFixtures(t, s)
+	s.Hashes.Legacy, s.Hashes.OldProduct = fixtureHash(legacy), fixtureHash(old)
+	s.Map.LegacySHA256 = s.Hashes.Legacy
 	s.Development = cases
 	for _, c := range cases {
 		if len(c.ExpectedCitations) > 0 {
@@ -99,8 +119,7 @@ func releaseSuite(t *testing.T, cases []Case) (Suite, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sum := sha256.Sum256(data)
-	s.Hashes.Development = hex.EncodeToString(sum[:])
+	s.Hashes.Development = fixtureHash(data)
 	return s, data
 }
 
@@ -215,6 +234,13 @@ func TestReleaseValidator_AcceptsRevisedVersionThreeReports(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = os.WriteFile(filepath.Join(dir, "fixture-2.json"), currentFixture, 0600); err != nil {
+		t.Fatal(err)
+	}
+	legacy, old := releaseLegacyFixtures(t, currentSuite)
+	if err = os.WriteFile(filepath.Join(dir, "legacy.json"), legacy, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "old-product.json"), old, 0600); err != nil {
 		t.Fatal(err)
 	}
 	writeReleaseFile(t, filepath.Join(dir, "pairs.json"), [][2]string{{"r1", "r0"}, {"r2", "r1"}, {"r3", "r1"}, {"r4", "r2"}})

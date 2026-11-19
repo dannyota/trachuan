@@ -1,6 +1,7 @@
 import re
 
 from corpus_fixture_history import cohort_of, development_cases
+from corpus_old_product import old_product_partition
 from corpus_watermark import MRR_FIELDS
 
 PERIOD = [dict(mode=mode, arms='hybrid', limit=limit, name=name, gating=False)
@@ -44,26 +45,33 @@ def check_record_fields(report):
                 raise ValueError('non_regression record carries fields of another comparison')
 
 
-def check_partition(report, history):
-    fixture = development_cases(history.fixture(fixture_hash(report)))
-    wanted = {'development': set(), 'development_period': set()}
-    counts = {}
-    for case in fixture:
-        wanted[cohort_of(case)].add(case['id'])
-        counts[case['id']] = len(case.get('expected_citations') or ())
+def check_cohorts(report, wanted, counts, label, membership):
     found = {name: set() for name in wanted}
     hybrid = {(name, mode, limit): set() for name in wanted for mode in ('exact', 'ann') for limit in (8, 20)}
     for row in report['cases']:
         if row['cohort'] in found:
             found[row['cohort']].add(row['case_id'])
             if type(row.get('expected')) is not int or row['expected'] != counts.get(row['case_id']):
-                raise ValueError('development case records differ from the fixture partition')
+                raise ValueError(label + ' case records differ from the fixture partition')
             if row.get('arms') == 'hybrid' and row.get('mode') in ('exact', 'ann') and row.get('limit') in (8, 20):
                 hybrid[row['cohort'], row['mode'], row['limit']].add(row['case_id'])
     if found != wanted:
-        raise ValueError('development cohorts differ from the fixture partition by the historical tag')
+        raise ValueError(membership)
     if any(ids != wanted[key[0]] for key, ids in hybrid.items()):
         raise ValueError('a fixture case lacks a hybrid row in a mode and limit of the fixture partition')
+
+
+def check_partition(report, history):
+    fixture = development_cases(history.fixture(fixture_hash(report)))
+    wanted = {'development': set(), 'development_period': set()}
+    for case in fixture:
+        wanted[cohort_of(case)].add(case['id'])
+    counts = {case['id']: len(case.get('expected_citations') or ()) for case in fixture}
+    check_cohorts(report, wanted, counts, 'development',
+                  'development cohorts differ from the fixture partition by the historical tag')
+    scored, counts = old_product_partition(report, history.root)
+    check_cohorts(report, {'old_product': scored}, counts, 'old_product',
+                  'old_product cohort differs from the legacy fixture without its rejections')
     return fixture
 
 
