@@ -33,8 +33,8 @@ def verified_previous(report, directory, client, release_row=None, sidecars=None
     recipe = manifest['recipes']['retrieval']
     if not isinstance(recipe, dict):
         raise ValueError('previous signed retrieval recipe missing')
-    if prior.get('version') == 2 and not isinstance(prior.get('retrieval_recipe'), dict):
-        raise ValueError('previous version 2 retrieval recipe missing')
+    if prior.get('version') in (2, 3) and not isinstance(prior.get('retrieval_recipe'), dict):
+        raise ValueError(f"previous version {prior['version']} retrieval recipe missing")
     if 'retrieval_recipe' in prior and canonical(prior['retrieval_recipe']) != canonical(recipe):
         raise ValueError('previous report retrieval recipe differs from signed manifest')
     prior = prior | {'retrieval_recipe': recipe}

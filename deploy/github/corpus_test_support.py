@@ -1,12 +1,16 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 
 from corpus_manifest import create, non_regression_contract
 from corpus_rules import DECISION_FIELDS
 from manifest import canonical
+
+DEVELOPMENT_FIXTURE = 'apps/corpus/internal/evaluation/testdata/vn/development.json'
 
 
 FAKE_CURL = '''#!{python}
@@ -207,3 +211,28 @@ def add_heading_build(path, row, report):
     row['run']['build_artifact_sha256'] = report['build_artifact_sha256'] = digest(manifest)
     save_fixture(path, row, report)
     return json.loads(data)
+
+
+def git(root, *args):
+    env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+    env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM='1', GIT_AUTHOR_NAME='Test',
+               GIT_AUTHOR_EMAIL='test@example.invalid', GIT_COMMITTER_NAME='Test',
+               GIT_COMMITTER_EMAIL='test@example.invalid')
+    return subprocess.run(['git', '-c', 'commit.gpgsign=false', '-C', str(root), *args],
+                          check=True, capture_output=True, env=env).stdout
+
+
+def fixture_repository(root, versions, branch='main'):
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, 'init', '--quiet', '--initial-branch', branch)
+    path = root / DEVELOPMENT_FIXTURE
+    for index, data in enumerate(versions):
+        if data is None:
+            git(root, 'rm', '--quiet', DEVELOPMENT_FIXTURE)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            git(root, 'add', DEVELOPMENT_FIXTURE)
+        git(root, 'commit', '--quiet', '--allow-empty', '-m', f'version {index}')
+    return root

@@ -90,6 +90,16 @@ class CorpusPreviousTest(unittest.TestCase):
         self.manifest['report']['sha256'] = digest
         self.assertEqual(self.verify()['retrieval_recipe'], previous_recipe)
 
+    def test_version_three_previous_needs_its_retrieval_recipe(self):
+        self.previous.pop('retrieval_recipe')
+        self.previous.update(version=3, scorer='agent-eval/6')
+        self.data = json.dumps(self.previous).encode()
+        digest = hashlib.sha256(self.data).hexdigest()
+        self.report['previous_diff']['previous']['report_sha256'] = digest
+        self.manifest['report']['sha256'] = digest
+        with self.assertRaisesRegex(ValueError, 'previous version 3 retrieval recipe missing'):
+            self.verify()
+
     def test_previous_report_recipe_cannot_disagree_with_signed_manifest(self):
         self.manifest['recipes']['retrieval'] = copy.deepcopy(self.previous['retrieval_recipe'])
         self.manifest['recipes']['retrieval']['non_current_tail'] = 3

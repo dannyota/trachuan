@@ -10,6 +10,9 @@ from corpus_cohorts import cohort_counts
 from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
 from corpus_evidence import SIDECARS, validate_evidence_field, validate_sidecars
+from corpus_fixture_history import FixtureHistory
+from corpus_period import PERIOD, check_partition, check_period, check_record_fields, no_historical_policy
+from corpus_revision import validate_version_three
 from corpus_rules import DECISION_FIELDS, has_decision, older_shape_allowed, require_status_country
 
 
@@ -65,7 +68,8 @@ def non_regression_contract():
                    for mode in ('exact', 'ann')
                    for name, limit, gating in (('recall', 20, True), ('mrr', 8, True),
                                                ('abstention_balanced_accuracy', 8, False))]
-    return {'legacy': [], 'old_product': comparisons, 'development': comparisons}
+    return {'legacy': [], 'old_product': comparisons, 'development': comparisons,
+            'development_period': [entry.copy() for entry in PERIOD]}
 
 
 def check_comparisons(records, expected):
@@ -90,7 +94,7 @@ def check_comparisons(records, expected):
                 raise ValueError('required non_regression gate missing or not passing')
 
 
-def validate_report(report, country, rel, previous_report=None, release_row=None):
+def validate_report(report, country, rel, previous_report=None, release_row=None, history=None):
     if not isinstance(report, dict):
         raise ValueError('invalid report')
     versions(report)
@@ -102,9 +106,11 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
     if release_row is not None:
         validate_recipes(release_row, report)
     scanned = report
-    if report['version'] == 2 and release_row is not None:
+    if report['version'] >= 2 and release_row is not None:
         scanned = {key: value for key, value in report.items() if key != 'retrieval_recipe'}
     no_research_override(scanned)
+    if report['version'] >= 3:
+        no_historical_policy(report)
     diff = report.get('previous_diff')
     if not isinstance(diff, dict) or 'reason' in diff or not isinstance(diff.get('previous'), dict):
         raise ValueError('report must compare a previous release')
@@ -114,6 +120,8 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
     require_match(r'[0-9]{8}(?:_[0-9]+)?', previous.get('rel'), 'previous rel')
     require_match(r'[0-9a-f]{64}', previous.get('report_sha256'), 'previous report hash')
     contract = non_regression_contract()
+    if report['version'] < 3:
+        del contract['development_period']
     check_comparisons(report.get('non_regression'), contract['old_product'])
     cohorts = report.get('cohorts')
     if not isinstance(cohorts, dict) or set(cohorts) != set(contract):
@@ -124,17 +132,25 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
             raise ValueError('invalid cohort')
         if cohort['case_count'] > 0:
             check_comparisons(cohort.get('non_regression', []), contract[name])
-    if report['version'] == 2:
+    if report['version'] >= 2:
         for records in [report['non_regression'], *(cohort.get('non_regression', []) for cohort in cohorts.values() if cohort['case_count'] > 0)]:
             for record in records:
                 if record.get('name') == 'mrr' and record.get('gating'):
                     check_mrr_fields(record)
     if report['non_regression'] != cohorts['old_product'].get('non_regression'):
         raise ValueError('top-level non_regression differs from old_product')
+    if report['version'] >= 3:
+        history = history or FixtureHistory()
+        check_record_fields(report)
+        check_period(report)
+        fixture = check_partition(report, history)
     if previous_report is not None:
         if previous_report.get('country') != country or previous_report.get('rel') != previous['rel']:
             raise ValueError('previous report identity differs from inputs')
-        validate_comparisons(report, previous_report)
+        if report['version'] >= 3:
+            validate_version_three(report, previous_report, history, fixture)
+        else:
+            validate_comparisons(report, previous_report)
 
 
 def validate_recipes(row, report):
@@ -147,7 +163,7 @@ def validate_recipes(row, report):
     objects = dict(query=dense.get('query'), document=dense.get('document'),
                    chunk=row.get('chunk_recipe'), lexical=row.get('lexical_recipe'),
                    retrieval=row.get('retrieval_recipe'))
-    if report['version'] == 2 and canonical(report.get('retrieval_recipe')) != canonical(objects['retrieval']):
+    if report['version'] >= 2 and canonical(report.get('retrieval_recipe')) != canonical(objects['retrieval']):
         raise ValueError('report retrieval recipe object differs from release row')
     inputs, hashes = row.get('recipe_hash_inputs'), report.get('recipes')
     if not isinstance(inputs, dict) or set(inputs) != set(objects) or not isinstance(hashes, dict) or set(hashes) != set(objects):

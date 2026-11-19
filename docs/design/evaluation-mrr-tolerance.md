@@ -106,7 +106,7 @@ both:
   [When the tolerance applies](#when-the-tolerance-applies) from the two
   reports, recompute `high_water`, the comparison and `losses` from their case
   records, with the tolerance as their own constant, and refuse a record whose
-  stated fields or status differ, a non-finite value, or a version 2 record
+  stated fields or status differ, a non-finite value, or a version 2 or 3 record
   without its fields.
 
 The previous signed manifest is verified under the release policy before its
