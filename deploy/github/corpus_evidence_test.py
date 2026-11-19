@@ -72,7 +72,12 @@ class EvidenceGateTest(unittest.TestCase):
             with self.subTest(name=name):
                 path = self.path / name
                 original = path.read_bytes()
-                path.write_bytes(original.replace(b'"schema"', b'"schema" ', 1))
+                if name == FINDINGS:
+                    tampered = original.replace(b'"schema"', b'"schema" ', 1)
+                else:
+                    header, rest = original.split(b'\n', 1)
+                    tampered = jsonl([dict(reversed(json.loads(header).items()))]) + rest
+                path.write_bytes(tampered)
                 self.assert_both_refuse(name + ' differs from release.json')
                 path.write_bytes(original)
 
@@ -239,6 +244,87 @@ class GoSummaryContractTest(unittest.TestCase):
                 self.assertEqual(records, len(lines) - 1)
                 self.assertEqual(seen, set(types))
                 self.assertEqual(header['schema'], corpus_evidence.SUMMARY_SCHEMA)
+
+
+def relation(kind='cites', target='vn:vbpl:2', **tail):
+    record = dict(type='relation', kind=kind, method='vbpl_diagram',
+                  source=dict(key='vn:vbpl:1', number='1/2099/TT', in_release=True, anchor=None),
+                  target=dict(key=target, number='2/2099/TT', in_release=True, anchor=None))
+    return record | (tail or dict(count=1))
+
+
+class LineOrderTest(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.path = Path(temporary.name) / 'summary.jsonl'
+        self.header = dict(schema=1, bindings=dict(rel=REL))
+
+    def scan(self, data, types=corpus_evidence.IDENTITY_TYPES):
+        self.path.write_bytes(data)
+        return corpus_evidence.scan_lines(self.path, types, lambda record: record)
+
+    def refuses(self, data, types=corpus_evidence.IDENTITY_TYPES, message=''):
+        with self.assertRaisesRegex(ValueError, message):
+            self.scan(data, types)
+
+    def test_keys_increase_strictly_within_each_record_type(self):
+        doc = lambda key: dict(type='document', key=key, absent=True)
+        prov = lambda key, anchor: dict(type='provision', key=key, anchor=anchor)
+        accepted = [self.header, doc('vn:vbpl:1'), doc('vn:vbpl:2'), prov('vn:vbpl:1', 'dieu-2'), prov('vn:vbpl:1', 'dieu-2/khoan-1'),
+                    prov('vn:vbpl:2', 'dieu-1'), relation('amends_supplements'), relation('cites', 'vn:vbpl:1'), relation('cites')]
+        self.assertEqual(self.scan(jsonl(accepted))[2], len(accepted) - 1)
+        for name, lines in {'documents out of order': [doc('vn:vbpl:2'), doc('vn:vbpl:1')],
+                            'duplicate document': [doc('vn:vbpl:1'), doc('vn:vbpl:1')],
+                            'provisions out of order': [prov('vn:vbpl:1', 'dieu-2'), prov('vn:vbpl:1', 'dieu-1')],
+                            'duplicate provision': [prov('vn:vbpl:1', 'dieu-1'), prov('vn:vbpl:1', 'dieu-1')],
+                            'provision documents out of order': [prov('vn:vbpl:2', 'dieu-1'), prov('vn:vbpl:1', 'dieu-9')],
+                            'relations out of order': [relation('cites'), relation('amends_supplements')],
+                            'duplicate relation': [relation('cites'), relation('cites', count=2)]}.items():
+            with self.subTest(name=name):
+                self.refuses(jsonl([self.header] + lines), message='order')
+
+    def test_relation_order_is_read_from_its_bytes_before_change_or_count(self):
+        removed = relation('cites', 'vn:vbpl:3', change='removed', count=1)
+        added = relation('cites', 'vn:vbpl:2', change='added', count=1)
+        self.assertEqual(self.scan(jsonl([self.header, added, removed]), corpus_evidence.CHANGE_TYPES)[2], 2)
+        self.refuses(jsonl([self.header, removed, added]), corpus_evidence.CHANGE_TYPES, 'order')
+        change_first = dict(type='relation', change='added') | {k: v for k, v in added.items() if k not in ('type', 'change')}
+        self.refuses(jsonl([self.header, change_first]), corpus_evidence.CHANGE_TYPES, 'relation')
+
+    def test_relation_with_no_fields_or_a_bad_count_refuses(self):
+        for record in (dict(type='relation'), relation(count=0), relation(count='1'), relation(count=1, extra=True),
+                       dict(type='document'), dict(type='provision', key='vn:vbpl:1')):
+            with self.subTest(record=record):
+                self.refuses(jsonl([self.header, record]))
+
+    def test_lines_must_be_go_compact_json(self):
+        doc = dict(type='document', key='vn:vbpl:1', absent=True)
+        compact = jsonl([self.header, doc])
+        self.assertEqual(self.scan(compact)[2], 1)
+        for name, data in {'CRLF': compact.replace(b'\n', b'\r\n'),
+                           'CRLF header only': compact.replace(b'\n', b'\r\n', 1),
+                           'spaced record': jsonl([self.header]) + json.dumps(doc).encode() + b'\n',
+                           'spaced header': json.dumps(self.header).encode() + b'\n' + jsonl([doc]),
+                           'escaped non-ASCII': jsonl([self.header]) + json.dumps(doc | dict(key='vn:vbpl:Đ'), separators=(',', ':')).encode() + b'\n',
+                           'raw line separator': jsonl([self.header, doc | dict(key='vn:vbpl:\u2028')])}.items():
+            with self.subTest(name=name):
+                self.refuses(data, message='compact')
+        escaped = jsonl([self.header]) + b'{"type":"document","key":"vn:vbpl:\\u2028","absent":true}\n'
+        self.assertEqual(self.scan(escaped)[2], 1)
+
+    def test_upload_and_signing_apply_the_order(self):
+        write_fixture(Path(self.path.parent))
+        directory = Path(self.path.parent)
+        row = json.loads((directory / 'release.json').read_bytes())
+        report = json.loads((directory / 'report.json').read_bytes())
+        base = evidence_bindings(directory, row, (directory / 'report.json').read_bytes())
+        doc = lambda key: dict(type='document', key=key, absent=True)
+        write_evidence(directory, row, report, identity=[dict(schema=1, bindings=base), doc('vn:vbpl:2'), doc('vn:vbpl:1')])
+        with self.assertRaisesRegex(ValueError, 'order'):
+            validated_inputs('vn', REL, directory, directory / 'report.json')
+        with self.assertRaisesRegex(ValueError, 'order'):
+            create('a' * 40, 2, 'vn', REL, directory, directory / 'report.json')
 
 
 class PredecessorEvidenceTest(unittest.TestCase):

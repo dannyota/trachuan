@@ -19,10 +19,11 @@ binds, and never changes, the build artifact and the evaluation report.
 - `identity.jsonl` and `changes.jsonl` hold one JSON object per line, at most 1
   MiB each. The first line holds the schema version and the bindings. Later
   lines are sorted by record type and then by document key, anchor, or a
-  relation's identity: the bytes of its line before the `count` member, which
-  comes last, so the order is read from the file itself and needs no serializer.
-  Equal inputs give equal bytes. A relation's identity is its kind, method and
-  two ends; equal rows compare as a count. Taxonomy codes are sorted by code.
+  relation's identity: the bytes of its line before the `change` member, or
+  before `count` where there is no `change`; both come last, so the order is
+  read from the file itself and needs no serializer. Equal inputs give equal
+  bytes. A relation's identity is its kind, method and two ends; equal rows
+  compare as a count. Taxonomy codes are sorted by code.
 - An anchor with no `~k` component is derived from the kinds and tokens on the
   provision's path ([text structure](text-structure.md)). A `~k` suffix numbers
   repeated anchors in tree order and is not stable across releases. A provision

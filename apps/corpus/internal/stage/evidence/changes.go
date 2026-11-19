@@ -98,21 +98,12 @@ type handOvers struct {
 
 func pairHandOvers(before, after map[string]summaryRecord, m members) handOvers {
 	h := handOvers{oldFor: map[string]string{}, newFor: map[string]string{}, named: map[string]bool{}}
+	naming := countValues(m.replacement)
 	for old, replacement := range m.replacement {
 		h.named[replacement] = true
-		if present(before, old) && present(after, replacement) && !present(after, old) && !present(before, replacement) {
+		if naming[replacement] == 1 && present(before, old) && present(after, replacement) && !present(after, old) && !present(before, replacement) {
 			h.oldFor[replacement] = old
 			h.newFor[old] = replacement
-		}
-	}
-	for replacement, count := range countValues(h.newFor) {
-		if count > 1 {
-			for old, value := range h.newFor {
-				if value == replacement {
-					delete(h.newFor, old)
-				}
-			}
-			delete(h.oldFor, replacement)
 		}
 	}
 	return h

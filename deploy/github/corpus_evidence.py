@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 from manifest import require_match
 
@@ -31,11 +32,6 @@ def bare_or_none(value, name):
 def decoded(data):
     from corpus_manifest import decode
     return decode(data)
-
-
-def file_digest(path):
-    with path.open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def check_detectors(detectors):
@@ -84,8 +80,35 @@ def check_findings(findings, base, previous_rel):
     return predecessor, counts, dict(new=len(findings['new']), gone=len(findings['gone']))
 
 
+def compact(record):
+    text = json.dumps(record, ensure_ascii=False, separators=(',', ':'))
+    return text.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029').encode()
+
+
+def relation_key(record, body):
+    tail = ['change', 'count'] if 'change' in record else ['count']
+    if list(record)[-len(tail):] != tail or type(record['count']) is not int or record['count'] < 1:
+        raise ValueError('relation record must end with its change and a positive count')
+    if 'change' in record and record['change'] not in ('added', 'removed'):
+        raise ValueError('invalid relation change')
+    key = compact({name: value for name, value in record.items() if name not in tail})[:-1]
+    if not body.startswith(key) or not all(isinstance(record.get(name), str) for name in ('kind', 'method')):
+        raise ValueError('invalid relation record')
+    return key
+
+
+def order_key(record, body):
+    kind = record['type']
+    if kind == 'relation':
+        return relation_key(record, body)
+    fields = ('key', 'anchor') if kind.startswith('provision') else ('key',)
+    if any(not isinstance(record.get(name), str) for name in fields):
+        raise ValueError('invalid ' + kind + ' record')
+    return tuple(record[name] for name in fields)
+
+
 def scan_lines(path, types, check_header):
-    digest, header, records, last = hashlib.sha256(), None, 0, ''
+    digest, header, records, last = hashlib.sha256(), None, 0, ('', None)
     with path.open('rb') as stream:
         while line := stream.readline(LINE_LIMIT + 2):
             digest.update(line)
@@ -93,15 +116,19 @@ def scan_lines(path, types, check_header):
                 raise ValueError(path.name + ' line exceeds 1 MiB')
             if not line.endswith(b'\n'):
                 raise ValueError(path.name + ' does not end its last line')
-            record = decoded(line[:-1])
+            body = line[:-1]
+            record = decoded(body)
+            if compact(record) != body:
+                raise ValueError(path.name + ' line is not compact JSON')
             if header is None:
                 header = check_header(record)
                 continue
             if not isinstance(record, dict) or record.get('type') not in types:
                 raise ValueError(path.name + ' holds an unknown record type')
-            if record['type'] < last:
+            key = (record['type'], order_key(record, body))
+            if key[0] < last[0] or (key[0] == last[0] and key[1] <= last[1]):
                 raise ValueError(path.name + ' records are out of order')
-            last, records = record['type'], records + 1
+            last, records = key, records + 1
     if header is None:
         raise ValueError(path.name + ' has no header')
     return digest.hexdigest(), header, records

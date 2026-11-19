@@ -4,11 +4,11 @@ import "slices"
 
 type relationChange struct {
 	Type   string      `json:"type"`
-	Change string      `json:"change"`
 	Kind   string      `json:"kind"`
 	Method string      `json:"method"`
 	Source relationEnd `json:"source"`
 	Target relationEnd `json:"target"`
+	Change string      `json:"change"`
 	Count  int         `json:"count"`
 }
 
@@ -97,7 +97,7 @@ func writeRelationChanges(in changeInputs, h handOvers, out *lineWriter) error {
 			continue
 		}
 		id := entry.identity
-		if err = out.write(relationChange{Type: changeRelation, Change: change, Kind: id.Kind, Method: id.Method, Source: id.Source, Target: id.Target, Count: diff}); err != nil {
+		if err = out.write(relationChange{Type: changeRelation, Kind: id.Kind, Method: id.Method, Source: id.Source, Target: id.Target, Change: change, Count: diff}); err != nil {
 			return err
 		}
 	}

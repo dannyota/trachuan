@@ -49,10 +49,6 @@ type summaryRelation struct {
 	TargetNode      *string
 }
 
-func sortRowsByAnchor(rows []summaryProvision) {
-	slices.SortFunc(rows, func(a, b summaryProvision) int { return strings.Compare(a.Anchor, b.Anchor) })
-}
-
 func (d summaryDocument) line() documentLine {
 	return documentLine{Type: recordDocument, Key: d.Key, NumberNorm: d.NumberNorm, StatusClass: d.StatusClass, EffFrom: d.EffFrom, EffTo: d.EffTo, IsCurrent: d.IsCurrent, ValidityConflict: d.ValidityConflict, TextSource: d.TextSource, TextComplete: d.TextComplete, Baseline: d.Baseline}
 }

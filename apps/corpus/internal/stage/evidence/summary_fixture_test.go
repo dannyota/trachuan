@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+func sortRowsByAnchor(rows []summaryProvision) {
+	slices.SortFunc(rows, func(a, b summaryProvision) int { return strings.Compare(a.Anchor, b.Anchor) })
+}
+
 type fakeSummary struct {
 	documents  []summaryDocument
 	nodes      map[int64]taxonomyNode

@@ -170,6 +170,20 @@ func TestWriteChanges_HandOverNeedsBothDocumentLines(t *testing.T) {
 			}
 		}
 	})
+	t.Run("a second old key without a predecessor line still blocks the pair", func(t *testing.T) {
+		c := newChangesCase(t)
+		c.after = c.after.with("vn:chinhphu:2099013", "source_replaced", "vn:vbpl:2099004")
+		lines := c.lines()
+		assertLines(t, lines,
+			`{"type":"document","key":"vn:chinhphu:2099003","change":"removed","cause":"source","replaced_by":"vn:vbpl:2099004"}`,
+			`{"type":"document","key":"vn:vbpl:2099004","change":"added","cause":"source"}`,
+		)
+		for _, line := range lines {
+			if strings.Contains(line, `"type":"document_key"`) {
+				t.Errorf("hand-over paired although two old keys name the replacement: %s", line)
+			}
+		}
+	})
 	t.Run("new key already in the predecessor is not paired", func(t *testing.T) {
 		c := newChangesCase(t)
 		c.previous.documents = append(c.previous.documents, doc("vn:vbpl:2099004", "3/2099/ND-CP", "in_force"))
@@ -206,8 +220,8 @@ func TestWriteChanges_NoMoves(t *testing.T) {
 func TestWriteChanges_RelationsCompareAsCounts(t *testing.T) {
 	lines := newChangesCase(t).lines()
 	assertLines(t, lines,
-		`{"type":"relation","change":"removed","kind":"guided_by","method":"vbpl_diagram","source":{"key":"vn:vbpl:2099001","number":"1/2099/TT-NHNN","in_release":true,"anchor":null},"target":{"key":"vn:vbpl:2099002","number":"2/2099/TT-NHNN","in_release":true,"anchor":null},"count":1}`,
-		`{"type":"relation","change":"added","kind":"repeals","method":"text_rule/1","source":{"key":"vn:vbpl:2099001","number":"1/2099/TT-NHNN","in_release":true,"anchor":"dieu-4"},"target":{"key":null,"number":"9/2098/TT","in_release":false,"anchor":null,"named":"dieu-3"},"count":1}`,
+		`{"type":"relation","kind":"guided_by","method":"vbpl_diagram","source":{"key":"vn:vbpl:2099001","number":"1/2099/TT-NHNN","in_release":true,"anchor":null},"target":{"key":"vn:vbpl:2099002","number":"2/2099/TT-NHNN","in_release":true,"anchor":null},"change":"removed","count":1}`,
+		`{"type":"relation","kind":"repeals","method":"text_rule/1","source":{"key":"vn:vbpl:2099001","number":"1/2099/TT-NHNN","in_release":true,"anchor":"dieu-4"},"target":{"key":null,"number":"9/2098/TT","in_release":false,"anchor":null,"named":"dieu-3"},"change":"added","count":1}`,
 	)
 }
 
@@ -308,4 +322,58 @@ func appendTo(t *testing.T, path, text string) {
 	if err = f.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func relationOrderKeys(t *testing.T, text, member string) []string {
+	t.Helper()
+	var keys []string
+	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
+		if !strings.HasPrefix(line, `{"type":"relation",`) {
+			continue
+		}
+		at := strings.Index(line, `,"`+member+`":`)
+		if at < 0 || !strings.Contains(line[at:], `"count":`) || strings.Contains(line[:at], `"count":`) {
+			t.Fatalf("relation line without a trailing %s member: %s", member, line)
+		}
+		keys = append(keys, line[:at])
+	}
+	return keys
+}
+
+func assertStrictlyIncreasing(t *testing.T, keys []string) {
+	t.Helper()
+	for i := 1; i < len(keys); i++ {
+		if keys[i-1] >= keys[i] {
+			t.Fatalf("relation lines out of order:\n%s\n%s", keys[i-1], keys[i])
+		}
+	}
+}
+
+func TestWriteChanges_RelationLinesSortByTheirBytesBeforeChange(t *testing.T) {
+	c := newChangesCase(t)
+	c.previous.relations = append(c.previous.relations,
+		rel("cites", "vbpl_diagram", "vn:vbpl:2099001", "1/2099/TT-NHNN", nil, "vn:vbpl:2099005", "5/2099/TT-BTC", true, nil, nil),
+		rel("amends_supplements", "vbpl_diagram", "vn:vbpl:2099001", "1/2099/TT-NHNN", nil, "", "8/2098/TT", false, nil, nil))
+	text, err := c.run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := relationOrderKeys(t, text, "change")
+	if len(keys) < 4 {
+		t.Fatalf("too few relation changes: %d", len(keys))
+	}
+	assertStrictlyIncreasing(t, keys)
+	golden, err := os.ReadFile(filepath.Join("testdata", changesFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStrictlyIncreasing(t, relationOrderKeys(t, string(golden), "change"))
+}
+
+func TestWriteIdentity_RelationLinesSortByTheirBytesBeforeCount(t *testing.T) {
+	golden, err := os.ReadFile(filepath.Join("testdata", identityFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStrictlyIncreasing(t, relationOrderKeys(t, string(golden), "count"))
 }
