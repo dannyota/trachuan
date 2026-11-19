@@ -136,8 +136,11 @@ func TestPreviousRecipe_LegacyReportMetadata(t *testing.T) {
 			if err = finishQuality(&current, &prior); err != nil {
 				t.Fatal(err)
 			}
-			if n := mrrRecord(t, current, "old_product"); n["status"] != "pass" || n["tolerance"] != .005 {
-				t.Fatalf("comparison: %v", n)
+			if !sameMRRRecipes(&current, &prior) {
+				t.Fatal("metadata recipe not comparable")
+			}
+			if n := mrrRecord(t, current, "old_product"); n["status"] != "fail" || n["tolerance"] != float64(0) {
+				t.Fatalf("agent-eval/4 comparison not strict: %v", n)
 			}
 			before.Abstention.Threshold = new(.54)
 			metadata["retrieval_recipe"] = before

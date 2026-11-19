@@ -99,7 +99,7 @@ func TestLoadDevelopment_ValidatesTagsAndCases(t *testing.T) {
 			t.Fatalf("invalid cases accepted: %s", data)
 		}
 	}
-	for _, tag := range []string{"identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "out_of_domain", "negative"} {
+	for _, tag := range []string{"identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "transition", "out_of_domain", "negative"} {
 		data := `[{"id":"new-negative","question":"Câu hỏi khác","expect_abstain":true,"tags":["` + tag + `"]}]`
 		if _, err := LoadDevelopment(strings.NewReader(data)); err != nil {
 			t.Fatalf("valid tag %s: %v", tag, err)

@@ -91,10 +91,11 @@ are never revised. When the development fixture's hash differs from the previous
 report's, the gated `development` records are compared over the **comparable
 cases** instead of the whole cohort. A case is comparable when it has the same
 ID in both fixtures, `question`, `expected_citations` and `expect_abstain` equal
-as decoded (other fields are ignored), and the same cohort in both reports,
-`development` or [`development_period`](evaluation-period-cases.md). A case is
-never removed ([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item
-3), and an ID rename is a removal: a revision that removes a case is refused.
+as decoded (other fields are ignored; an absent list equals an empty one), and
+the same cohort in both reports, `development` or
+[`development_period`](evaluation-period-cases.md). A case is never removed
+([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item 3), and an ID
+rename is a removal: a revision that removes a case is refused.
 
 - The previous value and the candidate value are both recomputed from the case
   records over the comparable cases, in fixture order, with the metric's own
@@ -104,11 +105,26 @@ never removed ([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item
   [tolerance used](evaluation-mrr-tolerance.md#rule) by the previous record. A
   tag-only revision so keeps the watermark exactly, and a revision never resets
   it. The [MRR@8 tolerance](evaluation-mrr-tolerance.md) applies against it.
+- The evaluator reads the previous fixture from
+  `testdata/vn/development-previous/<sha256>.json` beside the current one: a
+  revising change commits the replaced bytes there under their SHA-256. It
+  checks the hash and refuses when the file is missing; with equal hashes no
+  file is needed. It also refuses a previous report that holds a case in both
+  development cohorts, whose case records do not match its fixture (an ID
+  missing or extra, or a citation count that differs), or that moves a case
+  between cohorts under an unchanged fixture hash.
 - A revision record's `previous` and `high_water` hold the comparable values its
   status is judged on, and its `value` stays the value over all its cases. Its
-  `revision` states the comparable case count, the comparable candidate value,
-  and `revised`, every case of the cohort outside the comparable set with its
-  reason (`added`, `changed` or `cohort`).
+  `revision` is `{cases, value, revised}`: the comparable case count, the
+  comparable candidate value, and every case of either report's `development`
+  cohort outside the comparable set as `{case_id, reason}`, sorted by ID, with
+  one reason chosen in the order `added`, `cohort`, `changed`. A recall record
+  also states `numerator` and `denominator` over the candidate's comparable
+  cases and `previous_numerator` and `previous_denominator` over the previous
+  ones; `previous_value` holds the comparable previous value on every record.
+  `within_tolerance`, `losses` and tolerance condition 4 use the comparable
+  cases. When the recipes differ, `high_water` is the recomputed previous value
+  alone, since a watermark never crosses a recipe change.
 - The uploader and the signing validator take each fixture from the main
   branch's history: the version of `development.json` whose SHA-256 equals that
   report's development fixture hash, refusing when there is none. The

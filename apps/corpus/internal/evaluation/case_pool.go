@@ -69,7 +69,7 @@ type casePrefetch struct {
 
 func prefetchCase(ctx context.Context, engine Engine, input cohortInput, rejects map[string]bool, modes []retrieval.Mode, recipe retrieval.Recipe, policy ValidityOverrides) casePrefetch {
 	c := input.c
-	force := inForceForCase(c, policy)
+	force := input.inForce()
 	request := retrieval.Request{Query: c.Question, Limit: 8, Mode: "exact", Arms: "hybrid", InForceOnly: &force}
 	result := casePrefetch{collects: map[string]map[retrieval.Mode]caseCollect{}}
 	result.product, result.prepareErr = engine.Prepare(ctx, request)
@@ -94,7 +94,7 @@ func prefetchCase(ctx context.Context, engine Engine, input cohortInput, rejects
 
 func collectPrefetch(ctx context.Context, engine Engine, input cohortInput, rejects map[string]bool, modes []retrieval.Mode, recipe retrieval.Recipe, policy ValidityOverrides, result casePrefetch) casePrefetch {
 	c := input.c
-	force := inForceForCase(c, policy)
+	force := input.inForce()
 	for _, cohort := range input.cohorts {
 		if cohort == "old_product" && rejects[c.ID] {
 			continue

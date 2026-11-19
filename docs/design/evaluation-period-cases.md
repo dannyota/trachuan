@@ -50,17 +50,24 @@ Cases tagged `historical` leave the gated `development` records and form their
 own cohort, `development_period`, with its own case records.
 
 - **Request:** the agent's period request, `in_force_only:false` with `as_of`
-  unset, the request the research override `historical_policy: agent` sends
-  today. One `as_of` date cannot cover a period: dev-033 spans six successive
+  unset, the request the removed research override `historical_policy: agent`
+  sent. One `as_of` date cannot cover a period: dev-033 spans six successive
   circulars. On `vn/20261118_2` the seven cases match 13 of 21 at 20 under this
   request, with MRR@8 0.206; a non-current tail of 2 adds nothing. ADR 0010's
   History of 2026-11-12 rejected this request as a recipe change under the
   earlier leftover-slot rule; here it only scores this cohort.
 - **Records:** recall@20, recall@8 and MRR@8, in modes `exact` and `ann`, hybrid
-  arms, with a per-case diff against the previous report's period cohort.
+  arms, as six `cohorts.development_period.non_regression` records
+  `{mode, arms, limit, name, value, previous_value, gating: false, status: "reported"}`,
+  with no floors, targets or `revision`. The per-case diff against the previous
+  report's period cohort is in `previous_diff`. A fixture with no period case
+  gives an empty cohort and `not_run.development_period`.
 - **Status:** `reported`. No record of this cohort is a gate, a floor or a
   target. Current-law precision does not apply, because the request admits
-  non-current documents by design. Abstention is reported, not gated.
+  non-current documents by design: its precision metrics stay in `metrics[]`
+  with no floor, and its hits count in the report-wide `hits_by_class`,
+  `hits_by_status_basis` and `validity_adjudicated`. Abstention is reported, not
+  gated.
 - **Calibration:** unchanged. It still fits every development case, period cases
   included, under the default request, so the abstention threshold does not move
   with the split.
@@ -98,7 +105,8 @@ the value stays above 0.749330.
 
 The report version becomes 3: it adds the period cohort and the revision fields.
 The scorer version moves to `agent-eval/6`, listed as comparable with
-`agent-eval/5` because product matching and the metric definitions are
-unchanged; only the cases in the `development` records change, which the
-revision rule handles. `corpus start` accepts a previous report of version 2 or
-3, and the validators list version 3.
+`agent-eval/5` only (earlier scorers stay incompatible) because product matching
+and the metric definitions are unchanged; only the cases in the `development`
+records change, which the revision rule handles. `corpus start` accepts a
+previous report of version 2 or 3, and the validators list version 3. A previous
+report that used the removed `historical_policy` override is refused.

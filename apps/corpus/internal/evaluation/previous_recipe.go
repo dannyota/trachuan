@@ -34,8 +34,8 @@ func parsePreviousReport(data []byte) (Report, error) {
 	if err != nil {
 		return Report{}, err
 	}
-	if previous.Version == 2 && len(previous.RetrievalRecipe) == 0 {
-		return Report{}, fmt.Errorf("previous version 2 retrieval recipe missing")
+	if previous.Version >= 2 && len(previous.RetrievalRecipe) == 0 {
+		return Report{}, fmt.Errorf("previous version %d retrieval recipe missing", previous.Version)
 	}
 	if len(previous.RetrievalRecipe) > 0 {
 		var recipe retrieval.Recipe
@@ -54,8 +54,8 @@ func ParseDecisionReport(data []byte) (Report, error) {
 	if err != nil {
 		return Report{}, err
 	}
-	if report.Version != 2 {
-		return Report{}, fmt.Errorf("previous report is version %d, want version 2", report.Version)
+	if report.Version != 2 && report.Version != 3 {
+		return Report{}, fmt.Errorf("previous report is version %d, want version 2 or 3", report.Version)
 	}
 	if report.Status != "complete" {
 		return Report{}, fmt.Errorf("previous report status %q is not complete", report.Status)

@@ -3,8 +3,8 @@ package evaluation
 import "fmt"
 
 func validateReportTransition(current, previous *Report) error {
-	if previous != nil && current.Version == 1 && previous.Version == 2 {
-		return fmt.Errorf("report version cannot downgrade from 2 to 1")
+	if previous != nil && current.Version < previous.Version {
+		return fmt.Errorf("report version cannot downgrade from %d to %d", previous.Version, current.Version)
 	}
 	counts, err := reportCaseCounts(current)
 	if err != nil {

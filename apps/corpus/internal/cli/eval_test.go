@@ -151,19 +151,31 @@ func TestEvalCLI_CapFlag(t *testing.T) {
 	}
 }
 
+func TestEvalCLI_HistoricalPolicyRemoved(t *testing.T) {
+	var stderr bytes.Buffer
+	args := []string{"vn", "20261109", "--out", t.TempDir(), "--historical-policy", "agent"}
+	if code := runEval(context.Background(), args, &stderr, &stderr); code != 1 || !strings.Contains(stderr.String(), `unknown option "--historical-policy"`) {
+		t.Fatalf("code=%d error=%s", code, stderr.String())
+	}
+	stderr.Reset()
+	if code := runEval(context.Background(), []string{"vn"}, &stderr, &stderr); code != 1 || strings.Contains(stderr.String(), "historical") {
+		t.Fatalf("usage still names the historical policy: %s", stderr.String())
+	}
+}
+
 func TestEvalCLI_ValidityFlags(t *testing.T) {
 	out := t.TempDir()
 	if err := os.WriteFile(filepath.Join(out, "existing"), []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, args := range [][]string{{"--historical-policy", "agent"}, {"--non-current-tail", "0"}, {"--non-current-tail", "5"}, {"--not-yet-eligible"}} {
+	for _, args := range [][]string{{"--non-current-tail", "0"}, {"--non-current-tail", "5"}, {"--not-yet-eligible"}} {
 		var stderr bytes.Buffer
 		input := append([]string{"vn", "20261109", "--out", out}, args...)
 		if code := runEval(context.Background(), input, &stderr, &stderr); code != 1 || !strings.Contains(stderr.String(), "output directory is not empty") {
 			t.Errorf("args %v: code=%d error=%s", args, code, stderr.String())
 		}
 	}
-	for _, args := range [][]string{{"--historical-policy", "other"}, {"--non-current-tail", "-1"}, {"--non-current-tail", "6"}, {"--non-current-tail", "01"}} {
+	for _, args := range [][]string{{"--historical-policy", "agent"}, {"--non-current-tail", "-1"}, {"--non-current-tail", "6"}, {"--non-current-tail", "01"}} {
 		var stderr bytes.Buffer
 		input := append([]string{"vn", "20261109", "--out", out}, args...)
 		if code := runEval(context.Background(), input, &stderr, &stderr); code != 1 || strings.Contains(stderr.String(), "output directory is not empty") {
@@ -175,7 +187,6 @@ func TestEvalCLI_ValidityFlags(t *testing.T) {
 		flags []string
 		rank  int
 	}{
-		{"historical", []string{"--historical-policy", "agent"}, 8},
 		{"tail", []string{"--non-current-tail", "1"}, 8},
 		{"not_yet", []string{"--not-yet-eligible"}, 1},
 	} {
@@ -197,7 +208,7 @@ func TestEvalCLI_ValidityFlags(t *testing.T) {
 			if err = json.Unmarshal(data, &report); err != nil {
 				t.Fatal(err)
 			}
-			if (tc.name == "historical" && (report.HistoricalPolicy == nil || *report.HistoricalPolicy != "agent")) || (tc.name == "tail" && (report.NonCurrentTail == nil || *report.NonCurrentTail != 1)) || (tc.name == "not_yet" && !report.NotYetEligible) {
+			if (tc.name == "tail" && (report.NonCurrentTail == nil || *report.NonCurrentTail != 1)) || (tc.name == "not_yet" && !report.NotYetEligible) {
 				t.Fatalf("report policy %+v", report.ValidityOverrides)
 			}
 			for _, row := range report.Cases {
@@ -374,7 +385,7 @@ func (e cliValidityEngine) CollectWithNotYetEligible(_ context.Context, p retrie
 type cliValidityStage struct{ kind string }
 
 func (s cliValidityStage) Evaluate(ctx context.Context, _ stage.Env, _ stage.Run, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
-	cases := []evaluation.Case{{ID: "positive", Question: "Câu hỏi tốt", Tags: []string{"historical"}, ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject1", Question: "khong dau mot", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject2", Question: "khong dau hai", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject3", Question: "khong dau ba", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}}
+	cases := []evaluation.Case{{ID: "positive", Question: "Câu hỏi tốt", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject1", Question: "khong dau mot", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject2", Question: "khong dau hai", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject3", Question: "khong dau ba", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}}
 	suite := evaluation.Suite{Legacy: cases, Rejections: []string{"reject1", "reject2", "reject3"}, Hashes: evaluation.FixtureHashes{Legacy: "fixture"}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "fixture"}}
 	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
 	opts.EvaluationDate, opts.Modes = date, []retrieval.Mode{"exact"}
