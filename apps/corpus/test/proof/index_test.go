@@ -66,8 +66,13 @@ func fakeEmbedder(t *testing.T, recipe embedding.Recipe) *httptest.Server {
 	return server
 }
 
+const indexSources = "country: vn\nvbpl:\n  selection_version: 1\n  sweep_agencies: ['62']\ncentral_issuers:\n  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM\nrelation_codes:\n  '10': {kind: amends_supplements, label: amends, amending: true}\nstatus_codes: {}\n"
+
 func (h *harness) indexSetup() {
 	h.t.Helper()
+	if err := os.WriteFile(filepath.Join(h.root, "sources", "vn.yaml"), []byte(indexSources), 0600); err != nil {
+		h.t.Fatal(err)
+	}
 	h.startWorker("")
 	h.command("start", "vn", h.rel, "--until", "relate")
 	h.waitState("paused")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,31 +35,98 @@ func decisionSnapshot(t *testing.T, decision *stage.PreviousReport) json.RawMess
 	return data
 }
 
-func TestReleaseDecision_AddsHashesAndNeedsEvidence(t *testing.T) {
+var evidenceFiles = map[string]string{"findings.json": "{\"schema\":2}\n", "identity.jsonl": "{\"schema\":1}\n", "changes.jsonl": "{\"schema\":1,\"baseline\":true}\n"}
+
+func evidenceReleaseItem(t *testing.T, artifacts artifact.Store, rel string, files map[string]string) releaseItem {
+	t.Helper()
+	hash := strings.Repeat("e", 64)
+	art, err := artifacts.Publish(context.Background(), stage.EvidenceStage, hash, sha256Hex([]byte(fmt.Sprint(files))), func(dir string) error {
+		for name, body := range files {
+			if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return releaseItem{Stage: stage.EvidenceStage, State: "done", Key: "vn/" + rel, Path: art.Path, ArtifactHash: art.SHA256}
+}
+
+func TestReleaseDecision_AddsFiveHashesFromVerifiedEvidence(t *testing.T) {
 	artifacts := artifact.Store{Root: t.TempDir()}
 	eval, sum := evalReleaseItem(t, artifacts, `{"status":"complete"}`)
+	evidence := evidenceReleaseItem(t, artifacts, "20990102", evidenceFiles)
 	previous := strings.Repeat("b", 64)
-	evidence := releaseItem{Stage: stage.EvidenceStage, State: "done", Key: "vn/20990102"}
 	for _, tc := range []struct {
 		name         string
 		decision     stage.PreviousReport
-		items        []releaseItem
 		wantPrevious string
-		wantEvidence bool
 	}{
-		{"report with evidence", stage.PreviousReport{SHA256: previous}, []releaseItem{eval, evidence}, previous, true},
-		{"none with evidence", stage.PreviousReport{SHA256: stage.NoPreviousReport}, []releaseItem{eval, evidence}, "none", true},
-		{"evidence missing", stage.PreviousReport{SHA256: previous}, []releaseItem{eval}, previous, false},
-		{"evidence pending", stage.PreviousReport{SHA256: previous}, []releaseItem{eval, {Stage: stage.EvidenceStage, State: "pending", Key: "vn/20990102"}}, previous, false},
+		{"report", stage.PreviousReport{SHA256: previous}, previous},
+		{"none", stage.PreviousReport{SHA256: stage.NoPreviousReport}, "none"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			summary := releaseRun{}
-			done, err := applyReleaseDecision(&summary, "vn", "20990102", decisionSnapshot(t, &tc.decision), tc.items, artifacts)
+			done, err := applyReleaseDecision(&summary, "vn", "20990102", decisionSnapshot(t, &tc.decision), []releaseItem{eval, evidence}, artifacts)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if done != tc.wantEvidence || summary.EvalReportSHA256 != sum || summary.PreviousReportSHA256 != tc.wantPrevious {
+			want := releaseRun{EvalReportSHA256: sum, PreviousReportSHA256: tc.wantPrevious, FindingsSHA256: sha256Hex([]byte(evidenceFiles["findings.json"])), IdentitySHA256: sha256Hex([]byte(evidenceFiles["identity.jsonl"])), ChangesSHA256: sha256Hex([]byte(evidenceFiles["changes.jsonl"]))}
+			if !done || summary != want {
 				t.Fatalf("done=%v summary=%+v", done, summary)
+			}
+		})
+	}
+}
+
+func TestReleaseDecision_DecidedRunAtTheCutoffWritesAllFive(t *testing.T) {
+	artifacts := artifact.Store{Root: t.TempDir()}
+	cutoff := stage.LegacyCutoff("vn")
+	eval, _ := evalReleaseItem(t, artifacts, `{"status":"complete"}`)
+	eval.Key = "vn/" + cutoff
+	decision := stage.PreviousReport{SHA256: strings.Repeat("b", 64)}
+	summary := releaseRun{}
+	if _, err := applyReleaseDecision(&summary, "vn", cutoff, decisionSnapshot(t, &decision), []releaseItem{eval, evidenceReleaseItem(t, artifacts, cutoff, evidenceFiles)}, artifacts); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"eval_report_sha256", "previous_report_sha256", "findings_sha256", "identity_sha256", "changes_sha256"} {
+		if !strings.Contains(string(data), `"`+field+`":"`) {
+			t.Errorf("decided run at the cutoff omits %s: %s", field, data)
+		}
+	}
+	if _, err = applyReleaseDecision(&releaseRun{}, "vn", cutoff, decisionSnapshot(t, &decision), []releaseItem{eval}, artifacts); err == nil {
+		t.Fatal("decided run at the cutoff without evidence wrote a row")
+	}
+}
+
+func TestReleaseDecision_RefusesMissingOrUnverifiedEvidence(t *testing.T) {
+	artifacts := artifact.Store{Root: t.TempDir()}
+	eval, _ := evalReleaseItem(t, artifacts, `{"status":"complete"}`)
+	decision := stage.PreviousReport{SHA256: strings.Repeat("b", 64)}
+	partial := map[string]string{"findings.json": evidenceFiles["findings.json"]}
+	tampered := evidenceReleaseItem(t, artifacts, "20990102", evidenceFiles)
+	tampered.ArtifactHash = strings.Repeat("0", 64)
+	edited := evidenceReleaseItem(t, artifacts, "20990102", map[string]string{"findings.json": "{}", "identity.jsonl": "{}", "changes.jsonl": "{}"})
+	if err := os.WriteFile(filepath.Join(artifacts.Abs(edited.Path), "identity.jsonl"), []byte("{\"x\":1}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for name, items := range map[string][]releaseItem{
+		"evidence missing": {eval},
+		"evidence pending": {eval, {Stage: stage.EvidenceStage, State: "pending", Key: "vn/20990102"}},
+		"file missing":     {eval, evidenceReleaseItem(t, artifacts, "20990102", partial)},
+		"other manifest":   {eval, tampered},
+		"edited file":      {eval, edited},
+	} {
+		t.Run(name, func(t *testing.T) {
+			summary := releaseRun{}
+			if _, err := applyReleaseDecision(&summary, "vn", "20990102", decisionSnapshot(t, &decision), items, artifacts); err == nil || !strings.Contains(err.Error(), "evidence") {
+				t.Fatalf("err = %v summary=%+v", err, summary)
 			}
 		})
 	}

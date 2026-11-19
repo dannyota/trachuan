@@ -55,8 +55,8 @@ other than `postgres` is a superuser or a member of one: the result is
 `waiting`, so no manifest is spent. The same check runs again in the `postgres`
 step.
 
-The [manual restore](../runbooks/release-restore.md#restore-a-corpus-manually)
-is for a dump the owner already trusts and is outside these rules.
+The [manual restore](../runbooks/corpus-restore-manual.md) is for a dump the
+owner already trusts and is outside these rules.
 
 ## Steps
 

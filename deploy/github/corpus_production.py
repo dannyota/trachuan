@@ -7,7 +7,7 @@ import tempfile
 
 from corpus_manifest import decode, manifest_fields, validate_manifest
 from corpus_registry import existing_release, production
-from corpus_rules import first_signing_allowed, refuse_until_sidecar_gate, require_status_country
+from corpus_rules import first_signing_allowed, require_status_country
 from manifest import canonical
 
 STATUS_URL = 'https://trachuan.vn/api/v1/public/status'
@@ -95,7 +95,6 @@ def resign_differences(country, rel, directory, temporary):
         raise ValueError(f'no signed manifest for {country}-{rel}')
     rebuilt = validate_manifest(manifest_fields(signed['commit'], signed['sequence'], country, rel,
                                                 directory, directory / 'report.json'))
-    refuse_until_sidecar_gate(decode((directory / 'release.json').read_bytes()))
     return [(field, canonical(signed[field]).decode(),
              canonical(rebuilt[field]).decode() if field in rebuilt else 'absent')
             for field in changed_fields(signed, rebuilt)]

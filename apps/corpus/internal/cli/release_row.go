@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/config"
@@ -178,6 +179,9 @@ type releaseRun struct {
 
 	EvalReportSHA256     string `json:"eval_report_sha256,omitempty"`
 	PreviousReportSHA256 string `json:"previous_report_sha256,omitempty"`
+	FindingsSHA256       string `json:"findings_sha256,omitempty"`
+	IdentitySHA256       string `json:"identity_sha256,omitempty"`
+	ChangesSHA256        string `json:"changes_sha256,omitempty"`
 }
 
 type releaseItem struct {
@@ -217,6 +221,11 @@ func applyReleaseDecision(summary *releaseRun, cc, rel string, rawSnapshot json.
 		}
 		switch item.Stage {
 		case stage.EvidenceStage:
+			digests, err := evidenceDigests(artifacts.Abs(item.Path), item.ArtifactHash)
+			if err != nil {
+				return false, err
+			}
+			summary.FindingsSHA256, summary.IdentitySHA256, summary.ChangesSHA256 = digests[0], digests[1], digests[2]
 			evidenceDone = true
 		case "eval":
 			dir := artifacts.Abs(item.Path)
@@ -238,8 +247,11 @@ func applyReleaseDecision(summary *releaseRun, cc, rel string, rawSnapshot json.
 	if !reportFound {
 		return false, fmt.Errorf("release run has no done evaluation")
 	}
+	if !evidenceDone {
+		return false, fmt.Errorf("release run has no done evidence")
+	}
 	summary.PreviousReportSHA256 = decision.SHA256
-	return evidenceDone, nil
+	return true, nil
 }
 
 func readReleaseRun(ctx context.Context, cc, rel, url string, row map[string]json.RawMessage, artifacts artifact.Store) (releaseRun, error) {
@@ -315,4 +327,31 @@ func readReleaseRun(ctx context.Context, cc, rel, url string, row map[string]jso
 	}
 	summary.Complete = summary.Complete && evidenceDone && summary.ExpectedItems > 0 && summary.IncompleteItems == 0 && summary.UnacceptedGaps == 0
 	return summary, nil
+}
+
+var evidenceNames = []string{"findings.json", "identity.jsonl", "changes.jsonl"}
+
+func evidenceDigests(dir, recorded string) ([]string, error) {
+	manifest, err := artifact.VerifyFiles(dir, evidenceNames...)
+	if err != nil {
+		return nil, fmt.Errorf("evidence artifact failed verification: %w", err)
+	}
+	if manifest != recorded {
+		return nil, fmt.Errorf("evidence artifact failed verification: manifest %s, recorded %s", manifest, recorded)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "MANIFEST.sha256"))
+	if err != nil {
+		return nil, fmt.Errorf("read evidence manifest: %w", err)
+	}
+	digests := map[string]string{}
+	for _, line := range strings.Split(string(data), "\n") {
+		if len(line) > 66 && line[64:66] == "  " {
+			digests[line[66:]] = line[:64]
+		}
+	}
+	out := make([]string, 0, len(evidenceNames))
+	for _, name := range evidenceNames {
+		out = append(out, digests[name])
+	}
+	return out, nil
 }

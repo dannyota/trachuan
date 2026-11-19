@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 from corpus_manifest import create, non_regression_contract
+from corpus_rules import DECISION_FIELDS
 from manifest import canonical
 
 
@@ -119,11 +120,62 @@ def write_fixture(path):
     (path / 'MANIFEST.sha256').write_bytes(manifest)
     save_fixture(path, row, report)
     manifest = json.loads(create('a' * 40, 1, 'vn', row['rel'], path, path / 'report.json'))
+    manifest.pop('evidence', None)
     manifest.update(rel='20990101_1', database='corpus_vn_20990101_1', previous='20981231_1')
     manifest['dump']['object'] = 'vn/20990101_1/corpus.dump'
     manifest['report']['sha256'] = digest(previous_data)
     (path / 'previous-manifest.json').write_bytes(canonical(manifest))
     return row, report
+
+
+def evidence_bindings(path, row, report_bytes):
+    return {'rel': row.get('rel'), 'dump_sha256': 'sha256:' + digest((path / 'corpus.dump').read_bytes()),
+            'build_artifact_sha256': 'sha256:' + digest((path / 'MANIFEST.sha256').read_bytes()),
+            'report_sha256': 'sha256:' + digest(report_bytes)}
+
+
+def previous_rel(report):
+    return ((report.get('previous_diff') or {}).get('previous') or {}).get('rel', 'none')
+
+
+def findings_fixture(path, row, report_bytes, report, predecessor='none', detectors=None, findings=()):
+    bindings = evidence_bindings(path, row, report_bytes) | {
+        'detector_registry_sha256': 'sha256:' + 'f' * 64, 'predecessor_rel': previous_rel(report),
+        'predecessor_findings_sha256': predecessor}
+    if detectors is None:
+        detectors = {'unmatched_operative_claim': dict(complete=True, severity='review', observed=3, not_observable=0, excluded=0),
+                     'partial_without_provision_effect': dict(complete=True, severity='info', observed=2, not_observable=1, excluded=0)}
+    return dict(schema=2, bindings=bindings, detectors=detectors, findings=list(findings),
+                new=[], gone=[], carried=[], unmatched=[])
+
+
+def jsonl(records):
+    return b''.join(json.dumps(record, ensure_ascii=False, separators=(',', ':')).encode() + b'\n' for record in records)
+
+
+def write_evidence(path, row, report, findings=None, identity=None, changes=None, predecessor_identity='none'):
+    report_bytes = (path / 'report.json').read_bytes()
+    base = evidence_bindings(path, row, report_bytes)
+    if findings is None:
+        findings = findings_fixture(path, row, report_bytes, report)
+    if identity is None:
+        identity = [dict(schema=1, bindings=base),
+                    dict(type='document', key='vn:vbpl:2099001', number_norm='1/2099/TT-NHNN', status_class='in_force',
+                         eff_from='2099-01-01', eff_to=None, is_current=True, validity_conflict=False,
+                         text_source='source_tree', text_complete=True)]
+    if changes is None:
+        changes = [dict(schema=1, bindings=base | {'predecessor_rel': previous_rel(report),
+                                                   'predecessor_identity_sha256': predecessor_identity},
+                        baseline=predecessor_identity == 'none')]
+    files = {'findings.json': json.dumps(findings, indent=2).encode() + b'\n',
+             'identity.jsonl': identity if isinstance(identity, bytes) else jsonl(identity),
+             'changes.jsonl': changes if isinstance(changes, bytes) else jsonl(changes)}
+    for name, data in files.items():
+        (path / name).write_bytes(data)
+    if isinstance(row.get('run'), dict):
+        row['run'].update(findings_sha256=digest(files['findings.json']), identity_sha256=digest(files['identity.jsonl']),
+                          changes_sha256=digest(files['changes.jsonl']))
+    (path / 'release.json').write_text(json.dumps(row))
 
 
 def save_fixture(path, row, report):
@@ -134,11 +186,13 @@ def save_fixture(path, row, report):
                           previous_report_sha256=previous.get('report_sha256', 'none'))
     (path / 'release.json').write_text(json.dumps(row))
     (path / 'report.json').write_bytes(data)
+    if (path / 'corpus.dump').exists() and (path / 'MANIFEST.sha256').exists():
+        write_evidence(path, row, report)
 
 
 def save_older_shape(path, row):
     older = copy.deepcopy(row)
-    for field in ('eval_report_sha256', 'previous_report_sha256'):
+    for field in DECISION_FIELDS:
         older['run'].pop(field, None)
     (path / 'release.json').write_text(json.dumps(older))
 

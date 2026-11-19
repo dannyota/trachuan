@@ -48,7 +48,7 @@ func TestCompute_EmptyInputWritesEmptyLists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"schema": 1`, `"detectors": {}`, `"findings": []`, `"new": []`, `"gone": []`, `"carried": []`, `"unmatched": []`} {
+	for _, want := range []string{`"schema": 2`, `"detectors": {}`, `"findings": []`, `"new": []`, `"gone": []`, `"carried": []`, `"unmatched": []`} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("missing %s in %s", want, data)
 		}
