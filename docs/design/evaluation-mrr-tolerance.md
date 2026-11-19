@@ -19,8 +19,9 @@ not the number of cases that moved.
 
 The gated MRR@8 records are four: cohorts `old_product` and `development`, each
 in modes `exact` and `ann`, hybrid arms, limit 8. The top-level records repeat
-`old_product` and must equal it. Recall@20 is gated separately and is never
-relaxed; abstention is not a gate.
+`old_product` and must equal it. The `development` records leave out the
+[period cohort](evaluation-period-cases.md). Recall@20 is gated separately and
+is never relaxed; abstention is not a gate.
 
 ## When the tolerance applies
 
@@ -37,7 +38,9 @@ candidate report and the previous report; otherwise the strict rule applies:
    unchanged between them.
 3. The legacy, old-product and development fixture hashes are equal, and the
    cohort has the same case ids, positive count and denominators, the same
-   rejection set, and the same modes, arms and limits.
+   rejection set, and the same modes, arms and limits. Across a revised
+   development fixture, a `development` record meets this condition over its
+   comparable cases instead ([revisions](evaluation-fixtures.md#revisions)).
 4. For every case of the record whose first-correct reciprocal rank at limit 8
    fell, every scoring alternative the previous report records for the case
    (`mapped_identities`, compared by the fields the matcher uses, not by

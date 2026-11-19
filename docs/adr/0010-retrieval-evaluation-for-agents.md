@@ -56,14 +56,16 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    previous release's: MRR@8 may be below the previous value while it stays
    within a fixed tolerance of the highest value reached under those recipes,
    with recall@20 still strict
-   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). A loss whose
-   credited documents left current-law eligibility through a validity change
-   between the two releases is excused on both metrics
-   ([losses from corrected validity](../design/evaluation-validity-losses.md)).
-   A change that alters only the abstention threshold or its calibration policy
-   ships when matched citations are identical on every cohort and abstention
-   balanced accuracy does not fall on either cohort. Reports state the small
-   sample size; no interval or superiority claim is required.
+   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). Development cases
+   about a past period are scored with the agent's period request in a reported
+   cohort that is not gated
+   ([period cases](../design/evaluation-period-cases.md)); a revised development
+   fixture is compared over the cases it left unchanged
+   ([revisions](../design/evaluation-fixtures.md#revisions)). A change that
+   alters only the abstention threshold or its calibration policy ships when
+   matched citations are identical on every cohort and abstention balanced
+   accuracy does not fall on either cohort. Reports state the small sample size;
+   no interval or superiority claim is required.
 5. Every evaluation reports returned evidence characters per response (p50,
    p95). A change that only reduces size ships when matched citations and gate
    results are identical on every cohort.
@@ -229,10 +231,18 @@ accuracy on either cohort.
   `abstention.calibration_sha256` from its release's data. Condition 1 of the
   MRR@8 tolerance compares retrieval recipes without that field; the abstention
   threshold and every other field must still match.
-- 2026-11-18 (proposed): excused losses from corrected validity added to item 4
-  after `vn/20261118_1`: a reviewed correction ended 32/2012/TT-NHNN, wrongly
-  current in `vn/20261117_7`, and development case dev-033 lost the hit it had
-  credited (recall@20 0.7611 to 0.7522, MRR@8 0.6673 to 0.6595). The gate held
-  212 other corrections; the entry was dropped to ship them. Accepted cost: the
-  validators trust the validity fields the candidate report states. Scoring of
-  cases tagged `historical` stays open.
+- 2026-11-19: period cases and fixture revisions added to item 4 after
+  `vn/20261118_1`. A reviewed correction ended 32/2012/TT-NHNN, wrongly current
+  in `vn/20261117_7`, and dev-033, a question about 2011 to 2014 scored as
+  current law, lost the hit it had credited: recall@20 86 to 85 of 113, MRR@8
+  0.6673 to 0.6595. The gate held 212 other corrections and the entry was
+  dropped to ship them. The nine cases about a past period now form a reported
+  `development_period` cohort under `in_force_only:false`; on the other 41
+  positive cases that run keeps recall@20 at 74 of 85 and falls MRR@8 by 0.0008,
+  inside the tolerance. Rejected: excusing a loss whose credited document left
+  current-law eligibility. Its review found that it trusted validity fields the
+  candidate report states, excused any cause of ineligibility rather than a
+  reviewed correction, and could not tell a primary hit from a non-current tail
+  hit in the previous case records. A current-law case whose expected document
+  ends is revised in Git instead. Accepted cost: a loss on a revised case is not
+  gated in the release that revises it.

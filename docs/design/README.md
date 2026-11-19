@@ -82,7 +82,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [search results](mcp-results.md)                                                 | Compact search hits, snippets, related pointers, batch `read`, guide flow                                        |
 | [evaluation](evaluation.md)                                                      | Cohorts, identity mapping, calibration, metrics and caches                                                       |
 | [MRR@8 tolerance](evaluation-mrr-tolerance.md)                                   | The bounded exception to MRR@8 non-regression on a corpus-only release, against a high-water mark                |
-| [losses from corrected validity](evaluation-validity-losses.md)                  | Excused recall and MRR losses when a validity fix removes a wrongly current hit                                  |
+| [period cases](evaluation-period-cases.md)                                       | Development cases about a past period: a reported cohort under the agent's period request, not gated             |
 | [evaluation fixtures](evaluation-fixtures.md)                                    | Authored case fixtures, the identity map and identity validation                                                 |
 | [serialized recipe](retrieval-recipe-serialized.md)                              | Serialized retrieval recipe, hash and checks                                                                     |
 | [retrieval performance](retrieval-performance.md)                                | Measured statement costs per search and topic page; one change per cost                                          |

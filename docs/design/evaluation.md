@@ -18,26 +18,26 @@ and fixture hashes, never arbitrary SQL. Separate
 publishing its final recipe.
 
 Freeze the engine clock to the build's evaluation date, but leave request `AsOf`
-nil and `InForceOnly` true for both old cohorts and calibration. Setting `AsOf`
-would change the test to historical eligibility. Research-only overrides on
-`corpus eval` (the per-document and per-article caps, and validity policy
-overrides for cases tagged `historical`, a non-current tail and not-yet
-documents) may change a trial's request or shaping; each is recorded on the
-report and on every record that carries `limit`, never reaches serving or the
-stage, and a mismatch makes `previous_diff` incompatible. Cache/report fields
-distinguish `evaluation_date` from nullable `request_as_of`. Use the evaluation
-deadline profile for every arm. Cases run three at a time within the item and
-their results merge in case order, so every report and cache field except
-`timings_ms` equals a serial run; `timings_ms` measures latency with three cases
-in flight. A case whose exact retrieval is cancelled by the statement timeout
-(SQLSTATE 57014) is retried once, alone, after the others, under the same
-deadline; a second timeout fails the run, naming the case and the code, and no
-other error is retried. A retry cannot change the result: exact arms read a
-release database that no longer changes, and their order is total. Errors carry
-the SQLSTATE; server retrieval keeps failing fast and keeps its public messages.
-In ANN mode the lexical arm reuses the exact-mode lexical result cut to the
-recipe depth: its order (score descending, then chunk id) is total, so the
-prefix equals a fresh query.
+nil and `InForceOnly` true for every gated cohort and calibration; the
+[period cohort](evaluation-period-cases.md) sends `InForceOnly` false. Setting
+`AsOf` would change the test to historical eligibility. Research-only overrides
+on `corpus eval` (the per-document and per-article caps, and validity policy
+overrides for a non-current tail and not-yet documents) may change a trial's
+request or shaping; each is recorded on the report and on every record that
+carries `limit`, never reaches serving or the stage, and a mismatch makes
+`previous_diff` incompatible. Cache/report fields distinguish `evaluation_date`
+from nullable `request_as_of`. Use the evaluation deadline profile for every
+arm. Cases run three at a time within the item and their results merge in case
+order, so every report and cache field except `timings_ms` equals a serial run;
+`timings_ms` measures latency with three cases in flight. A case whose exact
+retrieval is cancelled by the statement timeout (SQLSTATE 57014) is retried
+once, alone, after the others, under the same deadline; a second timeout fails
+the run, naming the case and the code, and no other error is retried. A retry
+cannot change the result: exact arms read a release database that no longer
+changes, and their order is total. Errors carry the SQLSTATE; server retrieval
+keeps failing fast and keeps its public messages. In ANN mode the lexical arm
+reuses the exact-mode lexical result cut to the recipe depth: its order (score
+descending, then chunk id) is total, so the prefix equals a fresh query.
 
 The sibling clause merge follows the release recipe (recipe 3);
 `--merge-siblings` is rejected with a message naming the release recipe.
@@ -277,12 +277,14 @@ compare per-case gains/losses and reject incompatible scorer/fixture versions. A
 previous report scored by `agent-eval/3` stays comparable with `agent-eval/4`
 for the product cohorts, because the two differ only in legacy matching: the
 non-regression checks and the old product and development case diffs run, the
-diff names both scorers, and legacy cases are left out of it. Every other scorer
-difference skips the comparison with the reason `incompatible scorer version`,
-which fails the stage for a run that froze a previous report. A previous report
-under another retrieval recipe version stays comparable: the diff and the
-non-regression checks run, and the report labels the comparison with both recipe
-versions, as for corpus changes. Corpus changes are labeled coverage changes,
-not an isolated model effect. Report low sample size and old-cohort reuse; no
-superiority interval or claim is needed here. MRR@8 on a corpus-only release is
-judged by the [MRR@8 tolerance](evaluation-mrr-tolerance.md).
+diff names both scorers, and legacy cases are left out of it. `agent-eval/5` and
+`agent-eval/6` are comparable the same way; `agent-eval/6` adds the
+[period cohort](evaluation-period-cases.md). Every other scorer difference skips
+the comparison with the reason `incompatible scorer version`, which fails the
+stage for a run that froze a previous report. A previous report under another
+retrieval recipe version stays comparable: the diff and the non-regression
+checks run, and the report labels the comparison with both recipe versions, as
+for corpus changes. Corpus changes are labeled coverage changes, not an isolated
+model effect. Report low sample size and old-cohort reuse; no superiority
+interval or claim is needed here. MRR@8 on a corpus-only release is judged by
+the [MRR@8 tolerance](evaluation-mrr-tolerance.md).

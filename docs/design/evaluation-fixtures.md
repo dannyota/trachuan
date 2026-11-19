@@ -82,3 +82,37 @@ not found under the rule above stays `mapping_incomplete` until re-adjudicated.
 Map bytes are pinned by the [build input hash](index.md#build-stage) and eval
 input hash, not a recipe; editing the map requires new build/eval input, not
 changed frozen recipes.
+
+## Revisions
+
+The development fixture and its identity entries change only through a reviewed
+Git change; build and eval never write them. The legacy and old product fixtures
+are never revised. When the development fixture's hash differs from the previous
+report's, the gated `development` records are compared over the **comparable
+cases** instead of the whole cohort. A case is comparable when it has the same
+ID in both fixtures, the same fields other than `tags` (`question`,
+`expected_citations`, `expect_abstain`), and the same cohort in both reports,
+`development` or [`development_period`](evaluation-period-cases.md).
+
+- The previous value and the candidate value are both recomputed from the case
+  records over the comparable cases, in fixture order, with the metric's own
+  definition. Recall@20 compares integer matched counts over the same
+  denominator.
+- `high_water` does not cross a revision. It is the previous value recomputed
+  this way, and the [MRR@8 tolerance](evaluation-mrr-tolerance.md) applies
+  against it. Its other conditions hold as written.
+- Each record states `revision`: the comparable case count, the recomputed
+  previous and candidate values, and `revised`, every case of the cohort outside
+  the comparable set with its reason (`added`, `removed`, `changed` or
+  `cohort`). Its `value` stays the value over all its cases, and its status is
+  judged on the comparable values.
+- The uploader and the signing validator read both fixtures from the repository
+  at each release's manifest `commit`, require their SHA-256 to equal the
+  reports' fixture hashes, and recompute the comparable set, both values, the
+  tolerance check and the status. They refuse a record whose stated fields
+  differ from theirs. They also check that the candidate's `development_period`
+  case IDs are exactly the fixture's cases tagged `historical`.
+
+Accepted cost: a loss on a revised case is not gated in the release that revises
+it. The guard is the Git review of the fixture change, and `revised` lists every
+such case. A later release compares the revised case as usual.
