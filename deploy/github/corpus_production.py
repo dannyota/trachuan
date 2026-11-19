@@ -95,12 +95,13 @@ def resign_differences(country, rel, directory, temporary):
         raise ValueError(f'no signed manifest for {country}-{rel}')
     rebuilt = validate_manifest(manifest_fields(signed['commit'], signed['sequence'], country, rel,
                                                 directory, directory / 'report.json'))
-    return [(field, canonical(signed[field]).decode(),
-             canonical(rebuilt[field]).decode() if field in rebuilt else 'absent')
-            for field in changed_fields(signed, rebuilt)]
+    return signed, [(field, canonical(signed[field]).decode(),
+                     canonical(rebuilt[field]).decode() if field in rebuilt else 'absent')
+                    for field in changed_fields(signed, rebuilt)]
 
 
 def main():
+    from corpus_upload import dispatch_command
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['resign-check'])
     parser.add_argument('country')
@@ -108,12 +109,14 @@ def main():
     parser.add_argument('directory', type=Path)
     args = parser.parse_args()
     with tempfile.TemporaryDirectory() as temporary:
-        differences = resign_differences(args.country, args.rel, args.directory, Path(temporary))
-    for field, signed, rebuilt in differences:
-        print(f'{field}: signed {signed} rebuilt {rebuilt}')
+        signed, differences = resign_differences(args.country, args.rel, args.directory, Path(temporary))
+    for field, old, new in differences:
+        print(f'{field}: signed {old} rebuilt {new}')
+    if not differences:
+        print('no signed field would change')
+    print(' '.join(dispatch_command(args.country, args.rel, signed['report']['sha256'])))
     if differences:
         sys.exit(RESIGN_DRIFT_EXIT)
-    print('no signed field would change')
 
 
 if __name__ == '__main__':

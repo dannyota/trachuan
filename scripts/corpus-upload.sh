@@ -57,8 +57,7 @@ if [[ $dry_run == true ]]; then
   while IFS= read -r file; do
     printf 'Upload and verify size and ETag: s3://trachuan-releases/%s%s\n' "$prefix" "$file"
   done <<< "$files"
-  printf 'gh workflow run corpus-release.yml --ref main -f country=%s -f rel=%s\n' "$country" "$rel"
-  exit 0
+  exec python3 "$root/deploy/github/corpus_upload.py" --dry-run "$country" "$rel" "$build_dir" "$report"
 fi
 
 version=$(aws --version)
@@ -80,5 +79,3 @@ count=$(aws_release s3api list-objects-v2 --bucket trachuan-releases --prefix "$
 
 cp "$report" "$directory/report.json"
 python3 "$root/deploy/github/corpus_upload.py" "$country" "$rel" "$build_dir" "$directory/report.json"
-cp "$directory/report.json" "$build_dir/report.json"
-gh workflow run corpus-release.yml --ref main -f "country=$country" -f "rel=$rel"

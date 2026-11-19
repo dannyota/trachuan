@@ -102,12 +102,20 @@ same owner. The uploader creates the cache directory with mode `0700`, checks
 the prefix is empty, uploads every object (`build.json` too from schema 8), then
 rechecks every size and ETag against its upload receipt. It keeps the uploaded
 report as `$UPLOAD/report.json` before dispatching `corpus-release.yml` from
-`main`. Use that file as `--previous-report` for the next release after this
+`main` with that report's SHA-256 as `report_sha256`; signing refuses any other
+report. Use that file as `--previous-report` for the next release after this
 release becomes active. If dispatch alone fails, dispatch it manually with the
-same country and release; do not upload again. A partial upload reserves that
-prefix; use a new release id for a rebuilt corpus. The signed manifest
-authorizes release; the report's `release_eligible` remains false. Host
-activation follows
+same country and release and the SHA-256 of `$UPLOAD/report.json`; do not upload
+again:
+
+```sh
+gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<rel> \
+  -f "report_sha256=$(shasum -a 256 "$UPLOAD/report.json" | cut -d' ' -f1)"
+```
+
+A partial upload reserves that prefix; use a new release id for a rebuilt
+corpus. The signed manifest authorizes release; the report's `release_eligible`
+remains false. Host activation follows
 [corpus release](../design/corpus-release.md#host-activation).
 
 Signing repeats the production comparison before it signs or pushes anything, so
@@ -125,11 +133,15 @@ comparison applies to the retry only while production's sequence is below the
 pushed one. Once another release holds production with a higher sequence, the
 pushed release is exempt too: signing it moves the tag, the host refuses it
 because its `previous` is not the active release, and uploads stay blocked.
-Recover by signing the active release again:
+Recover by signing the active release again. Every re-sign passes
+`report.sha256` from that release's signed manifest; `resign-check` verifies the
+manifest and prints the exact command as its last line:
 
 ```sh
-gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<active rel>
+python3 deploy/github/corpus_production.py resign-check vn <active rel> <upload-dir>
 ```
+
+Then run the printed `gh workflow run corpus-release.yml ...` line.
 
 ### First release with a decision
 
@@ -151,11 +163,9 @@ image, so no rollback can reach an image that drops the warning.
 ### Roll back a corpus release
 
 Request a lasting rollback by signing the older release again, within its
-retention window:
-
-```sh
-gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<older rel>
-```
+retention window: run `resign-check` for it, as below, then the
+`gh workflow run` line it prints, which carries that release's signed
+`report.sha256`.
 
 The new signature gives that release a new sequence, `<cc>-production` follows
 it, and the host reactivates the retained database. A manual swap of
@@ -164,7 +174,9 @@ until the two agree.
 
 Check a rollback target ahead of need, from its upload directory. The command
 needs `oras` and `cosign`, signs and pushes nothing, prints each signed field
-that would change and exits 3 when any would:
+that would change and exits 3 when any would, and ends with the dispatch command
+for that release. It needs the release's upload directory, so keep that
+directory for as long as the release may be signed again:
 
 ```sh
 python3 deploy/github/corpus_production.py resign-check vn <rel> <upload-dir>

@@ -220,10 +220,25 @@ class ResignCheckTest(unittest.TestCase):
         self.assertEqual(existing.call_args.args[:2], ('vn', REL))
         return code, output.getvalue()
 
+    def dispatch(self):
+        return ('gh workflow run corpus-release.yml --ref main -f country=vn '
+                f"-f rel={REL} -f report_sha256={self.signed['report']['sha256']}\n")
+
     def test_matching_upload_directory_reports_no_difference(self):
         code, output = self.run_check()
         self.assertEqual(code, 0)
-        self.assertEqual(output, 'no signed field would change\n')
+        self.assertEqual(output, 'no signed field would change\n' + self.dispatch())
+
+    def test_dispatch_takes_the_report_hash_of_the_signed_manifest(self):
+        local = digest((self.path / 'report.json').read_bytes())
+        self.assertEqual(self.signed['report']['sha256'], local)
+        self.signed['report']['sha256'] = 'f' * 64
+        code, output = self.run_check()
+        self.assertEqual(code, 3)
+        self.assertEqual(output.splitlines(), [f'report: signed {{"quality_pass":true,"sha256":"{"f" * 64}"}} '
+                                               f'rebuilt {{"quality_pass":true,"sha256":"{local}"}}',
+                                               self.dispatch().rstrip('\n')])
+        self.assertNotIn(local, output.splitlines()[-1])
 
     def test_each_differing_field_is_printed_with_both_values(self):
         self.signed['previous'] = '20990101_2'
@@ -232,13 +247,14 @@ class ResignCheckTest(unittest.TestCase):
         code, output = self.run_check()
         self.assertEqual(code, 3)
         lines = output.splitlines()
+        self.assertEqual(lines.pop(), self.dispatch().rstrip('\n'))
         self.assertEqual([line.split(':', 1)[0] for line in lines], ['dump', 'previous', 'retired'])
         self.assertIn('previous: signed "20990101_2" rebuilt "20990101_1"', lines)
         self.assertIn('retired: signed true rebuilt absent', lines)
 
     def test_fields_signing_may_change_are_not_reported(self):
         self.signed.update(commit='d' * 40, sequence=1, heading_review=dict(reviewer='old'))
-        self.assertEqual(self.run_check(), (0, 'no signed field would change\n'))
+        self.assertEqual(self.run_check(), (0, 'no signed field would change\n' + self.dispatch()))
 
     def test_new_local_field_is_not_a_difference(self):
         add_heading_build(self.path, self.row, self.report)
@@ -276,16 +292,19 @@ class ResignCheckTest(unittest.TestCase):
     def test_upload_whose_evidence_differs_from_the_signed_manifest_is_reported(self):
         write_evidence(self.path, self.row, self.report)
         self.signed = json.loads(create('c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
-        self.assertEqual(self.run_check(), (0, 'no signed field would change\n'))
+        self.assertEqual(self.run_check(), (0, 'no signed field would change\n' + self.dispatch()))
         findings = json.loads((self.path / 'findings.json').read_bytes())
         findings['detectors']['unmatched_operative_claim']['observed'] = 4
         write_evidence(self.path, self.row, self.report, findings=findings)
         code, output = self.run_check()
         self.assertEqual(code, 3)
-        self.assertEqual([line.split(':', 1)[0] for line in output.splitlines()], ['evidence'])
+        self.assertTrue(output.endswith(self.dispatch()), output)
+        self.assertEqual([line.split(':', 1)[0] for line in output.removesuffix(self.dispatch()).splitlines()], ['evidence'])
         save_older_shape(self.path, self.row)
         code, output = self.run_check()
         self.assertEqual(code, 3)
+        self.assertTrue(output.endswith(self.dispatch()), output)
+        output = output.removesuffix(self.dispatch())
         self.assertTrue(output.startswith('evidence: signed {') and output.endswith(' rebuilt absent\n'), output)
 
 

@@ -1,3 +1,4 @@
+import hashlib
 import importlib
 import json
 from pathlib import Path
@@ -5,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from corpus_test_support import save_older_shape, write_fixture
+from corpus_test_support import save_fixture, save_older_shape, write_fixture
 from corpus_manifest import create
 
 
@@ -18,16 +19,19 @@ class CorpusPublishTest(unittest.TestCase):
         self.row, _ = write_fixture(self.path)
         self.current = json.loads((self.path / 'previous-manifest.json').read_bytes()) | {'sequence': 3}
 
+    def report_sha256(self):
+        return hashlib.sha256((self.path / 'report.json').read_bytes()).hexdigest()
+
     def manifest(self, sequence):
         (self.path / 'manifest.json').write_bytes(create('a' * 40, sequence, 'vn', '20990102_1',
                                                        self.path, self.path / 'report.json'))
 
-    def publish(self, current=None, existing=None, sign_error=None):
+    def publish(self, current=None, existing=None, sign_error=None, report_sha256=None):
         with patch('corpus_publish.sign', side_effect=sign_error) as sign, \
                 patch('corpus_production.production', return_value=current or self.current), \
                 patch('corpus_production.existing_release', return_value=existing), \
                 patch('publish.subprocess.run') as run:
-            self.module.publish(self.path, 'refs/heads/main', 'a' * 40)
+            self.module.publish(self.report_sha256() if report_sha256 is None else report_sha256, self.path, 'refs/heads/main', 'a' * 40)
         return sign, run
 
     def test_signs_and_publishes_two_layers_then_moves_country_pointer(self):
@@ -59,15 +63,15 @@ class CorpusPublishTest(unittest.TestCase):
             with patch('corpus_publish.sign', side_effect=ValueError('signature')), \
                     patch('corpus_production.production', return_value=self.current), \
                     patch('corpus_production.existing_release', return_value=None):
-                self.module.publish(self.path, 'refs/heads/main', 'a' * 40)
+                self.module.publish(self.report_sha256(), self.path, 'refs/heads/main', 'a' * 40)
         run.assert_not_called()
 
-    def assert_refused_before_signing(self, **patches):
+    def assert_refused_before_signing(self, report_sha256=None, **patches):
         with patch('corpus_publish.sign') as sign, patch('publish.subprocess.run') as run, \
                 patch('corpus_production.production', **patches.get('production', dict(return_value=self.current))), \
                 patch('corpus_production.existing_release', **patches.get('existing', dict(return_value=None))):
             with self.assertRaises(ValueError):
-                self.module.publish(self.path, 'refs/heads/main', 'a' * 40)
+                self.module.publish(self.report_sha256() if report_sha256 is None else report_sha256, self.path, 'refs/heads/main', 'a' * 40)
         sign.assert_not_called()
         run.assert_not_called()
 
@@ -89,6 +93,22 @@ class CorpusPublishTest(unittest.TestCase):
         path = self.path / 'report.json'
         path.write_bytes(path.read_bytes() + b' ')
         self.assert_refused_before_signing()
+
+    def test_report_must_have_the_dispatched_hash(self):
+        self.manifest(7)
+        dispatched = self.report_sha256()
+        for value in ('0' * 64, dispatched.upper(), dispatched[:-1], dispatched + '\n', ''):
+            with self.subTest(value=value):
+                self.assert_refused_before_signing(report_sha256=value)
+
+    def test_consistent_swapped_set_is_refused_by_the_dispatched_hash(self):
+        dispatched = self.report_sha256()
+        report = json.loads((self.path / 'report.json').read_bytes())
+        save_fixture(self.path, self.row, dict(reversed(report.items())))
+        self.assertNotEqual(self.report_sha256(), dispatched)
+        self.manifest(7)
+        self.publish()
+        self.assert_refused_before_signing(report_sha256=dispatched)
 
     def test_existing_release_at_or_below_production_signs_without_comparison(self):
         self.manifest(7)
@@ -128,7 +148,7 @@ class CorpusPublishTest(unittest.TestCase):
         with patch('corpus_publish.sign') as sign:
             for ref, commit in [('refs/heads/other', 'a' * 40), ('refs/heads/main', 'b' * 40)]:
                 with self.assertRaises(ValueError):
-                    self.module.publish(self.path, ref, commit)
+                    self.module.publish(self.report_sha256(), self.path, ref, commit)
             sign.assert_not_called()
 
 

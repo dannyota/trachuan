@@ -6,10 +6,15 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from corpus_manifest import identity, release_files, validated_inputs
+from corpus_manifest import identity, release_files, sha256, validated_inputs
 from corpus_previous import verified_previous
 from corpus_production import require_settled
 from manifest import positive
+
+
+def dispatch_command(country, rel, report_sha256):
+    return ['gh', 'workflow', 'run', 'corpus-release.yml', '--ref', 'main',
+            '-f', f'country={country}', '-f', f'rel={rel}', '-f', f'report_sha256={report_sha256}']
 
 
 def etag(result):
@@ -92,6 +97,8 @@ def upload(country, rel, directory, report):
                                 check=True, capture_output=True, text=True)
         return json.loads(result.stdout)
 
+    data = report.read_bytes()
+    report_sha256 = hashlib.sha256(data).hexdigest()
     row, candidate, _, sidecars = validated_inputs(country, rel, directory, report)
     if sidecars is not None:
         print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
@@ -104,18 +111,30 @@ def upload(country, rel, directory, report):
     for name in release_files(row):
         source = report if name == 'report.json' else directory / name
         key = f'{country}/{rel}/{name}'
-        receipts[key] = upload_file(source, key, client)
+        expected = (report_sha256, len(data)) if name == 'report.json' else None
+        receipts[key] = upload_file(source, key, client, expected=expected)
     verify_receipts(receipts, client)
+    (directory / 'report.json').write_bytes(data)
+    subprocess.run(dispatch_command(country, rel, report_sha256), check=True)
+
+
+def print_dispatch(country, rel, report):
+    identity(country, rel)
+    print(' '.join(dispatch_command(country, rel, sha256(report))))
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('country')
     parser.add_argument('rel')
     parser.add_argument('directory', type=Path)
     parser.add_argument('report', type=Path)
     args = parser.parse_args()
-    upload(args.country, args.rel, args.directory, args.report)
+    if args.dry_run:
+        print_dispatch(args.country, args.rel, args.report)
+    else:
+        upload(args.country, args.rel, args.directory, args.report)
 
 
 if __name__ == '__main__':

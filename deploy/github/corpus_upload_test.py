@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import corpus_rules
 import corpus_test_support as support
@@ -213,8 +214,10 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(len([call for call in calls if 'head-object' in call['args']]), 5)
         self.assertGreater(min(i for i, call in enumerate(calls) if 'head-object' in call['args'] and 'vn/20990101_1/report.json' not in call['args']),
                            max(i for i, call in enumerate(calls) if 'put-object' in call['args']))
+        uploaded = support.digest((self.remote / 'report.json').read_bytes())
+        self.assertEqual(uploaded, support.digest((self.build / 'report.json').read_bytes()))
         self.assertEqual(calls[-1]['args'], ['workflow', 'run', 'corpus-release.yml', '--ref', 'main',
-                                           '-f', 'country=vn', '-f', 'rel=20990102_1'])
+                                           '-f', 'country=vn', '-f', 'rel=20990102_1', '-f', f'report_sha256={uploaded}'])
         lock_dir = self.path / '.cache/trachuan'
         self.assertEqual(lock_dir.stat().st_mode & 0o777, 0o700)
         self.assertTrue((lock_dir / 'corpus-upload.lock').exists())
@@ -235,12 +238,15 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.build / 'report.json').read_bytes(), external.read_bytes())
         self.assertEqual((self.remote / 'report.json').read_bytes(), external.read_bytes())
+        self.assertEqual(self.calls()[-1]['args'][-2:], ['-f', 'report_sha256=' + support.digest(external.read_bytes())])
 
     def test_dry_run_validates_locally_and_never_calls_clients(self):
         result = self.run_upload('--dry-run')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('s3://trachuan-releases/vn/20990102_1/corpus.dump', result.stdout)
-        self.assertIn('corpus-release.yml --ref main', result.stdout)
+        report_sha256 = support.digest((self.build / 'report.json').read_bytes())
+        self.assertEqual(result.stdout.splitlines()[-1], 'gh workflow run corpus-release.yml --ref main '
+                         f'-f country=vn -f rel=20990102_1 -f report_sha256={report_sha256}')
         self.assertIn('vn-production', result.stdout)
         self.assertIn('https://trachuan.vn/api/v1/public/status', result.stdout)
         self.assertEqual(self.calls(), [])
@@ -360,14 +366,20 @@ class CorpusUploadTest(unittest.TestCase):
         (self.build / 'signed-manifest.json').write_bytes(canonical(signed | changes))
 
     def test_resign_check_compares_the_verified_manifest_with_the_upload_directory(self):
+        local = support.digest((self.build / 'report.json').read_bytes())
+        dispatch = f'gh workflow run corpus-release.yml --ref main -f country=vn -f rel={REL} -f report_sha256='
         self.signed_manifest()
         result = self.resign_check()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, 'no signed field would change\n')
+        self.assertEqual(result.stdout, f'no signed field would change\n{dispatch}{local}\n')
         self.signed_manifest(previous='20990101_2')
         result = self.resign_check()
         self.assertEqual(result.returncode, 3, result.stderr)
-        self.assertEqual(result.stdout, 'previous: signed "20990101_2" rebuilt "20990101_1"\n')
+        self.assertEqual(result.stdout, f'previous: signed "20990101_2" rebuilt "20990101_1"\n{dispatch}{local}\n')
+        self.signed_manifest(report=dict(sha256='f' * 64, quality_pass=True))
+        result = self.resign_check()
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual(result.stdout.splitlines()[-1], dispatch + 'f' * 64)
         self.assertFalse(any(call['name'] in {'aws', 'gh', 'curl'} or 'sign-blob' in call['args'] or 'push' in call['args'] or 'tag' in call['args']
                              for call in self.calls()))
 
@@ -459,10 +471,35 @@ class CorpusUploadTest(unittest.TestCase):
                 self.assertEqual(self.calls(), [])
 
     def test_dispatch_failure_is_reported_without_retrying_upload(self):
+        external = self.path / 'evaluation report.json'
+        external.write_bytes((self.build / 'report.json').read_bytes())
+        (self.build / 'report.json').unlink()
+        command = self.upload_command()
+        command[-1] = str(external)
         self.env['FAKE_FAIL_DISPATCH'] = '1'
-        result = self.run_upload()
+        result = subprocess.run(command, env=self.env, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(sum(call['name'] == 'gh' for call in self.calls()), 1)
+        self.assertEqual((self.build / 'report.json').read_bytes(), (self.remote / 'report.json').read_bytes())
+
+    def test_report_changed_after_validation_is_not_uploaded_or_dispatched(self):
+        import corpus_upload
+        report = self.path / 'private report.json'
+        report.write_bytes((self.build / 'report.json').read_bytes())
+        validated = corpus_upload.validated_inputs
+
+        def validate_then_change(*args, **kwargs):
+            result = validated(*args, **kwargs)
+            report.write_bytes(report.read_bytes() + b' ')
+            return result
+
+        with patch.dict(os.environ, self.env), patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': REL}), \
+                patch('corpus_upload.validated_inputs', validate_then_change), \
+                patch('corpus_upload.require_settled'), patch('corpus_upload.verified_previous'), \
+                self.assertRaisesRegex(ValueError, 'changed after validation: report.json'):
+            corpus_upload.upload('vn', REL, self.build, report)
+        self.assertFalse((self.remote / 'report.json').exists())
+        self.assertFalse(any(call['name'] == 'gh' for call in self.calls()))
 
     def test_same_size_replacement_after_upload_prevents_dispatch(self):
         self.env['FAKE_REPLACE_AFTER_UPLOAD'] = 'report.json'

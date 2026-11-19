@@ -1,8 +1,15 @@
+import os
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import unittest
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
+WORKFLOW = ROOT / '.github/workflows/corpus-release.yml'
+HASH = 'a' * 64
 
 
 class CorpusWorkflowTest(unittest.TestCase):
@@ -53,6 +60,49 @@ class CorpusWorkflowTest(unittest.TestCase):
                 continue
             for flag in ('--insecure-ignore-tlog', '--insecure-ignore-sct', '--allow-insecure-registry'):
                 self.assertNotIn(flag, path.read_text())
+
+
+class CorpusDispatchInputTest(unittest.TestCase):
+    def setUp(self):
+        self.workflow = yaml.safe_load(WORKFLOW.read_text())
+        self.job = self.workflow['jobs']['release']
+        self.steps = self.job['steps']
+
+    def step(self, prefix):
+        return next(step for step in self.steps if step.get('name', '').startswith(prefix))
+
+    def test_dispatch_takes_three_required_string_inputs(self):
+        inputs = self.workflow[True]['workflow_dispatch']['inputs']
+        self.assertEqual(list(inputs), ['country', 'rel', 'report_sha256'])
+        self.assertTrue(all(item['required'] is True and item['type'] == 'string' for item in inputs.values()))
+
+    def test_report_hash_reaches_commands_only_through_the_environment(self):
+        self.assertEqual(self.job['env']['REPORT_SHA256'], '${{ inputs.report_sha256 }}')
+        self.assertIn('[[ $REPORT_SHA256 =~ ^[0-9a-f]{64}$ ]]', self.steps[0]['run'])
+        self.assertNotIn('${{ inputs', ''.join(step.get('run', '') for step in self.steps))
+        self.assertEqual(self.step('Download corpus objects')['run'],
+                         'python3 deploy/github/corpus_storage.py "$COUNTRY" "$REL" "$REPORT_SHA256" "$RELEASE_DIR"')
+        self.assertIn('python3 deploy/github/corpus_publish.py "$REPORT_SHA256" "$RELEASE_DIR"',
+                      self.step('Validate, sign')['run'])
+
+    def first_step(self, **values):
+        with tempfile.TemporaryDirectory() as temporary:
+            github_env = Path(temporary) / 'github-env'
+            env = dict(PATH=os.environ['PATH'], GITHUB_REF='refs/heads/main', GITHUB_ENV=str(github_env),
+                       RUNNER_TEMP=temporary, COUNTRY='vn', REL='20990102_1', REPORT_SHA256=HASH) | values
+            env = {key: value for key, value in env.items() if value is not None}
+            result = subprocess.run(['bash', '-e', '-c', self.steps[0]['run']], env=env, capture_output=True, text=True)
+            return result.returncode, github_env.exists()
+
+    def test_first_step_refuses_a_missing_or_malformed_report_hash(self):
+        self.assertEqual(self.first_step(), (0, True))
+        for value in (None, '', 'a' * 63, 'a' * 65, 'A' * 64, 'a' * 63 + 'F', 'g' * 64, HASH + '\n',
+                      ' ' + 'a' * 63, 'sha256:' + HASH, 'a' * 32 + ' ' + 'a' * 31):
+            with self.subTest(value=value):
+                self.assertEqual(self.first_step(REPORT_SHA256=value), (1, False))
+        for values in (dict(COUNTRY='VN'), dict(REL='20990102')):
+            with self.subTest(values=values):
+                self.assertEqual(self.first_step(**values), (1, False))
 
 
 if __name__ == '__main__':
