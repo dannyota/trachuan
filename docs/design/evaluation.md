@@ -1,7 +1,8 @@
 # Retrieval evaluation harness
 
 Implementation of [ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md). It
-measures the legacy, old product and development cohorts; development is
+measures the legacy, old product and development cohorts, and the
+[development period](evaluation-period-cases.md) cohort; development is
 `not_run` while its case file is empty. A low score is a result, not grounds to
 remove cases or lower a floor.
 
@@ -244,15 +245,16 @@ versions; mismatches invalidate reuse.
 `country`, `rel`, `build_artifact_sha256`, `dump_sha256`, `fixture_hashes`,
 `identity_map_sha256`, `recipes`, `evaluation_date`, `request_as_of`,
 `database_instance_kind`, `software`, `calibration`,
-`cohorts:{legacy,old_product,development}`, `floors`, `rejections`, `coverage`,
-`ann_loss`, `timings_ms`, `evidence_characters`, `cache_manifest`,
-`previous_diff` (with `previous:{country,rel,report_sha256}` naming the compared
-report and SHA-256 of its exact bytes), `not_run`, `limitations`, and the counts
-in [scope adoption](scope-adoption.md#readers-and-evaluation). Each metric
-stores counts as well as the value. `coverage` lists each missing
-original/alternate document number and affected case/citation, including the
-five known omissions in the ingest research. Never remove them because the
-source sweep did not find them.
+`cohorts:{legacy,old_product,development,development_period}`, `floors`,
+`rejections`, `coverage`, `ann_loss`, `timings_ms`, `evidence_characters`,
+`cache_manifest`, `previous_diff` (with `previous:{country,rel,report_sha256}`
+naming the compared report and SHA-256 of its exact bytes), `not_run`,
+`limitations`, and the counts in
+[scope adoption](scope-adoption.md#readers-and-evaluation). Each metric stores
+counts as well as the value. `coverage` lists each missing original/alternate
+document number and affected case/citation, including the five known omissions
+in the ingest research. Never remove them because the source sweep did not find
+them.
 
 `mapping_incomplete` lists each validation issue by cohort, case ID, citation
 index and detail, sorted in that order; affected unavailable recall and MRR
@@ -273,7 +275,8 @@ summaries hold `{n,p50,p95,p99}` in milliseconds, using the same quantile rule.
 mapped identities, returned identities, arm/fusion/group/cap/abstention losses,
 decision reason, validity gaps and character counts, without query text.
 `previous_diff` is null with a reason when no previous report exists; otherwise
-compare per-case gains/losses and reject incompatible scorer/fixture versions. A
+compare per-case gains/losses and reject incompatible scorer/fixture versions,
+except a [revised development fixture](evaluation-fixtures.md#revisions). A
 previous report scored by `agent-eval/3` stays comparable with `agent-eval/4`
 for the product cohorts, because the two differ only in legacy matching: the
 non-regression checks and the old product and development case diffs run, the

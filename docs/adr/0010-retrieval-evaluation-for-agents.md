@@ -24,9 +24,10 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    unaccented cases become rejection checks that must all return the ADR 0002
    diacritics message and sit outside the recall, MRR and abstention
    denominators; the other 89 keep their expectations. **Development**: the new
-   cases below. The targets and gates in
-   [testing](../../instructions/testing.md) apply to the old product and
-   development cohorts, each on its own.
+   cases below; cases about a past period are reported in their own cohort and
+   not gated ([period cases](../design/evaluation-period-cases.md)). The targets
+   and gates in [testing](../../instructions/testing.md) apply to the old
+   product and development cohorts, each on its own.
 2. Product scoring matches exact document and provision identities, with
    alternates adjudicated from official text; no substring credit. Product
    current-law precision counts every returned primary hit.
@@ -231,18 +232,24 @@ accuracy on either cohort.
   `abstention.calibration_sha256` from its release's data. Condition 1 of the
   MRR@8 tolerance compares retrieval recipes without that field; the abstention
   threshold and every other field must still match.
-- 2026-11-19: period cases and fixture revisions added to item 4 after
+- 2026-11-19: period cases and fixture revisions added to items 1 and 4 after
   `vn/20261118_1`. A reviewed correction ended 32/2012/TT-NHNN, wrongly current
   in `vn/20261117_7`, and dev-033, a question about 2011 to 2014 scored as
   current law, lost the hit it had credited: recall@20 86 to 85 of 113, MRR@8
   0.6673 to 0.6595. The gate held 212 other corrections and the entry was
-  dropped to ship them. The nine cases about a past period now form a reported
-  `development_period` cohort under `in_force_only:false`; on the other 41
-  positive cases that run keeps recall@20 at 74 of 85 and falls MRR@8 by 0.0008,
-  inside the tolerance. Rejected: excusing a loss whose credited document left
-  current-law eligibility. Its review found that it trusted validity fields the
-  candidate report states, excused any cause of ineligibility rather than a
-  reviewed correction, and could not tell a primary hit from a non-current tail
-  hit in the previous case records. A current-law case whose expected document
-  ends is revised in Git instead. Accepted cost: a loss on a revised case is not
-  gated in the release that revises it.
+  dropped to ship them. Seven cases about a past period (dev-018, dev-022,
+  dev-033, dev-039, dev-052, dev-070, dev-088) move to a reported
+  `development_period` cohort under `in_force_only:false`; dev-023, dev-055,
+  dev-076 and dev-093 are retagged `transition`, and dev-032 and dev-073 lose
+  `historical`, all staying gated. On the 43 positive gated cases that run keeps
+  recall@20 at 80 of 92 and falls MRR@8 by 0.0008, inside the tolerance.
+  Rejected: excusing a loss whose credited document left current-law
+  eligibility. Its review found that it trusted validity fields the candidate
+  report states, excused any cause of ineligibility rather than a reviewed
+  correction, and could not tell a primary hit from a non-current tail hit in
+  the previous case records. A current-law case whose expected document ends is
+  revised in Git instead. Accepted costs: a loss on an added or changed case is
+  not gated in the release that revises it; a case moved into the period cohort
+  leaves the gate for good and takes a History line naming it; the tolerance
+  already used is carried across a revision as a difference measured over the
+  previous membership.

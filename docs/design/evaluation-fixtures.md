@@ -90,29 +90,35 @@ Git change; build and eval never write them. The legacy and old product fixtures
 are never revised. When the development fixture's hash differs from the previous
 report's, the gated `development` records are compared over the **comparable
 cases** instead of the whole cohort. A case is comparable when it has the same
-ID in both fixtures, the same fields other than `tags` (`question`,
-`expected_citations`, `expect_abstain`), and the same cohort in both reports,
-`development` or [`development_period`](evaluation-period-cases.md).
+ID in both fixtures, `question`, `expected_citations` and `expect_abstain` equal
+as decoded (other fields are ignored), and the same cohort in both reports,
+`development` or [`development_period`](evaluation-period-cases.md). A case is
+never removed ([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item
+3), and an ID rename is a removal: a revision that removes a case is refused.
 
 - The previous value and the candidate value are both recomputed from the case
   records over the comparable cases, in fixture order, with the metric's own
   definition. Recall@20 compares integer matched counts over the same
   denominator.
-- `high_water` does not cross a revision. It is the previous value recomputed
-  this way, and the [MRR@8 tolerance](evaluation-mrr-tolerance.md) applies
-  against it. Its other conditions hold as written.
+- `high_water` is the recomputed previous value plus the tolerance the previous
+  record had already used: its `high_water` minus its value, when positive. A
+  tag-only revision so keeps the watermark exactly, and a revision never resets
+  it. The [MRR@8 tolerance](evaluation-mrr-tolerance.md) applies against it.
 - Each record states `revision`: the comparable case count, the recomputed
-  previous and candidate values, and `revised`, every case of the cohort outside
-  the comparable set with its reason (`added`, `removed`, `changed` or
+  previous and candidate values, its `high_water`, and `revised`, every case of
+  the cohort outside the comparable set with its reason (`added`, `changed` or
   `cohort`). Its `value` stays the value over all its cases, and its status is
   judged on the comparable values.
-- The uploader and the signing validator read both fixtures from the repository
-  at each release's manifest `commit`, require their SHA-256 to equal the
-  reports' fixture hashes, and recompute the comparable set, both values, the
-  tolerance check and the status. They refuse a record whose stated fields
-  differ from theirs. They also check that the candidate's `development_period`
-  case IDs are exactly the fixture's cases tagged `historical`.
+- The uploader and the signing validator take each fixture from the main
+  branch's history: the version of `development.json` whose SHA-256 equals that
+  report's development fixture hash, refusing when there is none. They recompute
+  the comparable set, both values, `high_water`, the tolerance check and the
+  status, and refuse a record whose stated fields differ from theirs. They also
+  check that the candidate's `development_period` holds exactly the fixture's
+  cases tagged `historical`, and `development` exactly the others.
 
-Accepted cost: a loss on a revised case is not gated in the release that revises
-it. The guard is the Git review of the fixture change, and `revised` lists every
-such case. A later release compares the revised case as usual.
+Accepted costs: a loss on an added or changed case is not gated in the release
+that revises it, and a case moved into `development_period` leaves the gate for
+good, which takes an ADR 0010 History line naming it. The tolerance already used
+is carried as a difference measured over the previous membership. The guard is
+the Git review of the fixture change, and `revised` lists every such case.
