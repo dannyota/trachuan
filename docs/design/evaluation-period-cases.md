@@ -20,18 +20,19 @@ kept. Development recall@20 fell from 86 to 85 of 113 and MRR@8 from 0.6673 to
 other 212 as `vn/20261118_2`.
 
 Every development case was scored with current-law eligibility. A citation whose
-documents are all out of force today can be credited only by a document wrongly
-stored as current or from the non-current tail, so each correct validity fix on
-its documents shows up as a loss. Gating such cases rewards wrong validity,
-while current-law precision is a hard gate.
+documents have all ceased to be in force can be credited only by a document
+wrongly stored as current or from the non-current tail, so each correct validity
+fix on its documents shows up as a loss. Gating such cases rewards wrong
+validity, while current-law precision is a hard gate.
 
 ## Tags
 
-- `historical`: at least one expected citation has no document in force today,
-  by stored validity when the tag is set: dev-018, dev-022, dev-033, dev-039,
-  dev-052, dev-070 and dev-088. A citation counts by all its alternatives, so
-  one alternative in force makes it a current-law citation. A later correction
-  that ends more documents never moves a case out of this tag.
+- `historical`: the case has an expected citation whose documents have all
+  ceased to be in force (stored expired, or `eff_to` on or before today), by
+  stored validity when the tag is set. A document not yet in force, or of
+  unknown status, does not count. The seven are dev-018, dev-022, dev-033,
+  dev-039, dev-052, dev-070 and dev-088; no gated case has such a citation. A
+  later correction that ends more documents never moves a case out of this tag.
 - `transition`: the question asks when an instrument takes effect and what it
   replaced or what replaced it, and expects documents in force today: dev-023,
   dev-055, dev-076 and dev-093. These four carried `historical` before.
