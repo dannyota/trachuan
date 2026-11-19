@@ -80,9 +80,20 @@ run, the `trachuan-rollback` package does not exist, and the host policy has no
      (`deploy/host/updater/deploy_corpus.py`, step `manifest`): after a `vn`
      release built and signed by `dntmakers` is activated on the host;
    - the highest rollback tag, which the host verifies on every poll before
-     `production` (`deploy_run.py`): no tag exists, and from A until the release
-     after the cleanup no rollback can be published: in A, `publish.py rollback`
-     refuses while the policy lists two repositories.
+     `production` (`deploy_run.py`): no tag exists, and no rollback the host
+     would act on can be published (decision 5).
+
+5. **Rollback publishing refuses across the move.** From A,
+   `publish.py rollback` refuses before it signs (`publish.py`, before `sign`):
+   - while the policy lists two repositories, it refuses every rollback, so none
+     is published from A until C merges;
+   - for good, it refuses a target whose manifest `repository` is not the
+     workflow's repository, so from C on only B and later can be targets, and
+     the floor raise after C closes B.
+
+   A test pins `publish.py rollback` as the only publishing call in
+   `rollback.yml`. The host accepts rollbacks only from `rollback.yml` on
+   `main`, and it has never run, so no older run can be re-run.
 
 Rejected:
 
@@ -106,8 +117,7 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
    - Ships decisions 1 and 2, with `repositories` set to `dannyota/trachuan` and
      `dntmakers/trachuan`. Channels are unchanged.
    - It must verify and activate like any release.
-   - From A until the release after C, `publish.py rollback` refuses to publish,
-     because the policy lists two repositories.
+   - From A, rollback publishing refuses as decision 5 says.
 2. **Organization (owner).** Set Actions to the repository's policy: allowed
    actions, SHA pinning and a read-only default token. Let members create public
    packages.
@@ -123,8 +133,8 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
      are unchanged, and stops the move if not;
    - checks that `dannyota` is an admin of `dntmakers/trachuan`, since the
      `release-tags-create` ruleset lets only admins create `v*` tags;
-   - checks that `rollback.yml` has no run and that no `trachuan-rollback`
-     package exists under either owner;
+   - checks that `rollback.yml` has no successful run and that no
+     `trachuan-rollback` package exists under either owner;
    - points local checkouts' `origin` at the new name.
 
    From the transfer until B is live:
@@ -175,8 +185,10 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
    - Ship it only after step 7, for the reasons in decision 4, and after
      checking again that no `trachuan-rollback` package exists.
 9. **The release after C** raises `release_floor` to C's sequence, so no
-   rollback restores trust in `dannyota`. Rollback publishing resumes; the first
-   rollback creates a private `trachuan-rollback` package, which is made public.
+   rollback restores trust in `dannyota`. Until it is live, a rollback to B can
+   still be published; that is accepted, since only the owner dispatches one.
+   The first rollback creates a private `trachuan-rollback` package, which is
+   made public.
 
 Packages under `ghcr.io/dannyota` stay as they are. Nothing reads them after C.
 
@@ -194,10 +206,13 @@ Packages under `ghcr.io/dannyota` stay as they are. Nothing reads them after C.
   read it as a new or changed release.
 - **B's copy back to the old channel is missed.** The host stays on A and
   reports nothing new. The copy can run at any time.
+- **B's copied digest differs.** Do not move `production`; the host stays on A.
+  Copy again, which overwrites the bad artifact.
 - **B fails to activate.** B changes only the policy, so the host recovers to A
   by itself, still reading the old channel.
-- **Rollback.** No rollback can be published from A until the release after C.
-  From B on, the floor keeps any target at or above A. A rollback to A from B or
-  later would reinstall A's channels, so it needs B's bridge by hand.
+- **A `trachuan-rollback` package exists at step 3 or before C.** Stop, and plan
+  its tags first: the host verifies the highest one on every poll.
+- **Rollback.** Decision 5 refuses every rollback from A until C merges, and any
+  target built before the move for good.
 - **Corpus retry or rollback during the move.** A pre-move corpus release cannot
   be re-signed under `dntmakers`. The fix is a new run.
