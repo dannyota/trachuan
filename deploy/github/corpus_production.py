@@ -5,7 +5,8 @@ import subprocess
 import sys
 import tempfile
 
-from corpus_manifest import decode, manifest_fields, validate_manifest
+from corpus_dispatch import dispatch_command
+from corpus_manifest import decode, identity, manifest_fields, validate_manifest
 from corpus_registry import existing_release, production
 from corpus_rules import first_signing_allowed, require_status_country
 from manifest import canonical
@@ -67,17 +68,19 @@ def require_settled(report, directory):
 
 
 def changed_fields(signed, rebuilt):
-    return sorted(field for field, value in signed.items() if field not in RESIGN_MAY_CHANGE
-                  and (field not in rebuilt or canonical(rebuilt[field]) != canonical(value)))
+    return sorted(field for field in signed.keys() | rebuilt.keys() if field not in RESIGN_MAY_CHANGE
+                  and (field not in signed or field not in rebuilt or canonical(rebuilt[field]) != canonical(signed[field])))
 
 
-def require_signable(manifest, report, run, directory):
+def require_signable(manifest, report, run, directory, resign=False):
     country, rel = manifest['country'], manifest['rel']
     current = production(country, directory)
     if current is None:
         raise ValueError('no verified production manifest')
     existing = existing_release(country, rel, directory)
     if existing is None:
+        if resign:
+            raise ValueError(f'an empty release SHA-256 signs only an already signed {country}-{rel}')
         if not first_signing_allowed(country, rel, run):
             raise ValueError('a release without a decision below the cutoff needs a signed manifest')
     else:
@@ -89,32 +92,42 @@ def require_signable(manifest, report, run, directory):
     return current
 
 
-def resign_differences(country, rel, directory, temporary):
+def signed_release(country, rel, temporary):
     signed = existing_release(country, rel, temporary)
     if signed is None:
         raise ValueError(f'no signed manifest for {country}-{rel}')
+    return signed
+
+
+def shown(manifest, field):
+    return canonical(manifest[field]).decode() if field in manifest else 'absent'
+
+
+def resign_differences(country, rel, directory, temporary):
+    signed = signed_release(country, rel, temporary)
     rebuilt = validate_manifest(manifest_fields(signed['commit'], signed['sequence'], country, rel,
                                                 directory, directory / 'report.json'))
-    return signed, [(field, canonical(signed[field]).decode(),
-                     canonical(rebuilt[field]).decode() if field in rebuilt else 'absent')
-                    for field in changed_fields(signed, rebuilt)]
+    return signed, [(field, shown(signed, field), shown(rebuilt, field)) for field in changed_fields(signed, rebuilt)]
 
 
 def main():
-    from corpus_upload import dispatch_command
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['resign-check'])
     parser.add_argument('country')
     parser.add_argument('rel')
-    parser.add_argument('directory', type=Path)
+    parser.add_argument('directory', type=Path, nargs='?')
     args = parser.parse_args()
+    identity(args.country, args.rel)
     with tempfile.TemporaryDirectory() as temporary:
-        signed, differences = resign_differences(args.country, args.rel, args.directory, Path(temporary))
+        if args.directory is None:
+            signed, differences = signed_release(args.country, args.rel, Path(temporary)), []
+        else:
+            signed, differences = resign_differences(args.country, args.rel, args.directory, Path(temporary))
     for field, old, new in differences:
         print(f'{field}: signed {old} rebuilt {new}')
-    if not differences:
+    if args.directory is not None and not differences:
         print('no signed field would change')
-    print(' '.join(dispatch_command(args.country, args.rel, signed['report']['sha256'])))
+    print(' '.join(dispatch_command(args.country, args.rel, signed['report']['sha256'], '')))
     if differences:
         sys.exit(RESIGN_DRIFT_EXIT)
 

@@ -6,15 +6,11 @@ from pathlib import Path
 import subprocess
 import tempfile
 
+from corpus_dispatch import dispatch_command
 from corpus_manifest import identity, release_files, sha256, validated_inputs
 from corpus_previous import verified_previous
 from corpus_production import require_settled
 from manifest import positive
-
-
-def dispatch_command(country, rel, report_sha256):
-    return ['gh', 'workflow', 'run', 'corpus-release.yml', '--ref', 'main',
-            '-f', f'country={country}', '-f', f'rel={rel}', '-f', f'report_sha256={report_sha256}']
 
 
 def etag(result):
@@ -97,9 +93,8 @@ def upload(country, rel, directory, report):
                                 check=True, capture_output=True, text=True)
         return json.loads(result.stdout)
 
-    data = report.read_bytes()
-    report_sha256 = hashlib.sha256(data).hexdigest()
-    row, candidate, _, sidecars = validated_inputs(country, rel, directory, report)
+    inputs = validated_inputs(country, rel, directory, report)
+    row, candidate, sidecars = inputs.row, inputs.report, inputs.sidecars
     if sidecars is not None:
         print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
         print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))
@@ -108,19 +103,23 @@ def upload(country, rel, directory, report):
         verified_previous(candidate, Path(temporary), client, release_row=row, sidecars=sidecars)
 
     receipts = {}
-    for name in release_files(row):
-        source = report if name == 'report.json' else directory / name
-        key = f'{country}/{rel}/{name}'
-        expected = (report_sha256, len(data)) if name == 'report.json' else None
-        receipts[key] = upload_file(source, key, client, expected=expected)
+    with tempfile.TemporaryDirectory() as temporary:
+        for name in release_files(row):
+            source = directory / name
+            if name in inputs.data:
+                source = Path(temporary) / name
+                source.write_bytes(inputs.data[name])
+            key = f'{country}/{rel}/{name}'
+            receipts[key] = upload_file(source, key, client, expected=inputs.expected[name])
     verify_receipts(receipts, client)
-    (directory / 'report.json').write_bytes(data)
-    subprocess.run(dispatch_command(country, rel, report_sha256), check=True)
+    (directory / 'report.json').write_bytes(inputs.data['report.json'])
+    subprocess.run(dispatch_command(country, rel, inputs.expected['report.json'][0],
+                                    inputs.expected['release.json'][0]), check=True)
 
 
-def print_dispatch(country, rel, report):
+def print_dispatch(country, rel, directory, report):
     identity(country, rel)
-    print(' '.join(dispatch_command(country, rel, sha256(report))))
+    print(' '.join(dispatch_command(country, rel, sha256(report), sha256(directory / 'release.json'))))
 
 
 def main():
@@ -132,7 +131,7 @@ def main():
     parser.add_argument('report', type=Path)
     args = parser.parse_args()
     if args.dry_run:
-        print_dispatch(args.country, args.rel, args.report)
+        print_dispatch(args.country, args.rel, args.directory, args.report)
     else:
         upload(args.country, args.rel, args.directory, args.report)
 

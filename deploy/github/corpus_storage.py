@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 from pathlib import Path
 import subprocess
 import tempfile
@@ -10,9 +11,11 @@ from manifest import positive, require_match
 from object_store import ObjectReader, require_free_space, require_pinned_cli, s3_endpoint
 
 
-def download(country, rel, report_sha256, directory):
+def download(country, rel, report_sha256, release_sha256, directory):
     identity(country, rel)
     require_match(r'[0-9a-f]{64}', report_sha256, 'report SHA-256')
+    if release_sha256 != '':
+        require_match(r'[0-9a-f]{64}', release_sha256, 'release SHA-256')
     endpoint = s3_endpoint()
     require_pinned_cli()
     directory.mkdir(parents=True, exist_ok=False)
@@ -39,7 +42,10 @@ def download(country, rel, report_sha256, directory):
         if sha256(directory / 'report.json') != report_sha256:
             raise ValueError('report differs from the dispatched SHA-256')
         fetch('release.json')
-        row = decode((directory / 'release.json').read_bytes())
+        row_bytes = (directory / 'release.json').read_bytes()
+        if release_sha256 and hashlib.sha256(row_bytes).hexdigest() != release_sha256:
+            raise ValueError('release.json differs from the dispatched SHA-256')
+        row = decode(row_bytes)
         if not isinstance(row, dict) or row.get('country') != country or row.get('rel') != rel:
             raise ValueError('downloaded release identity differs from request')
         positive(row.get('schema_version'), 'schema version')
@@ -63,9 +69,10 @@ def main():
     parser.add_argument('country')
     parser.add_argument('rel')
     parser.add_argument('report_sha256')
+    parser.add_argument('release_sha256')
     parser.add_argument('directory', type=Path)
     args = parser.parse_args()
-    download(args.country, args.rel, args.report_sha256, args.directory)
+    download(args.country, args.rel, args.report_sha256, args.release_sha256, args.directory)
 
 
 if __name__ == '__main__':

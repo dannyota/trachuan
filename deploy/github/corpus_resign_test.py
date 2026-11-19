@@ -113,11 +113,11 @@ class SigningTraceTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.path = Path(temporary.name)
 
-    def signable(self, rebuilt, current, existing=None, run=None, report=None):
+    def signable(self, rebuilt, current, existing=None, run=None, report=None, resign=False):
         with patch('corpus_production.production', return_value=current), \
                 patch('corpus_production.existing_release', return_value=existing):
             return corpus_production.require_signable(rebuilt, report or report_for(),
-                                                      DECISION if run is None else run, self.path)
+                                                      DECISION if run is None else run, self.path, resign=resign)
 
     def production(self, rel=PREVIOUS, sequence=9, digest='b' * 64):
         return manifest(rel=rel, sequence=sequence, report=digest)
@@ -185,14 +185,29 @@ class SigningTraceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'dump'):
             self.signable(manifest(dump=dict(size=1.0)), self.production(rel=REL, sequence=10), existing=signed)
 
-    def test_commit_sequence_and_heading_review_may_change_and_new_fields_are_allowed(self):
+    def test_commit_sequence_and_heading_review_may_change_and_new_fields_are_refused(self):
         signed = manifest(sequence=10, heading_review=dict(reviewer='old'))
-        rebuilt = manifest(sequence=11, heading_review=dict(reviewer='new'), heading_evidence=dict(projection=1))
+        rebuilt = manifest(sequence=11, heading_review=dict(reviewer='new'))
         rebuilt['commit'] = 'b' * 40
         current = self.production(rel=REL, sequence=10)
         self.assertIs(self.signable(rebuilt, current, existing=signed), current)
         without_review = manifest(sequence=11)
         self.assertIs(self.signable(without_review, current, existing=signed), current)
+        with self.assertRaisesRegex(ValueError, 'signed fields: heading_evidence$'):
+            self.signable(rebuilt | dict(heading_evidence=dict(projection=1)), current, existing=signed)
+
+    def test_evidence_cannot_appear_on_a_later_signing(self):
+        evidence = dict(findings_sha256='a' * 64, identity_sha256='b' * 64, changes_sha256='c' * 64)
+        current = self.production(rel=REL, sequence=10)
+        with self.assertRaisesRegex(ValueError, 'signed fields: evidence$'):
+            self.signable(manifest(evidence=evidence), current, existing=manifest(sequence=10))
+
+    def test_empty_release_pin_needs_an_already_signed_release(self):
+        self.assertEqual(self.signable(manifest(), self.production())['rel'], PREVIOUS)
+        with self.assertRaisesRegex(ValueError, 'empty release SHA-256'):
+            self.signable(manifest(), self.production(), resign=True)
+        current = self.production(rel=REL, sequence=10, digest='c' * 64)
+        self.assertIs(self.signable(manifest(), current, existing=manifest(sequence=10), resign=True), current)
 
 
 class ResignCheckTest(unittest.TestCase):
@@ -207,9 +222,9 @@ class ResignCheckTest(unittest.TestCase):
         save_older_shape(self.path, self.row)
         self.signed = json.loads(create('c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
 
-    def run_check(self):
+    def run_check(self, directory=True):
         output = io.StringIO()
-        argv = ['corpus_production.py', 'resign-check', 'vn', REL, str(self.path)]
+        argv = ['corpus_production.py', 'resign-check', 'vn', REL] + ([str(self.path)] if directory else [])
         with patch('sys.argv', argv), redirect_stdout(output), \
                 patch('corpus_production.existing_release', return_value=self.signed) as existing:
             try:
@@ -222,7 +237,26 @@ class ResignCheckTest(unittest.TestCase):
 
     def dispatch(self):
         return ('gh workflow run corpus-release.yml --ref main -f country=vn '
-                f"-f rel={REL} -f report_sha256={self.signed['report']['sha256']}\n")
+                f"-f rel={REL} -f report_sha256={self.signed['report']['sha256']} -f release_sha256=\n")
+
+    def test_without_an_upload_directory_prints_only_the_dispatch_of_the_verified_manifest(self):
+        self.signed['report']['sha256'] = 'f' * 64
+        with patch('corpus_production.manifest_fields', side_effect=AssertionError('rebuilt')):
+            self.assertEqual(self.run_check(directory=False), (0, self.dispatch()))
+        self.assertIn('f' * 64, self.dispatch())
+        self.signed = None
+        with self.assertRaisesRegex(ValueError, 'no signed manifest'):
+            self.run_check(directory=False)
+
+    def test_evidence_the_signed_manifest_lacks_is_a_difference(self):
+        self.assertNotIn('evidence', self.signed)
+        write_evidence(self.path, self.row, self.report)
+        code, output = self.run_check()
+        self.assertEqual(code, 3)
+        lines = output.splitlines()
+        self.assertEqual(lines.pop(), self.dispatch().rstrip('\n'))
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith('evidence: signed absent rebuilt {"changes_sha256":'), lines[0])
 
     def test_matching_upload_directory_reports_no_difference(self):
         code, output = self.run_check()
@@ -256,12 +290,15 @@ class ResignCheckTest(unittest.TestCase):
         self.signed.update(commit='d' * 40, sequence=1, heading_review=dict(reviewer='old'))
         self.assertEqual(self.run_check(), (0, 'no signed field would change\n' + self.dispatch()))
 
-    def test_new_local_field_is_not_a_difference(self):
+    def test_new_local_field_is_a_difference(self):
         add_heading_build(self.path, self.row, self.report)
         save_older_shape(self.path, self.row)
         self.signed = json.loads(create('c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
         self.signed.pop('heading_evidence')
-        self.assertEqual(self.run_check()[0], 0)
+        code, output = self.run_check()
+        self.assertEqual(code, 3)
+        self.assertEqual(output, 'heading_evidence: signed absent rebuilt {"exclusions_sha256":"' + 'b' * 64 +
+                         '","projection":1,"scan_sha256":"' + 'a' * 64 + '"}\n' + self.dispatch())
 
     def test_heading_reviews_file_is_not_needed(self):
         with patch('corpus_manifest.heading_review', side_effect=AssertionError('read')):

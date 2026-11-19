@@ -59,6 +59,7 @@ def block_upload(filename):
 with open(os.environ['FAKE_LOG'], 'a') as stream:
     stream.write(json.dumps(dict(name=name, args=args, checksum=os.getenv('AWS_REQUEST_CHECKSUM_CALCULATION'),
                                 run=os.getenv('FAKE_RUN', ''),
+                                cloud=sorted(key for key in os.environ if key.startswith(('AWS_', 'OCI_'))),
                                 config=Path(os.environ['AWS_CONFIG_FILE']).read_text() if 'AWS_CONFIG_FILE' in os.environ else '')) + '\\n')
 if name == 'oras':
     manifest = (build / 'previous-manifest.json').read_bytes()
@@ -216,8 +217,11 @@ class CorpusUploadTest(unittest.TestCase):
                            max(i for i, call in enumerate(calls) if 'put-object' in call['args']))
         uploaded = support.digest((self.remote / 'report.json').read_bytes())
         self.assertEqual(uploaded, support.digest((self.build / 'report.json').read_bytes()))
+        release = support.digest((self.remote / 'release.json').read_bytes())
+        self.assertEqual(release, support.digest((self.build / 'release.json').read_bytes()))
         self.assertEqual(calls[-1]['args'], ['workflow', 'run', 'corpus-release.yml', '--ref', 'main',
-                                           '-f', 'country=vn', '-f', 'rel=20990102_1', '-f', f'report_sha256={uploaded}'])
+                                           '-f', 'country=vn', '-f', 'rel=20990102_1', '-f', f'report_sha256={uploaded}',
+                                           '-f', f'release_sha256={release}'])
         lock_dir = self.path / '.cache/trachuan'
         self.assertEqual(lock_dir.stat().st_mode & 0o777, 0o700)
         self.assertTrue((lock_dir / 'corpus-upload.lock').exists())
@@ -238,15 +242,16 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.build / 'report.json').read_bytes(), external.read_bytes())
         self.assertEqual((self.remote / 'report.json').read_bytes(), external.read_bytes())
-        self.assertEqual(self.calls()[-1]['args'][-2:], ['-f', 'report_sha256=' + support.digest(external.read_bytes())])
+        self.assertEqual(self.dispatched()['report_sha256'], support.digest(external.read_bytes()))
 
     def test_dry_run_validates_locally_and_never_calls_clients(self):
         result = self.run_upload('--dry-run')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('s3://trachuan-releases/vn/20990102_1/corpus.dump', result.stdout)
         report_sha256 = support.digest((self.build / 'report.json').read_bytes())
+        release_sha256 = support.digest((self.build / 'release.json').read_bytes())
         self.assertEqual(result.stdout.splitlines()[-1], 'gh workflow run corpus-release.yml --ref main '
-                         f'-f country=vn -f rel=20990102_1 -f report_sha256={report_sha256}')
+                         f'-f country=vn -f rel=20990102_1 -f report_sha256={report_sha256} -f release_sha256={release_sha256}')
         self.assertIn('vn-production', result.stdout)
         self.assertIn('https://trachuan.vn/api/v1/public/status', result.stdout)
         self.assertEqual(self.calls(), [])
@@ -353,9 +358,13 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(sum('put-object' in call['args'] for call in self.calls()), 7)
 
-    def resign_check(self):
+    def resign_check(self, directory=True):
         return subprocess.run(['python3', str(self.repo_tool('corpus_production.py')), 'resign-check', 'vn', REL,
-                               str(self.build)], env=self.env, capture_output=True, text=True)
+                               *([str(self.build)] if directory else [])], env=self.env, capture_output=True, text=True)
+
+    def dispatched(self):
+        args = next(call['args'] for call in reversed(self.calls()) if call['name'] == 'gh')
+        return dict(arg.split('=', 1) for arg in args if '=' in arg)
 
     def signed_manifest(self, **changes):
         from manifest import canonical
@@ -371,15 +380,20 @@ class CorpusUploadTest(unittest.TestCase):
         self.signed_manifest()
         result = self.resign_check()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, f'no signed field would change\n{dispatch}{local}\n')
+        self.assertEqual(result.stdout, f'no signed field would change\n{dispatch}{local} -f release_sha256=\n')
         self.signed_manifest(previous='20990101_2')
         result = self.resign_check()
         self.assertEqual(result.returncode, 3, result.stderr)
-        self.assertEqual(result.stdout, f'previous: signed "20990101_2" rebuilt "20990101_1"\n{dispatch}{local}\n')
+        self.assertEqual(result.stdout, f'previous: signed "20990101_2" rebuilt "20990101_1"\n{dispatch}{local} -f release_sha256=\n')
         self.signed_manifest(report=dict(sha256='f' * 64, quality_pass=True))
         result = self.resign_check()
         self.assertEqual(result.returncode, 3, result.stderr)
-        self.assertEqual(result.stdout.splitlines()[-1], dispatch + 'f' * 64)
+        self.assertEqual(result.stdout.splitlines()[-1], dispatch + 'f' * 64 + ' -f release_sha256=')
+        for name in ('corpus.dump', 'release.json', 'report.json'):
+            (self.build / name).unlink()
+        result = self.resign_check(directory=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, dispatch + 'f' * 64 + ' -f release_sha256=\n')
         self.assertFalse(any(call['name'] in {'aws', 'gh', 'curl'} or 'sign-blob' in call['args'] or 'push' in call['args'] or 'tag' in call['args']
                              for call in self.calls()))
 
@@ -482,24 +496,73 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(sum(call['name'] == 'gh' for call in self.calls()), 1)
         self.assertEqual((self.build / 'report.json').read_bytes(), (self.remote / 'report.json').read_bytes())
 
-    def test_report_changed_after_validation_is_not_uploaded_or_dispatched(self):
+    def upload_in_process(self, report, after_validation=lambda: None, after_upload=lambda: None):
         import corpus_upload
-        report = self.path / 'private report.json'
-        report.write_bytes((self.build / 'report.json').read_bytes())
-        validated = corpus_upload.validated_inputs
+        validated, verified = corpus_upload.validated_inputs, corpus_upload.verify_receipts
 
-        def validate_then_change(*args, **kwargs):
+        def validate(*args, **kwargs):
             result = validated(*args, **kwargs)
-            report.write_bytes(report.read_bytes() + b' ')
+            after_validation()
             return result
 
+        def verify(*args, **kwargs):
+            verified(*args, **kwargs)
+            after_upload()
+
         with patch.dict(os.environ, self.env), patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': REL}), \
-                patch('corpus_upload.validated_inputs', validate_then_change), \
-                patch('corpus_upload.require_settled'), patch('corpus_upload.verified_previous'), \
-                self.assertRaisesRegex(ValueError, 'changed after validation: report.json'):
+                patch('corpus_upload.validated_inputs', validate), patch('corpus_upload.verify_receipts', verify), \
+                patch('corpus_upload.require_settled'), patch('corpus_upload.verified_previous'):
             corpus_upload.upload('vn', REL, self.build, report)
-        self.assertFalse((self.remote / 'report.json').exists())
-        self.assertFalse(any(call['name'] == 'gh' for call in self.calls()))
+
+    def decision_release(self):
+        support.add_heading_build(self.build, self.row, self.report)
+        report = self.path / 'private report.json'
+        report.write_bytes((self.build / 'report.json').read_bytes())
+        return report, {'report.json': report, **{name: self.build / name for name in
+                        ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'build.json') + SIDECARS}}
+
+    def flip(self, path):
+        data = path.read_bytes()
+        path.write_bytes(bytes([data[0] ^ 1]) + data[1:])
+
+    def extend(self, path):
+        path.write_bytes(path.read_bytes() + b' ')
+
+    def test_json_files_changed_after_validation_upload_their_validated_bytes(self):
+        for name in ('report.json', 'release.json'):
+            with self.subTest(name=name):
+                self.log.unlink(missing_ok=True)
+                shutil.rmtree(self.remote)
+                self.remote.mkdir()
+                report, paths = self.decision_release()
+                validated = paths[name].read_bytes()
+                self.upload_in_process(report, after_validation=lambda: self.extend(paths[name]))
+                self.assertEqual((self.remote / name).read_bytes(), validated)
+                self.assertEqual(self.dispatched()[name.replace('.json', '_sha256')], support.digest(validated))
+
+    def test_every_other_file_changed_after_validation_is_refused_before_dispatch(self):
+        dump = (self.build / 'corpus.dump').read_bytes()
+        for name in ('corpus.dump', 'MANIFEST.sha256', 'build.json') + SIDECARS:
+            with self.subTest(name=name):
+                (self.build / 'corpus.dump').write_bytes(dump)
+                self.log.unlink(missing_ok=True)
+                shutil.rmtree(self.remote)
+                self.remote.mkdir()
+                report, paths = self.decision_release()
+                with self.assertRaisesRegex(ValueError, 'changed after validation: ' + name):
+                    self.upload_in_process(report, after_validation=lambda: self.flip(paths[name]))
+                self.assertFalse((self.remote / name).exists())
+                self.assertFalse(any(call['name'] == 'gh' for call in self.calls()))
+
+    def test_files_changed_after_upload_leave_the_dispatched_hashes_on_the_uploaded_objects(self):
+        report, paths = self.decision_release()
+        self.upload_in_process(report, after_upload=lambda: [self.extend(paths[name]) for name in ('report.json', 'release.json')])
+        dispatched = self.dispatched()
+        self.assertEqual(dispatched['report_sha256'], support.digest((self.remote / 'report.json').read_bytes()))
+        self.assertEqual(dispatched['release_sha256'], support.digest((self.remote / 'release.json').read_bytes()))
+        self.assertNotEqual(dispatched['report_sha256'], support.digest(report.read_bytes()))
+        self.assertNotEqual(dispatched['release_sha256'], support.digest(paths['release.json'].read_bytes()))
+        self.assertEqual((self.build / 'report.json').read_bytes(), (self.remote / 'report.json').read_bytes())
 
     def test_same_size_replacement_after_upload_prevents_dispatch(self):
         self.env['FAKE_REPLACE_AFTER_UPLOAD'] = 'report.json'

@@ -57,7 +57,7 @@ class FrameworksWorkflowTest(unittest.TestCase):
 
     def test_law_workflow_keeps_its_inputs(self):
         inputs = yaml.safe_load(LAW.read_text())[True]['workflow_dispatch']['inputs']
-        self.assertEqual(list(inputs), ['country', 'rel', 'report_sha256'])
+        self.assertEqual(list(inputs), ['country', 'rel', 'report_sha256', 'release_sha256'])
 
     def test_tools_and_checkout_are_pinned_like_the_law_job(self):
         law = yaml.safe_load(LAW.read_text())['jobs']['release']['steps']
