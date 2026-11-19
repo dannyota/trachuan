@@ -113,11 +113,12 @@ never removed ([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item
   branch's history: the version of `development.json` whose SHA-256 equals that
   report's development fixture hash, refusing when there is none. The
   candidate's version must come at or after the previous report's version in
-  that history, so a run built from a stale fixture is refused. They recompute
-  the comparable set, both values, `high_water`, the tolerance check and the
-  status, and refuse a record whose stated fields differ from theirs. They also
-  check that the candidate's `development_period` holds exactly the fixture's
-  cases tagged `historical`, and `development` exactly the others.
+  that history, comparing the latest commit at which each version appears, so a
+  run built from a stale fixture is refused. They recompute the comparable set,
+  both values, `high_water`, the tolerance check and the status, and refuse a
+  record whose stated fields differ from theirs. They also check that the
+  candidate's `development_period` holds exactly the fixture's cases tagged
+  `historical`, and `development` exactly the others.
 
 Accepted costs: a loss on an added or changed case is not gated in the release
 that revises it, and a case moved into `development_period` leaves the gate for
