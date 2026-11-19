@@ -8,17 +8,17 @@ contract itself is in [pull deployment](pull-deployment.md) and
 
 ## What the transfer changes
 
-| Item                              | After the transfer                                                                                                                                                |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Issues, pull requests, wiki       | Move ([transfer docs][transfer])                                                                                                                                  |
-| Secrets, webhooks, deploy keys    | Stay with the repository ([transfer docs][transfer])                                                                                                              |
-| Variables, environments, rulesets | Not stated; checked and re-applied with `deploy/github/settings.py` after the transfer                                                                            |
-| Git and web URLs                  | Redirect to the new name until a repository or fork takes the old name                                                                                            |
-| Packages under `ghcr.io/dannyota` | Stay owned by `dannyota`; the moved repository's `GITHUB_TOKEN` can no longer write them ([package permissions][perm]). Anonymous pulls keep working              |
-| New packages                      | Created by the moved repository's `GITHUB_TOKEN`: linked to it and as visible as it is (public). Created with a personal token: linked to nothing until connected |
-| Signer identity                   | Fulcio names the workflow by owner: `https://github.com/dntmakers/trachuan/.github/workflows/<file>@<ref>`. Old signatures keep `dannyota`                        |
-| Workflow run numbers              | Not stated. Image and corpus sequences are run numbers, so they are checked                                                                                       |
-| Go module `danny.vn/trachuan`     | Unaffected; the `replace` of `github.com/dannyota/onnxruntime/go` names another repository and stays                                                              |
+| Item                              | After the transfer                                                                                                                                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Issues, pull requests, wiki       | Move ([transfer docs][transfer])                                                                                                                                                                                       |
+| Secrets, webhooks, deploy keys    | Stay with the repository ([transfer docs][transfer])                                                                                                                                                                   |
+| Variables, environments, rulesets | Not stated; checked and re-applied with `deploy/github/settings.py` after the transfer                                                                                                                                 |
+| Git and web URLs                  | Redirect to the new name until a repository or fork takes the old name                                                                                                                                                 |
+| Packages under `ghcr.io/dannyota` | Stay owned by `dannyota`; the moved repository's `GITHUB_TOKEN` can no longer write them ([package permissions][perm]). Anonymous pulls keep working                                                                   |
+| New packages                      | Private by default, also when the moved repository's `GITHUB_TOKEN` creates them; such a package is linked to the repository and inherits its access. Created with a personal token: linked to nothing until connected |
+| Signer identity                   | Fulcio names the workflow by owner: `https://github.com/dntmakers/trachuan/.github/workflows/<file>@<ref>`. Old signatures keep `dannyota`                                                                             |
+| Workflow run numbers              | Not stated. Image and corpus sequences are run numbers, so they are checked                                                                                                                                            |
+| Go module `danny.vn/trachuan`     | Unaffected; the `replace` of `github.com/dannyota/onnxruntime/go` names another repository and stays                                                                                                                   |
 
 [transfer]:
   https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository
@@ -44,9 +44,10 @@ run, the `trachuan-rollback` package does not exist, and the host policy has no
      previous corpus manifest), it accepts the repositories of
      `deploy/host/deploy-policy.json`, as the host does.
    - Host files read image names from the policy: `render-units.sh`,
-     `check-mounts.py`, `images.env` and `proof.py`. Where they run without an
-     installed policy (CI), they take a policy path. Test fixtures may keep
-     `dannyota` as sample data.
+     `check-mounts.py` and `proof.py`. Where they run without an installed
+     policy (CI), they take a policy path. The template `images.env` names the
+     images of the last entry in `repositories`; the updater writes the live
+     file from the manifest. Test fixtures may keep `dannyota` as sample data.
 2. **The host policy accepts a list of repositories.**
    - `repositories` replaces `repository`: one or two `owner/name` entries.
    - `images` and every `*_identity` are keyed by repository, each with that
@@ -79,8 +80,9 @@ run, the `trachuan-rollback` package does not exist, and the host policy has no
      (`deploy/host/updater/deploy_corpus.py`, step `manifest`): after a `vn`
      release built and signed by `dntmakers` is activated on the host;
    - the highest rollback tag, which the host verifies on every poll before
-     `production` (`deploy_run.py`): no tag exists, and no rollback is published
-     from the transfer until the release after the cleanup.
+     `production` (`deploy_run.py`): no tag exists, and from A until the release
+     after the cleanup no rollback can be published: in A, `publish.py rollback`
+     refuses while the policy lists two repositories.
 
 Rejected:
 
@@ -104,7 +106,8 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
    - Ships decisions 1 and 2, with `repositories` set to `dannyota/trachuan` and
      `dntmakers/trachuan`. Channels are unchanged.
    - It must verify and activate like any release.
-   - From A until the release after C, nobody dispatches `rollback.yml`.
+   - From A until the release after C, `publish.py rollback` refuses to publish,
+     because the policy lists two repositories.
 2. **Organization (owner).** Set Actions to the repository's policy: allowed
    actions, SHA pinning and a read-only default token. Let members create public
    packages.
@@ -118,6 +121,10 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
      the variable `OCI_S3_ENDPOINT`;
    - checks that the last run numbers of `images.yml` and `corpus-release.yml`
      are unchanged, and stops the move if not;
+   - checks that `dannyota` is an admin of `dntmakers/trachuan`, since the
+     `release-tags-create` ruleset lets only admins create `v*` tags;
+   - checks that `rollback.yml` has no run and that no `trachuan-rollback`
+     package exists under either owner;
    - points local checkouts' `origin` at the new name.
 
    From the transfer until B is live:
@@ -131,9 +138,11 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
      and creates the four `ghcr.io/dntmakers/trachuan-*` image packages through
      `GITHUB_TOKEN`; it publishes no release, since `images.yml` releases only
      on a tag push.
-   - Check that each pulls anonymously.
-   - Verify its image signature and provenance under A's `dntmakers` identity,
-     as `proof.py` does.
+   - Make each package public, then check that each pulls anonymously.
+   - Verify its attestations with repository `dntmakers/trachuan` and the
+     identity `proof.py` builds for a dispatch from `main`.
+   - Require the run's number to be above A's sequence, which proves the run
+     numbers continued.
 5. **Copy the channels in.**
    - With the owner's token (`write:packages`), run `oras cp` for every tag of
      `trachuan-release` and `trachuan-corpus-release`, from `ghcr.io/dannyota`
@@ -149,22 +158,25 @@ and the usual checks after deploy ([deploy runbook](../runbooks/deploy.md)).
    - Living docs that name the owner change with it: pull deployment, corpus
      signing, corpus release, frameworks release, frameworks and the deploy
      runbook.
-   - Pause the host's deploy timer before tagging.
    - The image workflow reads the previous release from the copied channel and
      publishes B there.
-   - Copy B's release artifact to `ghcr.io/dannyota/trachuan-release` with the
-     owner's token, and move `production` there.
-   - Resume the timer. The host, under A's policy, verifies and activates B. Its
-     next poll reads the new channels and finds everything already seen.
+   - With the owner's token, copy B's release artifact to its version tag in
+     `ghcr.io/dannyota/trachuan-release`, check that the digests match, then
+     move `production` there. The host sees B only when `production` moves, so
+     no timer pause is needed.
+   - The host, under A's policy, verifies and activates B. Its next poll reads
+     the new channels and finds everything already seen.
 7. **A `vn` corpus release from `dntmakers`.** A new run, built and signed by
    `dntmakers` and activated on the host.
 8. **Release C.**
    - `repositories` holds only `dntmakers/trachuan`.
    - `release_floor` is B's sequence. `proof.py`'s fixture becomes a `dntmakers`
      release.
-   - Ship it only after step 7, for the reasons in decision 4.
+   - Ship it only after step 7, for the reasons in decision 4, and after
+     checking again that no `trachuan-rollback` package exists.
 9. **The release after C** raises `release_floor` to C's sequence, so no
-   rollback restores trust in `dannyota`. Rollback publishing resumes.
+   rollback restores trust in `dannyota`. Rollback publishing resumes; the first
+   rollback creates a private `trachuan-rollback` package, which is made public.
 
 Packages under `ghcr.io/dannyota` stay as they are. Nothing reads them after C.
 
@@ -181,11 +193,11 @@ Packages under `ghcr.io/dannyota` stay as they are. Nothing reads them after C.
 - **A copied tag resolves to a different digest.** Stop before B. The host would
   read it as a new or changed release.
 - **B's copy back to the old channel is missed.** The host stays on A and
-  reports nothing new. The copy can run at any time while the timer is paused.
+  reports nothing new. The copy can run at any time.
 - **B fails to activate.** B changes only the policy, so the host recovers to A
   by itself, still reading the old channel.
-- **Rollback.** No rollback is published from A until the release after C. From
-  B on, the floor keeps any target at or above A. A rollback to A from B or
+- **Rollback.** No rollback can be published from A until the release after C.
+  From B on, the floor keeps any target at or above A. A rollback to A from B or
   later would reinstall A's channels, so it needs B's bridge by hand.
 - **Corpus retry or rollback during the move.** A pre-move corpus release cannot
   be re-signed under `dntmakers`. The fix is a new run.
