@@ -21,6 +21,12 @@ class CorpusWorkflowTest(unittest.TestCase):
             self.assertIn(required, text)
         self.assertIn('.github/workflows/corpus-release.yml:', (ROOT / '.github/actionlint.yaml').read_text())
 
+    def test_checkout_holds_the_full_main_history_for_fixture_lookup(self):
+        text = (ROOT / '.github/workflows/corpus-release.yml').read_text()
+        checkout = text[text.index('uses: actions/checkout@'):text.index('Install AWS CLI')]
+        self.assertIn('          fetch-depth: 0\n', checkout)
+        self.assertIn('          persist-credentials: false\n', checkout)
+
     def test_installs_verified_aws_before_credentials(self):
         text = (ROOT / '.github/workflows/corpus-release.yml').read_text()
         install = text.index('Install AWS CLI')

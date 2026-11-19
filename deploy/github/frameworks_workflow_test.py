@@ -62,7 +62,9 @@ class FrameworksWorkflowTest(unittest.TestCase):
     def test_tools_and_checkout_are_pinned_like_the_law_job(self):
         law = yaml.safe_load(LAW.read_text())['jobs']['release']['steps']
         checkout = next(step for step in self.steps if 'uses' in step)
-        self.assertEqual(checkout, next(step for step in law if 'uses' in step))
+        law_checkout = next(step for step in law if 'uses' in step)
+        self.assertEqual(law_checkout['with'].pop('fetch-depth'), 0)
+        self.assertEqual(checkout, law_checkout)
         self.assertEqual(self.step('Install AWS CLI')['run'], next(s for s in law if s.get('name') == 'Install AWS CLI')['run'])
         self.assertEqual([step['uses'] for step in self.steps if 'uses' in step], [checkout['uses']])
         self.assertEqual(self.step('Install signing')['run'], 'bash deploy/github/install-tools.sh')

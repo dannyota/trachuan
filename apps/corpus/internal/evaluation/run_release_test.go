@@ -31,7 +31,7 @@ func releaseComparisons(records []NonRegression) []releaseComparison {
 func TestReleaseValidator_ContractMatchesEvaluationOutput(t *testing.T) {
 	ctx := context.Background()
 	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
-	report, _, err := Run(ctx, &recordedEngine{fakeEngine: fakeEngine{date: date}}, developmentSuite(), Options{EvaluationDate: date})
+	report, _, err := Run(ctx, &periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}}, periodSuite(), Options{EvaluationDate: date})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,14 +49,6 @@ func TestReleaseValidator_ContractMatchesEvaluationOutput(t *testing.T) {
 	emitted := make(map[string][]releaseComparison, len(report.Cohorts))
 	for name, cohort := range report.Cohorts {
 		emitted[name] = releaseComparisons(cohort.NonRegression)
-	}
-	if _, listed := contract["development_period"]; !listed {
-		for _, record := range emitted["development_period"] {
-			if record.Gating {
-				t.Fatalf("gated period record %+v", record)
-			}
-		}
-		delete(emitted, "development_period")
 	}
 	if !reflect.DeepEqual(emitted, contract) {
 		t.Fatalf("release validator contract differs from evaluation: emitted=%v contract=%v", emitted, contract)

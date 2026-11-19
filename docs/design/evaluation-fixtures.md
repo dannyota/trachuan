@@ -131,9 +131,9 @@ rename is a removal: a revision that removes a case is refused.
   recomputed previous value alone, since a watermark never crosses a recipe
   change.
 - The uploader and the signing validator take each fixture from the main
-  branch's history: the version of `development.json` whose SHA-256 equals that
-  report's development fixture hash, refusing when there is none. The
-  candidate's version must come at or after the previous report's version in
+  branch's first-parent history: the version of `development.json` whose SHA-256
+  equals that report's development fixture hash, refusing when there is none.
+  The candidate's version must come at or after the previous report's version in
   that history, comparing the latest commit at which each version appears, so a
   run built from a stale fixture is refused. They recompute the comparable set,
   both values, `high_water`, the tolerance check and the status, and refuse a

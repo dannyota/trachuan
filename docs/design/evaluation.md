@@ -241,7 +241,7 @@ eligible for caching. No questions in logs or report copies. Cache key includes
 dump, fixtures, map, query vectors, all recipes, date, tie rules and software
 versions; mismatches invalidate reuse.
 
-`report.json` fields: `version:1`, `status`, `quality_pass`, `release_eligible`,
+`report.json` fields: `version:3`, `status`, `quality_pass`, `release_eligible`,
 `country`, `rel`, `build_artifact_sha256`, `dump_sha256`, `fixture_hashes`,
 `identity_map_sha256`, `recipes`, `evaluation_date`, `request_as_of`,
 `database_instance_kind`, `software`, `calibration`,
