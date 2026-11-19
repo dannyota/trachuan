@@ -58,9 +58,11 @@ candidate report and the previous report; otherwise the strict rule applies:
   report of the earlier version has no such field and gives its value alone. A
   previous report under other recipes gives its value alone too: a watermark
   never crosses a recipe change. A previous record with `revision` gives its
-  value plus the tolerance it had used on the comparable values: its `revision`
-  high water minus its `revision` candidate value, when positive. The
-  candidate's own value is not part of it.
+  value plus the tolerance it used. The candidate's own value is not part of it.
+- **Tolerance used** by a record is its `high_water` minus the value its status
+  was judged on, when positive, and otherwise 0: its `value` for a plain record,
+  its `revision` candidate value for a
+  [revision](evaluation-fixtures.md#revisions) record.
 - **Pass** when the value is at least `high_water` minus the tolerance.
 - The record states `previous`, `high_water`, `tolerance`, the value, its
   `status`, `within_tolerance: true` when the value is below `previous`, and

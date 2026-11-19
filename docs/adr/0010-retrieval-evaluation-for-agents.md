@@ -72,8 +72,9 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    results are identical on every cohort.
 6. Abstention uses the best-member cosine of the first fused provision,
    including lexical-only hits; the threshold is calibrated on the old product
-   and development cohorts together, per dense recipe, to the best balanced
-   accuracy ([calibration](../design/calibration.md)).
+   and development cohorts together, including the development period cohort,
+   per dense recipe, to the best balanced accuracy
+   ([calibration](../design/calibration.md)).
 7. Models are compared exact search against exact search on the same cases; ANN
    loss and cost are measured separately per model. Vietnamese_Embedding_v2
    stays unless a different model passes item 4.
@@ -242,7 +243,7 @@ accuracy on either cohort.
   `development_period` cohort under `in_force_only:false`; dev-023, dev-055,
   dev-076 and dev-093 are retagged `transition`, and dev-032 and dev-073 lose
   `historical`, all staying gated. On the 43 positive gated cases that run keeps
-  recall@20 at 80 of 92 and falls MRR@8 by 0.0008, inside the tolerance.
+  recall@20 at 80 of 92 and falls MRR@8 by 0.000776, inside the tolerance.
   Rejected: excusing a loss whose credited document left current-law
   eligibility. Its review found that it trusted validity fields the candidate
   report states, excused any cause of ineligibility rather than a reviewed

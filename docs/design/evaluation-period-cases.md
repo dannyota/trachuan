@@ -27,16 +27,15 @@ such cases rewards wrong validity, while current-law precision is a hard gate.
 
 ## Tags
 
-- `historical`: the question asks about a past period, or expects documents that
-  were in force only in the past: dev-018, dev-022, dev-033, dev-039, dev-052,
-  dev-070 and dev-088.
+- `historical`: the case expects documents that are not in force today, by their
+  stored validity: dev-018, dev-022, dev-033, dev-039, dev-052, dev-070 and
+  dev-088.
 - `transition`: the question asks when an instrument takes effect and what it
   replaced or what replaced it, and expects documents in force today: dev-023,
   dev-055, dev-076 and dev-093. These four carried `historical` before.
-- dev-032 and dev-073 lose `historical`. dev-032 names no period and its
-  documents are in force. dev-073's documents are stored current; whether the
-  Covid-19 measures have ended is a validity question for corrections, not a
-  tag.
+- dev-032 and dev-073 lose `historical`: their documents are stored current.
+  Whether dev-073's Covid-19 measures have ended is a validity question for
+  corrections, not a tag.
 
 On `vn/20261118_2` (exact and ann, hybrid) the seven period cases match 6 of 21
 citations at 20, with MRR@8 0.153; the other 43 positive cases match 80 of 92,

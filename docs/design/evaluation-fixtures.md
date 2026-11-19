@@ -100,18 +100,20 @@ never removed ([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item
   records over the comparable cases, in fixture order, with the metric's own
   definition. Recall@20 compares integer matched counts over the same
   denominator.
-- `high_water` is the recomputed previous value plus the tolerance the previous
-  record had already used: its `high_water` minus its value, when positive. A
+- `high_water` is the recomputed previous value plus the
+  [tolerance used](evaluation-mrr-tolerance.md#rule) by the previous record. A
   tag-only revision so keeps the watermark exactly, and a revision never resets
   it. The [MRR@8 tolerance](evaluation-mrr-tolerance.md) applies against it.
-- Each record states `revision`: the comparable case count, the recomputed
-  previous and candidate values, its `high_water`, and `revised`, every case of
-  the cohort outside the comparable set with its reason (`added`, `changed` or
-  `cohort`). Its `value` stays the value over all its cases, and its status is
-  judged on the comparable values.
+- A revision record's `previous` and `high_water` hold the comparable values its
+  status is judged on, and its `value` stays the value over all its cases. Its
+  `revision` states the comparable case count, the comparable candidate value,
+  and `revised`, every case of the cohort outside the comparable set with its
+  reason (`added`, `changed` or `cohort`).
 - The uploader and the signing validator take each fixture from the main
   branch's history: the version of `development.json` whose SHA-256 equals that
-  report's development fixture hash, refusing when there is none. They recompute
+  report's development fixture hash, refusing when there is none. The
+  candidate's version must come at or after the previous report's version in
+  that history, so a run built from a stale fixture is refused. They recompute
   the comparable set, both values, `high_water`, the tolerance check and the
   status, and refuse a record whose stated fields differ from theirs. They also
   check that the candidate's `development_period` holds exactly the fixture's
