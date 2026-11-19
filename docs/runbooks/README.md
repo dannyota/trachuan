@@ -8,6 +8,7 @@ Exact operating, verification and recovery procedures for the running system.
 - [Deploy a release](deploy.md)
 - [Restore and select a corpus release](release-restore.md)
 - [Repair access to auth](auth-access.md)
+- [Restore and prewarm a corpus database by hand](corpus-restore-manual.md)
 - [Release journal check](release-journal-check.md)
 - [Back up and restore PostgreSQL](backups.md)
 - [Run the MCP agent evaluation](agent-eval.md)

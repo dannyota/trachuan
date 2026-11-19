@@ -6,10 +6,9 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from corpus_manifest import identity, release_files, validate_inputs
+from corpus_manifest import identity, release_files, validated_inputs
 from corpus_previous import verified_previous
 from corpus_production import require_settled
-from corpus_rules import refuse_until_sidecar_gate
 from manifest import positive
 
 
@@ -93,14 +92,16 @@ def upload(country, rel, directory, report):
                                 check=True, capture_output=True, text=True)
         return json.loads(result.stdout)
 
-    row, candidate = validate_inputs(country, rel, directory, report)
-    refuse_until_sidecar_gate(row)
+    row, candidate, _, sidecars = validated_inputs(country, rel, directory, report)
+    if sidecars is not None:
+        print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
+        print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))
     with tempfile.TemporaryDirectory() as temporary:
         require_settled(candidate, Path(temporary))
-        verified_previous(candidate, Path(temporary), client, release_row=row)
+        verified_previous(candidate, Path(temporary), client, release_row=row, sidecars=sidecars)
 
     receipts = {}
-    for name in release_files(row['schema_version']):
+    for name in release_files(row):
         source = report if name == 'report.json' else directory / name
         key = f'{country}/{rel}/{name}'
         receipts[key] = upload_file(source, key, client)

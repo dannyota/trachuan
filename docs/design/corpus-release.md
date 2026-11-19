@@ -33,11 +33,14 @@ workshop and the run's `eval` artifact read-only, without Temporal.
 adds `extensions`, `run` and `recipe_hash_inputs`. `run` records its id,
 expected and incomplete item counts, unaccepted gap count, matching build
 artifact hash, the two report hashes of the
-[selected report](release-evidence.md#selected-report) and `complete`. Complete
+[selected report](release-evidence.md#selected-report), the three
+[evidence file](release-evidence.md#upload) hashes and `complete`. Complete
 requires an evaluated or released run, every item done or a gap with a gap row,
 every gap accepted, a done build whose input and recipe hashes match the release
 row, and, for a run with a [decision](release-evidence.md#selected-report), a
-done `evidence` item. The workshop reads share one repeatable-read snapshot.
+done `evidence` item; release-row refuses such a run without one, so the five
+fields are present together or not at all. The workshop reads share one
+repeatable-read snapshot.
 
 Report recipes are hashes. `recipe_hash_inputs` holds the exact JSON strings
 hashed for `query`, `document`, `chunk`, `lexical` and `retrieval`: the

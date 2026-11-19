@@ -86,6 +86,8 @@ func (inv inventory) gapSnapshot() (string, error) {
 type predecessor struct {
 	rel, findingsSHA256 string
 	file                *File
+	identitySHA256      string
+	identityPath        string
 }
 
 type frozenInputs struct {
@@ -112,15 +114,26 @@ func (f frozenInputs) knowledgeHash() string {
 }
 
 func (f frozenInputs) inputHash() string {
-	return stage.RecipeHash("evidence-input", "1", f.build.SHA256, f.reportSHA256, f.gapSnapshot, f.knowledgeHash(), f.predecessor.rel, f.predecessor.findingsSHA256)
+	return stage.RecipeHash("evidence-input", "1", f.build.SHA256, f.reportSHA256, f.gapSnapshot, f.knowledgeHash(), f.predecessor.rel, f.predecessor.findingsSHA256, f.predecessor.identitySHA256)
+}
+
+func prefixedOrNone(sum string) string {
+	if sum == noneValue {
+		return noneValue
+	}
+	return hashPrefix + sum
+}
+
+func (f frozenInputs) identityBindings(rel string) identityBindings {
+	return identityBindings{Rel: rel, DumpSHA256: hashPrefix + f.dumpSHA256, BuildArtifactSHA256: hashPrefix + f.build.SHA256, ReportSHA256: hashPrefix + f.reportSHA256}
+}
+
+func (f frozenInputs) changesBindings(rel string) changesBindings {
+	return changesBindings{identityBindings: f.identityBindings(rel), PredecessorRel: f.predecessor.rel, PredecessorIdentitySHA256: prefixedOrNone(f.predecessor.identitySHA256)}
 }
 
 func (f frozenInputs) bindings(rel string) Bindings {
-	findings := f.predecessor.findingsSHA256
-	if findings != noneValue {
-		findings = hashPrefix + findings
-	}
-	return Bindings{Rel: rel, DumpSHA256: hashPrefix + f.dumpSHA256, BuildArtifactSHA256: hashPrefix + f.build.SHA256, ReportSHA256: hashPrefix + f.reportSHA256, DetectorRegistrySHA256: hashPrefix + detector.Hash(), PredecessorRel: f.predecessor.rel, PredecessorFindingsSHA256: findings}
+	return Bindings{Rel: rel, DumpSHA256: hashPrefix + f.dumpSHA256, BuildArtifactSHA256: hashPrefix + f.build.SHA256, ReportSHA256: hashPrefix + f.reportSHA256, DetectorRegistrySHA256: hashPrefix + detector.Hash(), PredecessorRel: f.predecessor.rel, PredecessorFindingsSHA256: prefixedOrNone(f.predecessor.findingsSHA256)}
 }
 
 func (s *Stage) committedBuild(ctx context.Context, env stage.Env, q store.Querier, run stage.Run, inv inventory, verifyDump bool) (artifact.Result, error) {
@@ -219,7 +232,7 @@ func resolvePredecessor(ctx context.Context, env stage.Env, q store.Querier, run
 		if compared != nil {
 			return predecessor{}, refuse("selected report names %s, previous report decision is none", compared.Rel)
 		}
-		return predecessor{rel: noneValue, findingsSHA256: noneValue}, nil
+		return predecessor{rel: noneValue, findingsSHA256: noneValue, identitySHA256: noneValue}, nil
 	}
 	if compared == nil || compared.ReportSHA256 != decision.SHA256 || compared.Country != run.Country {
 		return predecessor{}, refuse("selected report does not match the previous report decision %s", decision.SHA256)
@@ -236,7 +249,7 @@ func resolvePredecessor(ctx context.Context, env stage.Env, q store.Querier, run
 		return predecessor{}, refuse("decode predecessor snapshot: %v", err)
 	}
 	if stage.PredatesDecision(run.Country, compared.Rel, snapshot) {
-		return predecessor{rel: compared.Rel, findingsSHA256: noneValue}, nil
+		return predecessor{rel: compared.Rel, findingsSHA256: noneValue, identitySHA256: noneValue}, nil
 	}
 	if snapshot.PreviousReport == nil {
 		return predecessor{}, refuse("predecessor %s has no previous report decision", compared.Rel)
@@ -244,7 +257,7 @@ func resolvePredecessor(ctx context.Context, env stage.Env, q store.Querier, run
 	if row.State != "evaluated" && row.State != "released" {
 		return predecessor{}, refuse("predecessor %s is %s, not evaluated", compared.Rel, row.State)
 	}
-	file, sum, err := readRunFindings(ctx, q, env.Artifacts, row)
+	file, sum, dir, err := readRunEvidence(ctx, q, env.Artifacts, row)
 	if err != nil {
 		return predecessor{}, err
 	}
@@ -252,19 +265,25 @@ func resolvePredecessor(ctx context.Context, env stage.Env, q store.Querier, run
 	if !hasPrefix || bound != decision.SHA256 || file.Bindings.Rel != compared.Rel {
 		return predecessor{}, refuse("predecessor %s evidence does not bind the frozen previous report", compared.Rel)
 	}
-	return predecessor{rel: compared.Rel, findingsSHA256: sum, file: &file}, nil
+	path, identity, err := predecessorIdentity(dir, compared.Rel, decision.SHA256)
+	if err != nil {
+		return predecessor{}, err
+	}
+	return predecessor{rel: compared.Rel, findingsSHA256: sum, file: &file, identitySHA256: identity, identityPath: path}, nil
 }
 
-func readRunFindings(ctx context.Context, q store.Querier, artifacts artifact.Store, row store.Run) (File, string, error) {
+func readRunEvidence(ctx context.Context, q store.Querier, artifacts artifact.Store, row store.Run) (File, string, string, error) {
 	inv, err := readInventory(ctx, q, row.ID)
 	if err != nil {
-		return File{}, "", err
+		return File{}, "", "", err
 	}
 	path, sum, ok := inv.doneArtifact(stage.EvidenceStage, row.Country+"/"+row.Rel)
 	if !ok {
-		return File{}, "", refuse("%s/%s has no done evidence item", row.Country, row.Rel)
+		return File{}, "", "", refuse("%s/%s has no done evidence item", row.Country, row.Rel)
 	}
-	return readArtifactFindings(artifacts.Abs(path), sum)
+	dir := artifacts.Abs(path)
+	file, findings, err := readArtifactFindings(dir, sum)
+	return file, findings, dir, err
 }
 
 func readArtifactFindings(dir, manifestSHA256 string) (File, string, error) {
@@ -291,6 +310,6 @@ func LoadFindings(ctx context.Context, q store.Querier, artifacts artifact.Store
 	if err != nil {
 		return File{}, fmt.Errorf("read run %s/%s: %w", country, rel, err)
 	}
-	file, _, err := readRunFindings(ctx, q, artifacts, row)
+	file, _, _, err := readRunEvidence(ctx, q, artifacts, row)
 	return file, err
 }

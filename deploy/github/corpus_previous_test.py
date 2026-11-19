@@ -29,12 +29,29 @@ class CorpusPreviousTest(unittest.TestCase):
         Path(args[-1]).write_bytes(self.data)
         return dict(ETag='opaque', ContentRange=f'bytes 0-{len(self.data) - 1}/{len(self.data)}')
 
-    def verify(self, report=None, manifest=None, client=None):
+    def verify(self, report=None, manifest=None, client=None, run=None, sidecars=None):
         from corpus_previous import verified_previous
         with patch('corpus_registry.release', return_value=manifest or self.manifest):
             candidate = report or self.report
             row = recipe_fixture(candidate['retrieval_recipe'])[0]
-            return verified_previous(candidate, self.path, client or self.client, release_row=row)
+            if run is not None:
+                row['run'] = run
+            return verified_previous(candidate, self.path, client or self.client, release_row=row, sidecars=sidecars)
+
+    def test_decision_release_compares_its_predecessor_with_the_signed_evidence(self):
+        run = dict(eval_report_sha256='e' * 64)
+        sidecars = dict(predecessor=dict(rel='20990101_1', findings_sha256='none', identity_sha256='none'))
+        self.assertEqual(self.verify(run=run, sidecars=sidecars), self.previous)
+        with self.assertRaisesRegex(ValueError, 'evidence checked'):
+            self.verify(run=run)
+        evidence = dict(findings_sha256='a' * 64, identity_sha256='b' * 64, changes_sha256='c' * 64)
+        with self.assertRaisesRegex(ValueError, 'previous signed manifest'):
+            self.verify(manifest=self.manifest | dict(evidence=evidence), run=run, sidecars=sidecars)
+        named = dict(predecessor=dict(rel='20990101_1', findings_sha256='a' * 64, identity_sha256='b' * 64))
+        self.assertEqual(self.verify(manifest=self.manifest | dict(evidence=evidence), run=run, sidecars=named), self.previous)
+
+    def test_older_shape_skips_the_evidence_comparison(self):
+        self.assertEqual(self.verify(run=dict(complete=True)), self.previous)
 
     def test_downloads_bounded_previous_report_and_checks_both_hashes(self):
         self.assertEqual(self.verify(), self.previous)

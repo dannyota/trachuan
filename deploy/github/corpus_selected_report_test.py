@@ -1,4 +1,6 @@
+from contextlib import redirect_stdout
 import copy
+import io
 import json
 import os
 from pathlib import Path
@@ -8,7 +10,7 @@ from unittest.mock import patch
 
 from corpus_manifest import create, main, validate_inputs
 from corpus_upload import upload
-from corpus_test_support import digest, save_fixture, save_older_shape, write_fixture
+from corpus_test_support import digest, save_fixture, save_older_shape, write_evidence, write_fixture
 
 REL = '20990102_1'
 
@@ -97,12 +99,16 @@ class SelectedReportTest(unittest.TestCase):
         save_older_shape(self.path, self.row)
         self.assert_both_refuse()
 
-    def run_cli(self, command, country='vn'):
+    def run_cli(self, command, country='vn', list_files=False, check=True):
         environment = dict(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='2')
         argv = ['corpus_manifest.py', command, country, REL, str(self.path), str(self.path / 'report.json')]
-        with patch.dict(os.environ, environment), patch('sys.argv', argv), \
-                patch('corpus_previous.check_remote', return_value=None):
-            main()
+        argv += ['--list-files'] if list_files else []
+        with patch.dict(os.environ, environment), patch('sys.argv', argv):
+            if not check:
+                main()
+                return
+            with patch('corpus_previous.check_remote', return_value=None):
+                main()
 
     @patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': '20990102_2'})
     def test_cli_applies_the_signing_rule_to_create_and_the_upload_rule_to_validate(self):
@@ -112,17 +118,25 @@ class SelectedReportTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.run_cli('validate')
 
-    def test_cli_refuses_decision_fields_until_the_sidecar_gate(self):
-        for command in ('validate', 'create'):
-            with self.subTest(command=command), self.assertRaisesRegex(ValueError, 'sidecar gate'):
-                self.run_cli(command)
-        self.assertFalse((self.path / 'manifest.json').exists())
+    def test_cli_lists_and_signs_the_evidence_of_a_decision_release(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.run_cli('validate', list_files=True)
+        self.assertEqual(output.getvalue().split(), ['corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json',
+                                                     'findings.json', 'identity.jsonl', 'changes.jsonl'])
+        with patch('corpus_previous.check_remote', return_value=None) as remote, redirect_stdout(io.StringIO()):
+            self.run_cli('create', check=False)
+        self.assertEqual(remote.call_args.kwargs['sidecars']['evidence'],
+                         json.loads((self.path / 'manifest.json').read_bytes())['evidence'])
 
-    def test_upload_refuses_decision_fields_before_any_remote_call(self):
+    def test_upload_refuses_a_gate_failure_before_any_remote_call(self):
+        findings = json.loads((self.path / 'findings.json').read_bytes())
+        findings['detectors']['unmatched_operative_claim']['complete'] = False
+        write_evidence(self.path, self.row, self.report, findings=findings)
         with patch.dict(os.environ, OCI_S3_ENDPOINT='https://synthetic.invalid'), \
                 patch('corpus_upload.require_settled') as settled, \
                 patch('corpus_upload.subprocess.run') as run, \
-                self.assertRaisesRegex(ValueError, 'sidecar gate'):
+                self.assertRaisesRegex(ValueError, 'detector not complete'):
             upload('vn', REL, self.path, self.path / 'report.json')
         settled.assert_not_called()
         run.assert_not_called()

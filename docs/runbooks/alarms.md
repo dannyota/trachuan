@@ -122,7 +122,7 @@ any other row in the check above is a compromise.
    [restore production](backups.md#restore-production) from a backup older than
    the first evidence.
 6. Set the pointer back to the record's `active` with a compare-and-swap, as in
-   [manual restore](release-restore.md#restore-a-corpus-manually).
+   [manual restore](corpus-restore-manual.md).
 7. Return to `activate` the same way and start the server.
 
 [subscription]:

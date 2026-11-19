@@ -70,7 +70,8 @@ observed, so its finding is carried. For `relation_kind_disagreement`, a diagram
 `suspends`, because an act that repeals a clause amends the document; such pairs
 are counted as excluded. No cross-signal detector is `blocking` at first. A
 detector on counts is not defined: the evidence carries counts per detector and
-the uploader prints the change from the previous release.
+the uploader prints the open counts per detector severity and the number of
+findings new and gone against the previous release.
 
 ## Findings
 

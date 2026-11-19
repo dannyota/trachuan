@@ -52,6 +52,8 @@ type fixture struct {
 	report    map[string]any
 	gaps      []gapRow
 	previous  string
+	summary   *fakeSummary
+	members   members
 }
 
 func newFixture(t *testing.T, decision stage.PreviousReport) *fixture {
@@ -67,6 +69,9 @@ func newFixture(t *testing.T, decision stage.PreviousReport) *fixture {
 		return f.build, nil
 	}
 	f.stage.release = func(context.Context, stage.Env, stage.Run) (*pgxpool.Pool, func(), error) { return nil, func() {}, nil }
+	f.summary, f.members = currentSummary()
+	f.stage.summary = func(*pgxpool.Pool) summarySource { return f.summary }
+	f.stage.members = func(context.Context, stage.Env, stage.Run) (members, error) { return f.members, nil }
 	f.sync()
 	return f
 }
@@ -175,7 +180,7 @@ func TestProcess_WritesBoundEmptyFindings(t *testing.T) {
 	}
 	file := f.findings(output)
 	want := Bindings{Rel: testRel, DumpSHA256: "sha256:" + strings.Repeat("d", 64), BuildArtifactSHA256: "sha256:" + f.build.SHA256, ReportSHA256: "sha256:" + f.reportSum, DetectorRegistrySHA256: "sha256:" + detector.Hash(), PredecessorRel: "none", PredecessorFindingsSHA256: "none"}
-	if file.Bindings != want || file.Schema != 1 || len(file.Findings) != 0 || len(file.Detectors) != 0 {
+	if file.Bindings != want || file.Schema != schemaVersion || len(file.Findings) != 0 || len(file.Detectors) != 0 {
 		t.Fatalf("file = %+v", file)
 	}
 	entries, err := os.ReadDir(f.env.Artifacts.Abs(output.Artifact.Path))
@@ -183,7 +188,7 @@ func TestProcess_WritesBoundEmptyFindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, entry := range entries {
-		if entry.Name() != findingsFile && entry.Name() != "MANIFEST.sha256" {
+		if entry.Name() != findingsFile && entry.Name() != identityFile && entry.Name() != changesFile && entry.Name() != "MANIFEST.sha256" {
 			t.Fatalf("unexpected artifact file %s", entry.Name())
 		}
 	}
@@ -274,7 +279,7 @@ func TestGapSnapshot_IgnoresOrderAndEvidenceRows(t *testing.T) {
 
 func TestRecipe_CoversRegistryDetectorsAndSerialization(t *testing.T) {
 	plain := New(Config{}).Recipe(stage.Snapshot{})
-	if want := stage.RecipeHash(stage.EvidenceStage, "1", detector.Hash(), "[]", "findings.json/1"); plain != want {
+	if want := stage.RecipeHash(stage.EvidenceStage, "1", detector.Hash(), "[]", "findings.json/2,identity.jsonl/1,changes.jsonl/1"); plain != want {
 		t.Fatalf("recipe = %s, want %s", plain, want)
 	}
 	if New(Config{Detectors: []Detector{fakeDetector{id: "x"}}}).Recipe(stage.Snapshot{}) == plain {
@@ -300,7 +305,7 @@ func TestProcess_DetectorFindingsAndCounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	file := f.findings(output)
-	if got := file.Detectors["cross"]; got != (DetectorCounts{Complete: true, Observed: 3, NotObservable: 1}) || len(file.Findings) != 1 {
+	if got := file.Detectors["cross"]; got != (DetectorCounts{Complete: true, Severity: detector.Review, Observed: 3, NotObservable: 1}) || len(file.Findings) != 1 {
 		t.Fatalf("file = %+v", file)
 	}
 	if seen.Run.Rel != testRel || seen.BuildDir == "" || filepath.Base(seen.ReportPath) != "report.json" {
@@ -339,17 +344,6 @@ func TestProcess_DuplicateDetectorNamesRefused(t *testing.T) {
 	}
 }
 
-func TestProcess_NoDetectorsNeverOpensRelease(t *testing.T) {
-	f := newFixture(t, noneDecision())
-	f.stage.release = func(context.Context, stage.Env, stage.Run) (*pgxpool.Pool, func(), error) {
-		t.Fatal("release database opened without a detector")
-		return nil, nil, nil
-	}
-	if _, _, err := f.process(); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func (f *fixture) predecessorRun(decided bool, state string, file *File) {
 	f.t.Helper()
 	snapshot := stage.Snapshot{}
@@ -365,16 +359,31 @@ func (f *fixture) predecessorRun(decided bool, state string, file *File) {
 	if file == nil {
 		return
 	}
+	f.publishPredecessor(file, f.predecessorIdentity(strings.TrimPrefix(file.Bindings.ReportSHA256, hashPrefix)))
+}
+
+func (f *fixture) predecessorEvidence(file *File, identity []byte) {
+	f.t.Helper()
+	f.predecessorRun(true, "evaluated", nil)
+	f.publishPredecessor(file, identity)
+}
+
+func (f *fixture) publishPredecessor(file *File, identity []byte) {
+	f.t.Helper()
 	data, err := file.encode()
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	art := f.publish(stage.EvidenceStage, bareSHA256(data), map[string]string{findingsFile: string(data)})
+	files := map[string]string{findingsFile: string(data)}
+	if identity != nil {
+		files[identityFile] = string(identity)
+	}
+	art := f.publish(stage.EvidenceStage, bareSHA256(append(data, identity...)), files)
 	f.queries.inventories[1] = inventoryJSON(f.t, nil, inventoryItemFor(stage.EvidenceStage, "vn/"+f.previous, art))
 }
 
 func predecessorFile(reportSHA256 string, findings ...Finding) *File {
-	file := File{Schema: 1, Bindings: Bindings{Rel: previousRel, ReportSHA256: "sha256:" + reportSHA256}, Detectors: map[string]DetectorCounts{}, Findings: findings, New: []string{}, Gone: []string{}, Carried: []string{}, Unmatched: []ReviewDecision{}}
+	file := File{Schema: schemaVersion, Bindings: Bindings{Rel: previousRel, ReportSHA256: "sha256:" + reportSHA256}, Detectors: map[string]DetectorCounts{}, Findings: findings, New: []string{}, Gone: []string{}, Carried: []string{}, Unmatched: []ReviewDecision{}}
 	return &file
 }
 

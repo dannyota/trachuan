@@ -9,6 +9,7 @@ import unittest
 
 import corpus_rules
 import corpus_test_support as support
+from corpus_evidence import SIDECARS
 from corpus_manifest import create
 from corpus_test_support import FakeCurl, save_older_shape
 
@@ -286,14 +287,65 @@ class CorpusUploadTest(unittest.TestCase):
                 self.assertIn('not compared with the production release', result.stderr)
                 self.assertFalse(any('put-object' in call['args'] or call['name'] in {'gh', 'curl'} for call in self.calls()))
 
-    def test_decision_fields_never_call_clients(self):
+    def test_decision_release_uploads_its_evidence_then_dispatches(self):
         support.save_fixture(self.build, self.row, self.report)
-        for flags in ((), ('--dry-run',)):
-            with self.subTest(flags=flags):
-                result = self.run_upload(*flags)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn('sidecar gate', result.stderr)
-                self.assertEqual(self.calls(), [])
+        result = self.run_upload('--dry-run')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count('Upload and verify size and ETag:'), 7)
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Open findings allowed: review 0, info 0', result.stdout)
+        self.assertIn('Findings against 20990101_1: new 0, gone 0', result.stdout)
+        calls = self.calls()
+        self.assertEqual(sum('put-object' in call['args'] for call in calls), 7)
+        for name in SIDECARS:
+            self.assertEqual((self.remote / name).read_bytes(), (self.build / name).read_bytes())
+        self.assertEqual(calls[-1]['name'], 'gh')
+
+    def test_decision_release_gate_refusals_never_call_clients(self):
+        def blocking():
+            findings = json.loads((self.build / 'findings.json').read_bytes())
+            findings['detectors']['blocker'] = dict(complete=True, severity='blocking', observed=1, not_observable=0, excluded=0)
+            findings['findings'] = [dict(key='k', detector='blocker', status='open', carried=True)]
+            support.write_evidence(self.build, self.row, self.report, findings=findings)
+
+        def drop_evidence_hashes():
+            row = json.loads((self.build / 'release.json').read_bytes())
+            for field in ('findings_sha256', 'identity_sha256', 'changes_sha256'):
+                row['run'].pop(field)
+            (self.build / 'release.json').write_text(json.dumps(row))
+
+        faults = dict(blocking=blocking, older_binary=drop_evidence_hashes,
+                      missing=lambda: (self.build / 'changes.jsonl').unlink(),
+                      tampered=lambda: (self.build / 'identity.jsonl').write_bytes((self.build / 'identity.jsonl').read_bytes() + b'{}\n'))
+        for name, fault in faults.items():
+            for flags in ((), ('--dry-run',)):
+                with self.subTest(fault=name, flags=flags):
+                    support.save_fixture(self.build, self.row, self.report)
+                    fault()
+                    self.log.unlink(missing_ok=True)
+                    result = self.run_upload(*flags)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(self.calls(), [])
+
+    def test_decision_release_predecessor_must_match_the_previous_signed_manifest(self):
+        from manifest import canonical
+        evidence = dict(findings_sha256='a' * 64, identity_sha256='b' * 64, changes_sha256='c' * 64)
+        path = self.build / 'previous-manifest.json'
+        previous = json.loads(path.read_bytes())
+        path.write_bytes(canonical(previous | dict(evidence=evidence)))
+        support.save_fixture(self.build, self.row, self.report)
+        result = self.run_upload()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('previous signed manifest', result.stderr)
+        self.assertFalse(any('put-object' in call['args'] for call in self.calls()))
+        report_bytes = (self.build / 'report.json').read_bytes()
+        findings = support.findings_fixture(self.build, self.row, report_bytes, self.report, predecessor='sha256:' + 'a' * 64)
+        support.write_evidence(self.build, self.row, self.report, findings=findings, predecessor_identity='sha256:' + 'b' * 64)
+        self.log.unlink()
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(sum('put-object' in call['args'] for call in self.calls()), 7)
 
     def resign_check(self):
         return subprocess.run(['python3', str(self.repo_tool('corpus_production.py')), 'resign-check', 'vn', REL,
@@ -303,6 +355,7 @@ class CorpusUploadTest(unittest.TestCase):
         from manifest import canonical
         support.save_fixture(self.build, self.row, self.report)
         signed = json.loads(create('c' * 40, 7, 'vn', REL, self.build, self.build / 'report.json'))
+        signed.pop('evidence')
         save_older_shape(self.build, self.row)
         (self.build / 'signed-manifest.json').write_bytes(canonical(signed | changes))
 

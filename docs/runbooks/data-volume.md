@@ -105,7 +105,8 @@ df -h / /srv/trachuan/data
 
 Confirm the active release is unchanged and each database size matches the
 recorded value. Investigate any difference before accepting traffic.
-[Prewarm](release-restore.md#prewarm-a-corpus-database) `$DB`, then start Caddy:
+[Prewarm](corpus-restore-manual.md#prewarm-a-corpus-database) `$DB`, then start
+Caddy:
 
 ```sh
 systemctl --user start trachuan-caddy
