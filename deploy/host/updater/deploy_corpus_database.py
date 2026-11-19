@@ -54,6 +54,9 @@ class Database:
 
     def query(self, text, database='postgres', options=sql.CATALOG_PATH):
         self.check_lock()
+        return self.unlocked(text, database, options)
+
+    def unlocked(self, text, database='postgres', options=sql.CATALOG_PATH):
         name = self.target(database, 'postgres')
         try:
             return self.host.activator_psql(name, text, options)
@@ -66,8 +69,8 @@ class Database:
         self.check_lock()
         return self.host.psql(self.target(database), statements, options).decode().strip()
 
-    def catalog(self):
-        value = json.loads(self.query(CATALOG))
+    def catalog(self, locked=True):
+        value = json.loads(self.query(CATALOG) if locked else self.unlocked(CATALOG))
         if not isinstance(value, dict):
             raise ValueError('invalid database catalog')
         return {name: dict(oid=int(item['oid']), owner=item['owner']) for name, item in value.items()}

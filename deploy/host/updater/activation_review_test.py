@@ -115,17 +115,36 @@ class LockOutcomes(Helpers):
         self.assertEqual(self.db.rows, [])
         self.registry.fetch.assert_not_called()
 
-    def test_an_unavailable_lock_before_the_first_seed_keeps_the_file_missing(self):
+    def test_a_first_ever_run_that_meets_a_refused_lock_seeds_the_record_and_keeps_the_alert(self):
         self.baseline()
-        self.db.lock_error = LockUnavailable('activation lock unavailable')
-        self.assertTrue(self.run_phase())
-        self.assertEqual(self.result()['integrity'], ['lock_unavailable'])
         self.assertFalse(self.path.exists())
+        self.db.lock_error = LockUnavailable('activator cannot connect to auth')
+        self.assertTrue(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['integrity']), ('waiting', ['lock_unavailable']))
+        self.assertEqual(self.stored()['active'], self.active_entry())
+        self.assertEqual(self.stored()['alerts'], {'lock_unavailable': stamp(NOW)})
+        self.assertEqual(self.db.rows, [])
         self.db.lock_error = None
+        self.now = NOW + 3600
         self.assertTrue(self.again())
-        self.assertEqual(self.result()['status'], 'ok')
-        self.assertEqual(self.stored()['active']['database'], self.name)
-        self.assertEqual(self.stored()['retired'][0]['database'], self.active_name)
+        self.assertEqual((self.result()['status'], self.result()['integrity']), ('ok', ['lock_unavailable']))
+        self.now = NOW + DAY
+        self.assertTrue(self.again())
+        self.assertEqual((self.result()['status'], self.result()['integrity']), ('current', []))
+
+    def test_reconciling_runs_before_the_activation_lock_without_it(self):
+        self.baseline()
+        order = []
+        catalog, lock = self.db.catalog, self.db.lock
+        def read(locked=True):
+            order.append(('catalog', locked, self.path.exists()))
+            return catalog(locked)
+        def take():
+            order.append(('lock', self.path.exists()))
+            return lock()
+        self.db.catalog, self.db.lock = read, take
+        self.assertTrue(self.run_phase('verify'))
+        self.assertEqual(order[:2], [('catalog', False, False), ('lock', True)])
 
     def test_an_unavailable_lock_in_the_middle_of_an_operation_aborts_nothing(self):
         oid = self.db.add(self.name)

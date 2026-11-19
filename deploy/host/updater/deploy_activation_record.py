@@ -131,7 +131,7 @@ def blank():
 class Record:
     def __init__(self, path, check, clock=time.time):
         self.path, self.check, self.clock = Path(path), check, clock
-        self.data, self.written, self.transient = None, None, set()
+        self.data, self.written = None, None
 
     def load(self):
         self.data, self.written = None, None
@@ -164,8 +164,8 @@ class Record:
             try:
                 data = parse(self.path.read_bytes(), self.check)
             except (OSError, Unreadable):
-                return sorted(self.transient)
-        return sorted(set(self.recent(data['alerts'])) | self.transient)
+                return []
+        return sorted(self.recent(data['alerts']))
 
     def alert(self, code):
         if code not in ALERTS:
@@ -175,14 +175,6 @@ class Record:
     def raise_alert(self, code):
         self.alert(code)
         self.save()
-
-    def note(self, code):
-        if code not in ALERTS:
-            raise ValueError('unknown activation alert')
-        if self.data is None and self.load() != 'ok':
-            self.transient.add(code)
-            return
-        self.raise_alert(code)
 
     @property
     def active(self):

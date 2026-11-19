@@ -80,7 +80,7 @@ class World:
     def remove_list(self, operation):
         self.lists_removed.append(operation)
 
-    def catalog(self):
+    def catalog(self, locked=True):
         return copy.deepcopy(self.databases)
 
     def exists(self, name):

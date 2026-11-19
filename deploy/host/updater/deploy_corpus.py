@@ -339,6 +339,8 @@ class Corpus:
             self.step = 'provision'
             self.provision()
             self.db.discard_lists()
+            self.step = 'reconcile'
+            self.records.reconcile(self.db.catalog(locked=False))
             self.step = 'recovery'
             held = None
             try:
@@ -365,7 +367,7 @@ class Corpus:
         except Waiting as error:
             self.interrupted = interrupted(error)
             if isinstance(error, LockUnavailable):
-                self.record.note('lock_unavailable')
+                self.record.raise_alert('lock_unavailable')
             self.result.write('waiting', self.step, str(error), self.hash, self.manifest, self.mode)
             return True
         except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError, RecursionError) as error:

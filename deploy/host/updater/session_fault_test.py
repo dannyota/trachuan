@@ -94,6 +94,21 @@ class SessionFaultTest(unittest.TestCase):
         with self.assertRaises(CommandError):
             self.db.verify_target(dict(self.row, oid=16400))
 
+    def test_the_catalog_for_reconciling_is_read_from_postgres_without_the_lock(self):
+        self.db.holder, self.db.backend = None, None
+        self.assertEqual(self.db.catalog(locked=False), {})
+        args, text = self.activator_sessions()[0]
+        self.assertEqual(database_of(args), 'postgres')
+        self.assertIn('PGOPTIONS=-c search_path=pg_catalog', args)
+        self.assertIn('FROM pg_catalog.pg_database d', text)
+        for word in ('public.', 'corpus_release', 'release_journal', 'retired_release', 'frameworks_release'):
+            self.assertNotIn(word, text)
+        with self.assertRaises(LockLost):
+            self.db.catalog()
+        self.failure = ('postgres', 2)
+        with self.assertRaises(Unreachable):
+            self.db.catalog(locked=False)
+
     def test_a_lost_lock_is_a_wait_before_any_session(self):
         self.db.holder.poll.return_value = 1
         for action in (self.db.catalog, lambda: self.db.verify_target(dict(self.row, oid=16400))):
