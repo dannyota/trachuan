@@ -58,9 +58,12 @@ updaters refuse unknown steps; its table write is the `activated` row.
 
 ## Reconciling
 
-At the start of each phase, under the lock, the updater brings the file into
-line with `state.json` and the catalog. These reads cannot be forged by the
-server.
+At the start of each phase, under the run's `/run/trachuan-deploy.lock` and
+before it takes the `activation` lock, the updater brings the file into line
+with `state.json` and the catalog, read from database `postgres`. These reads
+cannot be forged by the server, and reconciling writes only the file, so an
+alert raised later in the run is recorded even when the `activation` lock is
+unavailable.
 
 1. A missing or unreadable file is rebuilt, with a warning when it was
    unreadable: `active` from the host's active manifest, `retired` from its
