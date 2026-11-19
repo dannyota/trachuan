@@ -6,16 +6,24 @@ The upload that precedes this and host activation are in
 ## Signing workflow
 
 `.github/workflows/corpus-release.yml`: `workflow_dispatch` from `main` with
-inputs `country`, `rel` and `report_sha256`, environment `corpus-release`, which
-holds the `trachuan-release-verify` read-only customer secret key. That key is
-the law workflow's only OCI credential; it reads one bucket of public legal text
-and cannot write ([frameworks](frameworks-release.md#bucket-and-keys) has its
-own). The uploader dispatches with the SHA-256 of the report it validated and
-uploaded, and the job refuses a downloaded report with any other hash before it
-fetches the dump. The report binds `MANIFEST.sha256` and the dump, so a holder
-of the upload key cannot swap the objects between upload and signing. Signing a
-released `rel` again, for a retry or a rollback, passes `report.sha256` from
-that `rel`'s signed manifest. The job:
+inputs `country`, `rel`, `report_sha256` and `release_sha256`, environment
+`corpus-release`, which holds the `trachuan-release-verify` read-only customer
+secret key. That key is the law workflow's only OCI credential; it reads one
+bucket of public legal text and cannot write
+([frameworks](frameworks-release.md#bucket-and-keys) has its own).
+
+The uploader dispatches with the SHA-256 of the report and of `release.json`
+that it validated and uploaded. The job fetches those two first and refuses
+either with another hash before it fetches anything else. `release.json` binds
+the report, `MANIFEST.sha256` (and through it the dump and `build.json`) and the
+three evidence files, so a holder of the upload key cannot swap any object
+between upload and signing. Signing a released `rel` again, for a retry or a
+rollback, passes `report.sha256` from that `rel`'s signed manifest and an empty
+`release_sha256`, which the job accepts only when `<cc>-<rel>` is already
+signed. Such a re-sign keeps every signed field, and refuses a field the signed
+manifest lacks, so a forged `release.json` cannot change it. The pins rest on
+who may dispatch: someone with repository write access and the upload key
+chooses them, and only the job's own checks remain. The job:
 
 1. HEADs every object before downloading: dump at most 16 GiB, each JSON file at
    most 16 MiB, the two [JSON Lines evidence files](release-evidence.md#upload)
