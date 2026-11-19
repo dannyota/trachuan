@@ -158,3 +158,39 @@ func TestVNFixtures_DevelopmentMappingPassesGuard(t *testing.T) {
 		t.Fatal("missing development mapping passed the guard")
 	}
 }
+
+func TestVNFixtures_PeriodAndTransitionTags(t *testing.T) {
+	suite, err := VNSuite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	period := map[string]bool{"dev-018": true, "dev-022": true, "dev-033": true, "dev-039": true, "dev-052": true, "dev-070": true, "dev-088": true}
+	transition := map[string]bool{"dev-023": true, "dev-055": true, "dev-076": true, "dev-093": true}
+	development, periodCount := 0, 0
+	for _, c := range suite.Development {
+		tags := map[string]bool{}
+		for _, tag := range c.Tags {
+			tags[tag] = true
+		}
+		if tags["historical"] != period[c.ID] || tags["transition"] != transition[c.ID] {
+			t.Errorf("%s tags %v", c.ID, c.Tags)
+		}
+		switch developmentCohort(c) {
+		case "development_period":
+			periodCount++
+		case "development":
+			development++
+		}
+		if c.ID == "dev-018" && c.ExpectedCitations[0].DocNumber != "19/2016/TT-NHNN" {
+			t.Errorf("dev-018 number %q", c.ExpectedCitations[0].DocNumber)
+		}
+	}
+	if periodCount != 7 || development != 58 || development+periodCount != len(suite.Development) {
+		t.Fatalf("development %d, period %d, cases %d", development, periodCount, len(suite.Development))
+	}
+	for _, entry := range suite.Map.Entries {
+		if entry.CaseID == "dev-018" && entry.CitationIndex == 0 && entry.ExpectedNumber != "19/2016/TT-NHNN" {
+			t.Fatalf("dev-018 identity entry number %q", entry.ExpectedNumber)
+		}
+	}
+}

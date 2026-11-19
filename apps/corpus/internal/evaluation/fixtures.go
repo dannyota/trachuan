@@ -6,18 +6,41 @@ import (
 	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
+	"strings"
 )
 
-//go:embed testdata/vn/*.json
+//go:embed testdata/vn/*.json testdata/vn/development-previous/*.json
 var vnFixtures embed.FS
 
-// VNSuite loads the embedded Vietnamese evaluation suite.
 func VNSuite() (Suite, error) { return LoadSuiteFS(vnFixtures, "testdata/vn") }
 
-// LoadSuiteFS reads and validates an evaluation suite from a filesystem.
+func readPreviousDevelopment(fsys fs.FS, dir string) (map[string][]byte, error) {
+	out := map[string][]byte{}
+	entries, err := fs.ReadDir(fsys, dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read previous development fixtures: %w", err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".json") {
+			return nil, fmt.Errorf("unexpected previous development fixture %s", name)
+		}
+		data, readErr := fs.ReadFile(fsys, path.Join(dir, name))
+		if readErr != nil {
+			return nil, fmt.Errorf("read previous development fixture %s: %w", name, readErr)
+		}
+		out[strings.TrimSuffix(name, ".json")] = data
+	}
+	return out, nil
+}
+
 func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	read := func(name string) ([]byte, error) {
 		b, err := fs.ReadFile(fsys, path.Join(dir, name))
@@ -39,6 +62,10 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 		return Suite{}, err
 	}
 	developmentCases, err := LoadDevelopment(bytes.NewReader(development))
+	if err != nil {
+		return Suite{}, err
+	}
+	previousDevelopment, err := readPreviousDevelopment(fsys, path.Join(dir, "development-previous"))
 	if err != nil {
 		return Suite{}, err
 	}
@@ -102,7 +129,7 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err = validateValidityCases(validityCases); err != nil {
 		return Suite{}, err
 	}
-	s := Suite{Development: developmentCases, ValidityCases: validityCases, ValidityBytes: append([]byte(nil), validity...), Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Development: hash(development), Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), ValidityCases: hash(validity)}}
+	s := Suite{Development: developmentCases, PreviousDevelopment: previousDevelopment, ValidityCases: validityCases, ValidityBytes: append([]byte(nil), validity...), Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Development: hash(development), Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), ValidityCases: hash(validity)}}
 	if err = validateSuite(s); err != nil {
 		return Suite{}, fmt.Errorf("validate suite: %w", err)
 	}

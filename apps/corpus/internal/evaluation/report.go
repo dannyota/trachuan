@@ -10,9 +10,8 @@ import (
 )
 
 type ValidityOverrides struct {
-	HistoricalPolicy *string `json:"historical_policy"`
-	NonCurrentTail   *int    `json:"non_current_tail"`
-	NotYetEligible   bool    `json:"not_yet_eligible"`
+	NonCurrentTail *int `json:"non_current_tail"`
+	NotYetEligible bool `json:"not_yet_eligible"`
 }
 
 type Options struct {
@@ -74,6 +73,11 @@ type Target struct {
 
 type NonRegression struct {
 	*MRRComparison
+	Revision            *Revision `json:"revision,omitempty"`
+	Numerator           *int      `json:"numerator,omitempty"`
+	Denominator         *int      `json:"denominator,omitempty"`
+	PreviousNumerator   *int      `json:"previous_numerator,omitempty"`
+	PreviousDenominator *int      `json:"previous_denominator,omitempty"`
 	ValidityOverrides
 	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride     *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
@@ -211,6 +215,7 @@ type Report struct {
 	NotRun                        map[string]string             `json:"not_run"`
 	Limitations                   []string                      `json:"limitations"`
 	Cases                         []CaseResult                  `json:"cases"`
+	revision                      *developmentRevision
 }
 
 type ANNMeasure struct {

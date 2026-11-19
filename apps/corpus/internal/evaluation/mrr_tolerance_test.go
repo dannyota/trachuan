@@ -11,7 +11,7 @@ import (
 
 func toleranceReport(t *testing.T, value float64) Report {
 	t.Helper()
-	r := Report{Version: 2, EvaluationDate: retrieval.Date{Year: 2099, Month: 1, Day: 2}, Scorer: "agent-eval/5", Recipes: map[string]string{"query": "q", "document": "d", "chunk": "c", "lexical": "l", "retrieval": "r"}, FixtureHashes: FixtureHashes{Legacy: "a", OldProduct: "b", Development: "c"}, Cohorts: map[string]Cohort{}, Rejections: []Rejection{{CaseID: "r1", Passed: true}, {CaseID: "r2", Passed: true}, {CaseID: "r3", Passed: true}}}
+	r := Report{Version: 3, EvaluationDate: retrieval.Date{Year: 2099, Month: 1, Day: 2}, Scorer: "agent-eval/6", Recipes: map[string]string{"query": "q", "document": "d", "chunk": "c", "lexical": "l", "retrieval": "r"}, FixtureHashes: FixtureHashes{Legacy: "a", OldProduct: "b", Development: "c"}, Cohorts: map[string]Cohort{}, Rejections: []Rejection{{CaseID: "r1", Passed: true}, {CaseID: "r2", Passed: true}, {CaseID: "r3", Passed: true}}}
 	for _, name := range []string{"old_product", "development"} {
 		c := Cohort{CaseCount: 1, PositiveCount: 1, ExpectedCitations: 1}
 		if name == "old_product" {
@@ -64,8 +64,10 @@ func TestMRRTolerance_Conditions(t *testing.T) {
 		{"same recipes", func(*Report, *Report) {}, true},
 		{"recipe differs", func(r, p *Report) { r.Recipes["chunk"] = "changed" }, false},
 		{"scorer incompatible", func(r, p *Report) { p.Scorer = "agent-eval/3" }, false},
-		{"compatible scorer", func(r, p *Report) { p.Scorer = "agent-eval/4"; p.Version = 1 }, true},
-		{"fixtures differ", func(r, p *Report) { r.FixtureHashes.Development = "changed" }, false},
+		{"compatible scorer", func(r, p *Report) { p.Scorer = "agent-eval/5"; p.Version = 2 }, true},
+		{"agent-eval/4 incompatible", func(r, p *Report) { p.Scorer = "agent-eval/4"; p.Version = 1 }, false},
+		{"legacy fixture differs", func(r, p *Report) { r.FixtureHashes.Legacy = "changed" }, false},
+		{"old product fixture differs", func(r, p *Report) { r.FixtureHashes.OldProduct = "changed" }, false},
 		{"case set differs", func(r, p *Report) {
 			for i := range r.Cases {
 				if r.Cases[i].Cohort == "old_product" {
@@ -199,7 +201,7 @@ func TestMRRTolerance_StrictFallbackAndVersionOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := toleranceReport(t, .723)
-	r.FixtureHashes.Development = "changed"
+	r.FixtureHashes.Legacy = "changed"
 	if err := finishQuality(&r, &middle); err != nil {
 		t.Fatal(err)
 	}
@@ -298,5 +300,33 @@ func TestMRRTolerance_LossRanksAcrossLimits(t *testing.T) {
 				t.Fatalf("losses: %v", losses)
 			}
 		})
+	}
+}
+
+func TestMRRTolerance_ConditionThreePerCohort(t *testing.T) {
+	p, r := toleranceReport(t, .7247), toleranceReport(t, .7226)
+	r.Cases[0].Ranks = []int{9}
+	r.FixtureHashes.Legacy = "changed"
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
+	if n := mrrRecord(t, r, "old_product"); n["tolerance"] != float64(0) || n["status"] != "fail" {
+		t.Fatalf("old product with a changed legacy fixture: %v", n)
+	}
+	if n := mrrRecord(t, r, "development"); n["tolerance"] != mrrTolerance || n["status"] != "pass" {
+		t.Fatalf("development with a changed legacy fixture: %v", n)
+	}
+	p, r = toleranceReport(t, .7247), toleranceReport(t, .7226)
+	r.Cases[0].Ranks = []int{9}
+	r.FixtureHashes.Development = "changed"
+	r.revision = &developmentRevision{comparable: []string{"one"}, previousOrder: []string{"one"}, revised: []RevisedCase{}}
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
+	if n := mrrRecord(t, r, "old_product"); n["tolerance"] != mrrTolerance || n["status"] != "pass" {
+		t.Fatalf("old product with a changed development fixture: %v", n)
+	}
+	if n := mrrRecord(t, r, "development"); n["revision"] == nil || n["tolerance"] != mrrTolerance {
+		t.Fatalf("development revision record: %v", n)
 	}
 }

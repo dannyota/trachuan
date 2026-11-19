@@ -6,7 +6,7 @@
   "origin": "authored evaluation cases, not user questions",
   "case_count": 92,
   "development": {
-    "sha256": "19d5e1af2b7031315db7a5164d28eda38d68ee7be364d8a332caca6f72649abf",
+    "sha256": "31c81020fb1aa6fd9c56fcbbe764b8aed2a2e613d482238e4678869861b4aa8b",
     "origin": "trachuan development cases: Claude-authored scenarios and queries, labels adjudicated against official text of run vn/20261111_2, rechecked by a second model, owner spot check",
     "case_count": 65
   }

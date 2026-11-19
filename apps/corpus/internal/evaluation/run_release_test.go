@@ -50,6 +50,14 @@ func TestReleaseValidator_ContractMatchesEvaluationOutput(t *testing.T) {
 	for name, cohort := range report.Cohorts {
 		emitted[name] = releaseComparisons(cohort.NonRegression)
 	}
+	if _, listed := contract["development_period"]; !listed {
+		for _, record := range emitted["development_period"] {
+			if record.Gating {
+				t.Fatalf("gated period record %+v", record)
+			}
+		}
+		delete(emitted, "development_period")
+	}
 	if !reflect.DeepEqual(emitted, contract) {
 		t.Fatalf("release validator contract differs from evaluation: emitted=%v contract=%v", emitted, contract)
 	}

@@ -89,9 +89,9 @@ type evalTarget struct {
 func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error), versions ...func(context.Context, string, string) (int, error)) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
-		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--previous-release FILE] [--require-floors] [--cap N|none] [--article-cap N|none] [--merge-siblings] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
+		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--previous-release FILE] [--require-floors] [--cap N|none] [--article-cap N|none] [--merge-siblings] [--non-current-tail N] [--not-yet-eligible]"))
 	}
-	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--previous-release": true, "--require-floors": false, "--cap": true, "--article-cap": true, "--merge-siblings": false, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
+	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--previous-release": true, "--require-floors": false, "--cap": true, "--article-cap": true, "--merge-siblings": false, "--non-current-tail": true, "--not-yet-eligible": false})
 	if err != nil {
 		return fail(err)
 	}
@@ -126,12 +126,6 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 		}
 	}
 	validity := evaluation.ValidityOverrides{NotYetEligible: opts["--not-yet-eligible"] == "true"}
-	if value, ok := opts["--historical-policy"]; ok {
-		if value != "agent" {
-			return fail(fmt.Errorf("invalid historical policy: expected agent"))
-		}
-		validity.HistoricalPolicy = &value
-	}
 	if value, ok := opts["--non-current-tail"]; ok {
 		n, parseErr := strconv.Atoi(value)
 		if parseErr != nil || n < 0 || n > 5 || strconv.Itoa(n) != value {

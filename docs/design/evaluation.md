@@ -61,7 +61,7 @@ diagnostic.
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
 verified build artifact hash, fixture and mapping hashes, previous report hash
 or empty string, frozen date, and mode list in fixed order. Recipe hash covers
-scorer version (now `agent-eval/4`), legacy matcher version, product matcher
+scorer version (now `agent-eval/6`), legacy matcher version, product matcher
 version, metric definitions, rejection IDs/message, cache schema/depths,
 quantile rule, and floors. It reads but never changes the dump or singleton
 release row. Artifact files: `report.json`, `cases.jsonl`, `arms.jsonl`,

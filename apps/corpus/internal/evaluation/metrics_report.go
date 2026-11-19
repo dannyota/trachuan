@@ -223,6 +223,10 @@ func finishQuality(r *Report, previous *Report) error {
 		r.QualityPass = false
 		return err
 	}
+	if err := unresolvedRevision(r, previous); err != nil {
+		r.QualityPass = false
+		return err
+	}
 	finishProductQuality(r, previous, "old_product")
 	old := r.Cohorts["old_product"]
 	old.Floors, old.Targets, old.NonRegression = r.Floors, r.Targets, r.NonRegression
@@ -246,6 +250,10 @@ func finishQuality(r *Report, previous *Report) error {
 	}
 	development.Floors, development.Targets, development.NonRegression = current.Floors, current.Targets, current.NonRegression
 	r.Cohorts["development"] = development
+	if period, ok := r.Cohorts["development_period"]; ok {
+		period.NonRegression = periodRecords(r, previous)
+		r.Cohorts["development_period"] = period
+	}
 	return nil
 }
 
@@ -299,7 +307,9 @@ func finishProductQuality(r *Report, previous *Report, cohort string) {
 					}
 				}
 				comparison := NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Gating: gating, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, Reason: m.Reason, MappingIncompleteCount: m.MappingIncompleteCount}
-				if r.Version == 2 && spec.name == "mrr" {
+				if cohort == "development" && gating && r.revision != nil && previous != nil {
+					applyRevision(r, previous, &comparison)
+				} else if r.Version >= 2 && spec.name == "mrr" {
 					applyMRRComparison(r, previous, cohort, &comparison)
 				}
 				r.NonRegression = append(r.NonRegression, comparison)

@@ -57,7 +57,7 @@ type filterState struct {
 func newFilterState(ctx context.Context, engine Engine, suite Suite, o Options) (filterState, error) {
 	s := filterState{gate: FilterGate{Cohorts: map[string]map[string]FilterCohort{}, Cases: []FilterCase{}}}
 	status := "out_of_scope"
-	if o.CapOverride != nil || o.ArticleCapOverride != nil || o.NonCurrentTail != nil || o.HistoricalPolicy != nil || o.NotYetEligible {
+	if o.CapOverride != nil || o.ArticleCapOverride != nil || o.NonCurrentTail != nil || o.NotYetEligible {
 		status = "not_run"
 		s.gate.Reason = "research_override"
 	} else {
