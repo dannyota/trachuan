@@ -24,9 +24,10 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    unaccented cases become rejection checks that must all return the ADR 0002
    diacritics message and sit outside the recall, MRR and abstention
    denominators; the other 89 keep their expectations. **Development**: the new
-   cases below. The targets and gates in
-   [testing](../../instructions/testing.md) apply to the old product and
-   development cohorts, each on its own.
+   cases below; cases about a past period are reported in their own cohort and
+   not gated ([period cases](../design/evaluation-period-cases.md)). The targets
+   and gates in [testing](../../instructions/testing.md) apply to the old
+   product and development cohorts, each on its own.
 2. Product scoring matches exact document and provision identities, with
    alternates adjudicated from official text; no substring credit. Product
    current-law precision counts every returned primary hit.
@@ -56,7 +57,12 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    previous release's: MRR@8 may be below the previous value while it stays
    within a fixed tolerance of the highest value reached under those recipes,
    with recall@20 still strict
-   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). A change that
+   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). Development cases
+   about a past period are scored with the agent's period request in a reported
+   cohort that is not gated
+   ([period cases](../design/evaluation-period-cases.md)); a revised development
+   fixture is compared over the cases it left unchanged
+   ([revisions](../design/evaluation-fixtures.md#revisions)). A change that
    alters only the abstention threshold or its calibration policy ships when
    matched citations are identical on every cohort and abstention balanced
    accuracy does not fall on either cohort. Reports state the small sample size;
@@ -66,8 +72,9 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    results are identical on every cohort.
 6. Abstention uses the best-member cosine of the first fused provision,
    including lexical-only hits; the threshold is calibrated on the old product
-   and development cohorts together, per dense recipe, to the best balanced
-   accuracy ([calibration](../design/calibration.md)).
+   and development cohorts together, including the development period cohort,
+   per dense recipe, to the best balanced accuracy
+   ([calibration](../design/calibration.md)).
 7. Models are compared exact search against exact search on the same cases; ANN
    loss and cost are measured separately per model. Vietnamese_Embedding_v2
    stays unless a different model passes item 4.
@@ -226,3 +233,24 @@ accuracy on either cohort.
   `abstention.calibration_sha256` from its release's data. Condition 1 of the
   MRR@8 tolerance compares retrieval recipes without that field; the abstention
   threshold and every other field must still match.
+- 2026-11-19: period cases and fixture revisions added to items 1 and 4 after
+  `vn/20261118_1`. A reviewed correction ended 32/2012/TT-NHNN, wrongly current
+  in `vn/20261117_7`, and dev-033, a question about 2011 to 2014 scored as
+  current law, lost the hit it had credited: recall@20 86 to 85 of 113, MRR@8
+  0.6673 to 0.6595. The gate held 212 other corrections and the entry was
+  dropped to ship them. Seven cases about a past period (dev-018, dev-022,
+  dev-033, dev-039, dev-052, dev-070, dev-088) move to a reported
+  `development_period` cohort under `in_force_only:false`; dev-023, dev-055,
+  dev-076 and dev-093 are retagged `transition`, and dev-032 and dev-073 lose
+  `historical`, all staying gated. On the 43 positive gated cases that run keeps
+  recall@20 at 80 of 92 and falls MRR@8 by 0.000776, inside the tolerance.
+  Rejected: excusing a loss whose credited document left current-law
+  eligibility. Its review found that it trusted validity fields the candidate
+  report states, excused any cause of ineligibility rather than a reviewed
+  correction, and could not tell a primary hit from a non-current tail hit in
+  the previous case records. A current-law case whose expected document ends is
+  revised in Git instead. Accepted costs: a loss on an added or changed case is
+  not gated in the release that revises it; a case moved into the period cohort
+  leaves the gate for good and takes a History line naming it; the tolerance
+  already used is carried across a revision as a difference measured over the
+  previous membership.

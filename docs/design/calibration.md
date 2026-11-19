@@ -4,18 +4,19 @@ This note owns the abstention threshold. [Evaluation](evaluation.md) owns the
 cohorts, metrics and report.
 
 Build calls the same engine on old product and development exact hybrid limit-8
-responses, before finalizing the release row. No lexical, chunk or model
-experiment runs. Cache first-group best-member cosines before applying a
-threshold; empty or rejected cases remain fixed abstentions. Candidate
-thresholds are midpoints between consecutive distinct observed cosines, plus
-always-answer/always-abstain sentinels defined in budgets. Choose the threshold
-that maximizes balanced accuracy over both cohorts together: the mean of the
-positive answer rate (positives at or above the threshold) and the negative
-abstention rate (negatives below it); ties choose the lowest threshold. Record
-both rates at the chosen threshold. Reason: a single best-member cosine cannot
-separate every negative from every positive; requiring every negative to abstain
-lets the one highest-scoring negative set the threshold (run vn/20261111_3:
-threshold 0.726 from one negative, 11 of 134 positives answered).
+responses, the development period cohort included under the default request,
+before finalizing the release row. No lexical, chunk or model experiment runs.
+Cache first-group best-member cosines before applying a threshold; empty or
+rejected cases remain fixed abstentions. Candidate thresholds are midpoints
+between consecutive distinct observed cosines, plus always-answer/always-abstain
+sentinels defined in budgets. Choose the threshold that maximizes balanced
+accuracy over both cohorts together: the mean of the positive answer rate
+(positives at or above the threshold) and the negative abstention rate
+(negatives below it); ties choose the lowest threshold. Record both rates at the
+chosen threshold. Reason: a single best-member cosine cannot separate every
+negative from every positive; requiring every negative to abstain lets the one
+highest-scoring negative set the threshold (run vn/20261111_3: threshold 0.726
+from one negative, 11 of 134 positives answered).
 
 Calibration calls `Prepare` and `Collect` on the draft, then `retrieval.Rank`,
 which returns `FirstBestCosine` without a threshold; it never calls `Search`.

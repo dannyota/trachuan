@@ -39,7 +39,7 @@ new run requires exactly one of:
 
 - `--previous-report <report.json>`: the uploaded report of the production
   release ([corpus release](corpus-release.md)). Start decodes it, requires
-  report version 2 with its retrieval recipe, status complete, this run's
+  report version 2 or 3 with its retrieval recipe, status complete, this run's
   country and a `rel` below this run's, and copies the bytes into the artifact
   store.
 - `--no-previous-report`: the run is compared with nothing and cannot publish.

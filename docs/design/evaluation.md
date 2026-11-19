@@ -1,7 +1,8 @@
 # Retrieval evaluation harness
 
 Implementation of [ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md). It
-measures the legacy, old product and development cohorts; development is
+measures the legacy, old product and development cohorts, and the
+[development period](evaluation-period-cases.md) cohort; development is
 `not_run` while its case file is empty. A low score is a result, not grounds to
 remove cases or lower a floor.
 
@@ -18,26 +19,26 @@ and fixture hashes, never arbitrary SQL. Separate
 publishing its final recipe.
 
 Freeze the engine clock to the build's evaluation date, but leave request `AsOf`
-nil and `InForceOnly` true for both old cohorts and calibration. Setting `AsOf`
-would change the test to historical eligibility. Research-only overrides on
-`corpus eval` (the per-document and per-article caps, and validity policy
-overrides for cases tagged `historical`, a non-current tail and not-yet
-documents) may change a trial's request or shaping; each is recorded on the
-report and on every record that carries `limit`, never reaches serving or the
-stage, and a mismatch makes `previous_diff` incompatible. Cache/report fields
-distinguish `evaluation_date` from nullable `request_as_of`. Use the evaluation
-deadline profile for every arm. Cases run three at a time within the item and
-their results merge in case order, so every report and cache field except
-`timings_ms` equals a serial run; `timings_ms` measures latency with three cases
-in flight. A case whose exact retrieval is cancelled by the statement timeout
-(SQLSTATE 57014) is retried once, alone, after the others, under the same
-deadline; a second timeout fails the run, naming the case and the code, and no
-other error is retried. A retry cannot change the result: exact arms read a
-release database that no longer changes, and their order is total. Errors carry
-the SQLSTATE; server retrieval keeps failing fast and keeps its public messages.
-In ANN mode the lexical arm reuses the exact-mode lexical result cut to the
-recipe depth: its order (score descending, then chunk id) is total, so the
-prefix equals a fresh query.
+nil and `InForceOnly` true for every gated cohort and calibration; the
+[period cohort](evaluation-period-cases.md) sends `InForceOnly` false. Setting
+`AsOf` would change the test to historical eligibility. Research-only overrides
+on `corpus eval` (the per-document and per-article caps, and validity policy
+overrides for a non-current tail and not-yet documents) may change a trial's
+request or shaping; each is recorded on the report and on every record that
+carries `limit`, never reaches serving or the stage, and a mismatch makes
+`previous_diff` incompatible. Cache/report fields distinguish `evaluation_date`
+from nullable `request_as_of`. Use the evaluation deadline profile for every
+arm. Cases run three at a time within the item and their results merge in case
+order, so every report and cache field except `timings_ms` equals a serial run;
+`timings_ms` measures latency with three cases in flight. A case whose exact
+retrieval is cancelled by the statement timeout (SQLSTATE 57014) is retried
+once, alone, after the others, under the same deadline; a second timeout fails
+the run, naming the case and the code, and no other error is retried. A retry
+cannot change the result: exact arms read a release database that no longer
+changes, and their order is total. Errors carry the SQLSTATE; server retrieval
+keeps failing fast and keeps its public messages. In ANN mode the lexical arm
+reuses the exact-mode lexical result cut to the recipe depth: its order (score
+descending, then chunk id) is total, so the prefix equals a fresh query.
 
 The sibling clause merge follows the release recipe (recipe 3);
 `--merge-siblings` is rejected with a message naming the release recipe.
@@ -244,15 +245,16 @@ versions; mismatches invalidate reuse.
 `country`, `rel`, `build_artifact_sha256`, `dump_sha256`, `fixture_hashes`,
 `identity_map_sha256`, `recipes`, `evaluation_date`, `request_as_of`,
 `database_instance_kind`, `software`, `calibration`,
-`cohorts:{legacy,old_product,development}`, `floors`, `rejections`, `coverage`,
-`ann_loss`, `timings_ms`, `evidence_characters`, `cache_manifest`,
-`previous_diff` (with `previous:{country,rel,report_sha256}` naming the compared
-report and SHA-256 of its exact bytes), `not_run`, `limitations`, and the counts
-in [scope adoption](scope-adoption.md#readers-and-evaluation). Each metric
-stores counts as well as the value. `coverage` lists each missing
-original/alternate document number and affected case/citation, including the
-five known omissions in the ingest research. Never remove them because the
-source sweep did not find them.
+`cohorts:{legacy,old_product,development,development_period}`, `floors`,
+`rejections`, `coverage`, `ann_loss`, `timings_ms`, `evidence_characters`,
+`cache_manifest`, `previous_diff` (with `previous:{country,rel,report_sha256}`
+naming the compared report and SHA-256 of its exact bytes), `not_run`,
+`limitations`, and the counts in
+[scope adoption](scope-adoption.md#readers-and-evaluation). Each metric stores
+counts as well as the value. `coverage` lists each missing original/alternate
+document number and affected case/citation, including the five known omissions
+in the ingest research. Never remove them because the source sweep did not find
+them.
 
 `mapping_incomplete` lists each validation issue by cohort, case ID, citation
 index and detail, sorted in that order; affected unavailable recall and MRR
@@ -273,16 +275,19 @@ summaries hold `{n,p50,p95,p99}` in milliseconds, using the same quantile rule.
 mapped identities, returned identities, arm/fusion/group/cap/abstention losses,
 decision reason, validity gaps and character counts, without query text.
 `previous_diff` is null with a reason when no previous report exists; otherwise
-compare per-case gains/losses and reject incompatible scorer/fixture versions. A
+compare per-case gains/losses and reject incompatible scorer/fixture versions,
+except a [revised development fixture](evaluation-fixtures.md#revisions). A
 previous report scored by `agent-eval/3` stays comparable with `agent-eval/4`
 for the product cohorts, because the two differ only in legacy matching: the
 non-regression checks and the old product and development case diffs run, the
-diff names both scorers, and legacy cases are left out of it. Every other scorer
-difference skips the comparison with the reason `incompatible scorer version`,
-which fails the stage for a run that froze a previous report. A previous report
-under another retrieval recipe version stays comparable: the diff and the
-non-regression checks run, and the report labels the comparison with both recipe
-versions, as for corpus changes. Corpus changes are labeled coverage changes,
-not an isolated model effect. Report low sample size and old-cohort reuse; no
-superiority interval or claim is needed here. MRR@8 on a corpus-only release is
-judged by the [MRR@8 tolerance](evaluation-mrr-tolerance.md).
+diff names both scorers, and legacy cases are left out of it. `agent-eval/5` and
+`agent-eval/6` are comparable the same way; `agent-eval/6` adds the
+[period cohort](evaluation-period-cases.md). Every other scorer difference skips
+the comparison with the reason `incompatible scorer version`, which fails the
+stage for a run that froze a previous report. A previous report under another
+retrieval recipe version stays comparable: the diff and the non-regression
+checks run, and the report labels the comparison with both recipe versions, as
+for corpus changes. Corpus changes are labeled coverage changes, not an isolated
+model effect. Report low sample size and old-cohort reuse; no superiority
+interval or claim is needed here. MRR@8 on a corpus-only release is judged by
+the [MRR@8 tolerance](evaluation-mrr-tolerance.md).
