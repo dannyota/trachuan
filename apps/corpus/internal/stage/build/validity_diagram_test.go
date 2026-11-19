@@ -25,6 +25,9 @@ func TestRuleC_OnlyDiagramRelationsSetConflict(t *testing.T) {
 		{"text rule", "text_rule/1", false},
 		{"references only", "vbpl_references", false},
 		{"no method", "", false},
+		{"diagram first in a set", "vbpl_diagram,vbpl_references", true},
+		{"longer token", "vbpl_diagram_x", false},
+		{"suffix only", "x_vbpl_diagram", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			target, actor := diagramPair()
