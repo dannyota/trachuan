@@ -5,9 +5,9 @@ from frameworks_release import BUCKET, LIMITS, object_key
 from object_store import fetch_checked
 
 
-def require_active(report, directory, client):
+def require_active(report, directory, client, repository):
     named = report['previous']
-    current = production(directory / 'manifest')
+    current = production(repository, directory / 'manifest')
     if current is None:
         if named is not None:
             raise ValueError('report names a previous release but none is published')
@@ -23,9 +23,9 @@ def require_active(report, directory, client):
         raise ValueError('previous report SHA-256 differs from report')
 
 
-def require_signed(report, directory):
+def require_signed(report, directory, repository):
     named = report['previous']
     if named is None:
         return
-    if release(named['rel'], directory)['report']['sha256'] != named['report_sha256']:
+    if release(repository, named['rel'], directory)['report']['sha256'] != named['report_sha256']:
         raise ValueError('previous report SHA-256 differs from its signed manifest')

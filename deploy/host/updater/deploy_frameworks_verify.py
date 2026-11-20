@@ -3,7 +3,7 @@ from pathlib import Path
 
 from .deploy_frameworks_sql import RELEASE
 from .deploy_io import canonical, decode
-from .deploy_verify import flags, match, positive
+from .deploy_verify import accepted, flags, match, positive
 
 
 FIELDS = {'kind', 'version', 'corpus_kind', 'repository', 'commit', 'rel', 'database', 'sequence', 'previous',
@@ -15,8 +15,8 @@ def manifest(data, rules):
     obj = decode(data, 'frameworks manifest')
     if not isinstance(obj, dict) or set(obj) != FIELDS:
         raise ValueError('invalid frameworks manifest fields')
-    for key, value in dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks',
-                           repository=rules['repository']).items():
+    accepted(obj['repository'], rules, 'frameworks repository')
+    for key, value in dict(kind='trachuan.corpus-release', version=1, corpus_kind='frameworks').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError('invalid frameworks ' + key)
     match('[0-9a-f]{40}', obj['commit'], 'frameworks commit')
@@ -68,7 +68,7 @@ def verify(directory, rules, runner):
     identity = dict(rules, frameworks_identity=rules['frameworks']['identity'])
     runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-blob', '--bundle',
             str(Path(directory) / 'manifest.sigstore.json'),
-            *flags(identity, 'frameworks', 'refs/heads/main', obj['commit']), str(path)])
+            *flags(identity, 'frameworks', obj['repository'], 'refs/heads/main', obj['commit']), str(path)])
     return hashlib.sha256(data).hexdigest(), obj
 
 

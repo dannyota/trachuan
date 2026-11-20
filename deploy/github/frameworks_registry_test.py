@@ -33,7 +33,7 @@ class FrameworksRegistryTest(unittest.TestCase):
         publish_tag(self.registry, tag, manifest_object(self.value) | changes)
 
     def test_absent_tag_is_none_only_for_the_exact_registry_error(self):
-        self.assertIsNone(self.module.production(self.path / 'out'))
+        self.assertIsNone(self.module.production('dannyota/trachuan', self.path / 'out'))
         self.assertEqual(calls(self.log)[0]['args'], ['resolve', REPOSITORY + ':frameworks-production'])
 
     def test_host_fixture_text_is_the_recognised_error(self):
@@ -48,11 +48,11 @@ class FrameworksRegistryTest(unittest.TestCase):
                      'dial tcp: i/o timeout', ''):
             with self.subTest(text=text), patch.dict(os.environ, FAKE_RESOLVE_ERROR=text or ' '):
                 with self.assertRaises(ValueError):
-                    self.module.production(self.path / 'out')
+                    self.module.production('dannyota/trachuan', self.path / 'out')
 
     def test_production_is_verified_against_the_frameworks_workflow_and_commit(self):
         self.publish(sequence=9)
-        result = self.module.production(self.path / 'out')
+        result = self.module.production('dannyota/trachuan', self.path / 'out')
         self.assertEqual(result['sequence'], 9)
         command = next(call['args'] for call in calls(self.log) if call['name'] == 'cosign')
         self.assertEqual(command[command.index('--certificate-identity') + 1],
@@ -61,24 +61,24 @@ class FrameworksRegistryTest(unittest.TestCase):
 
     def test_release_reads_its_own_tag_and_requires_it(self):
         self.publish('frameworks-' + PREVIOUS)
-        self.assertEqual(self.module.release(PREVIOUS, self.path / 'out')['rel'], PREVIOUS)
+        self.assertEqual(self.module.release('dannyota/trachuan', PREVIOUS, self.path / 'out')['rel'], PREVIOUS)
         with self.assertRaises(ValueError):
-            self.module.release(REL, self.path / 'out')
+            self.module.release('dannyota/trachuan', REL, self.path / 'out')
         with self.assertRaises(ValueError):
-            self.module.release('../bad', self.path / 'out')
+            self.module.release('dannyota/trachuan', '../bad', self.path / 'out')
         self.publish('frameworks-' + REL)
         with self.assertRaises(ValueError):
-            self.module.release(REL, self.path / 'out')
+            self.module.release('dannyota/trachuan', REL, self.path / 'out')
 
     def test_bad_signature_artifact_type_and_manifest_are_refused(self):
         self.publish()
         with patch.dict(os.environ, FAKE_BAD_SIGNATURE='1'), self.assertRaises(subprocess.CalledProcessError):
-            self.module.production(self.path / 'out')
+            self.module.production('dannyota/trachuan', self.path / 'out')
         with patch.dict(os.environ, FAKE_ARTIFACT_TYPE='application/other'), self.assertRaises(ValueError):
-            self.module.production(self.path / 'out')
+            self.module.production('dannyota/trachuan', self.path / 'out')
         self.publish(corpus_kind='law')
         with self.assertRaises(ValueError):
-            self.module.production(self.path / 'out')
+            self.module.production('dannyota/trachuan', self.path / 'out')
 
 
 if __name__ == '__main__':

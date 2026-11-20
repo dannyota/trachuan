@@ -15,7 +15,7 @@ class RegistryTest(unittest.TestCase):
     def setUp(self):
         self.assertTrue(Path(__file__).with_name('registry.py').exists(), 'registry helper missing')
         self.registry = importlib.import_module('registry')
-        self.document = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+        self.document = manifest.release('dannyota/trachuan', 'a' * 40, 'refs/tags/v1.2.3', 4,
                                          {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                          'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
         self.hash = hashlib.sha256(self.document).hexdigest()
@@ -73,24 +73,24 @@ class RegistryTest(unittest.TestCase):
     def test_discovers_by_manifest_hash_and_verifies_before_returning(self):
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \
                 patch('registry.verify') as verify:
-            result = self.registry.find({self.hash}, Path(work))
+            result = self.registry.find('ghcr.io/dannyota/trachuan-release', {self.hash}, Path(work))
             self.assertEqual(result[self.hash]['commit'], 'a' * 40)
             self.assertEqual((Path(work) / self.hash / 'manifest.json').read_bytes(), self.document)
             args = verify.call_args
-            self.assertEqual(args.args[2:], ('images.yml', 'refs/tags/v1.2.3', 'a' * 40))
+            self.assertEqual(args.args[2:], ('dannyota/trachuan', 'images.yml', 'refs/tags/v1.2.3', 'a' * 40))
             self.assertEqual(args.kwargs, {'release': True})
         self.assertEqual(sum(args[:3] == ['oras', 'blob', 'fetch'] for args in self.commands), 2)
 
     def test_missing_manifest_fails_closed(self):
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command):
             with self.assertRaisesRegex(ValueError, 'not found'):
-                self.registry.find({'f' * 64}, Path(work))
+                self.registry.find('ghcr.io/dannyota/trachuan-release', {'f' * 64}, Path(work))
 
     def test_production_resolves_immutable_artifact_and_verifies_manifest(self):
         self.assertTrue(hasattr(self.registry, 'production'), 'production lookup missing')
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \
                 patch('registry.verify') as verify:
-            result = self.registry.production(Path(work))
+            result = self.registry.production('ghcr.io/dannyota/trachuan-release', Path(work))
             self.assertEqual(result['sequence'], 4)
             verify.assert_called_once()
         self.assertIn(['oras', 'resolve', 'ghcr.io/dannyota/trachuan-release:production'], self.commands)
@@ -100,7 +100,7 @@ class RegistryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as work, \
                 patch('registry.command', return_value=b'{"tags":["v1.2.3"]}') as command, \
                 patch('registry.verify') as verify:
-            self.assertIsNone(self.registry.production(Path(work)))
+            self.assertIsNone(self.registry.production('ghcr.io/dannyota/trachuan-release', Path(work)))
             self.assertEqual(command.call_count, 1)
             verify.assert_not_called()
 
@@ -109,21 +109,21 @@ class RegistryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \
                 patch('registry.verify', side_effect=ValueError('signature')):
             with self.assertRaises(ValueError):
-                self.registry.production(Path(work))
+                self.registry.production('ghcr.io/dannyota/trachuan-release', Path(work))
         with tempfile.TemporaryDirectory() as work, \
                 patch('registry.command', side_effect=subprocess.CalledProcessError(1, ['oras'])):
             with self.assertRaises(subprocess.CalledProcessError):
-                self.registry.production(Path(work))
+                self.registry.production('ghcr.io/dannyota/trachuan-release', Path(work))
 
     def test_wrong_blob_hash_or_signature_cannot_authorize_rollback(self):
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \
                 patch('registry.verify', side_effect=subprocess.CalledProcessError(1, ['cosign'])):
             with self.assertRaises(subprocess.CalledProcessError):
-                self.registry.find({self.hash}, Path(work))
+                self.registry.find('ghcr.io/dannyota/trachuan-release', {self.hash}, Path(work))
         self.layers[0]['size'] += 1
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command):
             with self.assertRaises(ValueError):
-                self.registry.find({self.hash}, Path(work))
+                self.registry.find('ghcr.io/dannyota/trachuan-release', {self.hash}, Path(work))
 
 
 if __name__ == '__main__':

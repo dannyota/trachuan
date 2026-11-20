@@ -11,7 +11,7 @@ class SigningTest(unittest.TestCase):
 
     def test_signs_then_verifies_exact_release_identity_and_commit(self):
         with patch('signing.subprocess.run') as run:
-            self.s.sign('manifest.json', 'manifest.sigstore.json', 'images.yml', 'refs/tags/v1.2.3', 'a' * 40)
+            self.s.sign('manifest.json', 'manifest.sigstore.json', 'dannyota/trachuan', 'images.yml', 'refs/tags/v1.2.3', 'a' * 40)
         self.assertEqual(run.call_args_list[0].args[0],
                          ['cosign', 'sign-blob', '--yes', '--bundle', 'manifest.sigstore.json', 'manifest.json'])
         command = run.call_args_list[1].args[0]
@@ -23,42 +23,42 @@ class SigningTest(unittest.TestCase):
 
     def test_rollback_uses_main_identity(self):
         with patch('signing.subprocess.run') as run:
-            self.s.sign('manifest.json', 'manifest.sigstore.json', 'rollback.yml', 'refs/heads/main', 'b' * 40)
+            self.s.sign('manifest.json', 'manifest.sigstore.json', 'dannyota/trachuan', 'rollback.yml', 'refs/heads/main', 'b' * 40)
         self.assertIn('https://github.com/dannyota/trachuan/.github/workflows/rollback.yml@refs/heads/main',
                       run.call_args.args[0])
 
     def test_corpus_uses_main_identity_and_binds_workflow_source(self):
         with patch('signing.subprocess.run') as run:
-            self.s.sign('manifest.json', 'manifest.sigstore.json', 'corpus-release.yml', 'refs/heads/main', 'b' * 40)
+            self.s.sign('manifest.json', 'manifest.sigstore.json', 'dannyota/trachuan', 'corpus-release.yml', 'refs/heads/main', 'b' * 40)
         command = run.call_args.args[0]
         self.assertIn('https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main', command)
         self.assertEqual(command[command.index('--certificate-github-workflow-ref') + 1], 'refs/heads/main')
         self.assertEqual(command[command.index('--certificate-github-workflow-sha') + 1], 'b' * 40)
         with patch('signing.subprocess.run') as run:
             with self.assertRaises(ValueError):
-                self.s.verify('manifest.json', 'sig.json', 'corpus-release.yml', 'refs/heads/other', 'b' * 40)
+                self.s.verify('manifest.json', 'sig.json', 'dannyota/trachuan', 'corpus-release.yml', 'refs/heads/other', 'b' * 40)
             run.assert_not_called()
 
     def test_frameworks_uses_its_own_main_identity(self):
         with patch('signing.subprocess.run') as run:
-            self.s.sign('manifest.json', 'manifest.sigstore.json', 'frameworks-release.yml', 'refs/heads/main', 'b' * 40)
+            self.s.sign('manifest.json', 'manifest.sigstore.json', 'dannyota/trachuan', 'frameworks-release.yml', 'refs/heads/main', 'b' * 40)
         command = run.call_args.args[0]
         self.assertIn('https://github.com/dannyota/trachuan/.github/workflows/frameworks-release.yml@refs/heads/main', command)
         self.assertEqual(command[command.index('--certificate-github-workflow-sha') + 1], 'b' * 40)
         with patch('signing.subprocess.run') as run:
             with self.assertRaises(ValueError):
-                self.s.verify('manifest.json', 'sig.json', 'frameworks-release.yml', 'refs/tags/v1.2.3', 'b' * 40)
+                self.s.verify('manifest.json', 'sig.json', 'dannyota/trachuan', 'frameworks-release.yml', 'refs/tags/v1.2.3', 'b' * 40)
             run.assert_not_called()
 
     def test_sign_can_keep_the_signature_out_of_the_log(self):
         with patch('signing.subprocess.run') as run:
-            self.s.sign('manifest.json', 'manifest.sigstore.json', 'frameworks-release.yml', 'refs/heads/main', 'b' * 40,
+            self.s.sign('manifest.json', 'manifest.sigstore.json', 'dannyota/trachuan', 'frameworks-release.yml', 'refs/heads/main', 'b' * 40,
                         stdout=self.s.subprocess.DEVNULL)
         self.assertEqual(run.call_args_list[0].kwargs['stdout'], self.s.subprocess.DEVNULL)
 
     def test_discovered_release_binds_ref_and_commit_with_anchored_identity(self):
         with patch('signing.subprocess.run') as run:
-            self.s.verify('manifest.json', 'sig.json', 'images.yml', 'refs/tags/v1.2.3', 'c' * 40, release=True)
+            self.s.verify('manifest.json', 'sig.json', 'dannyota/trachuan', 'images.yml', 'refs/tags/v1.2.3', 'c' * 40, release=True)
         command = run.call_args.args[0]
         self.assertIn('--certificate-identity-regexp', command)
         self.assertTrue(command[command.index('--certificate-identity-regexp') + 1].startswith('^'))

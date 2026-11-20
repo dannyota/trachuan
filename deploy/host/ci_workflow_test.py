@@ -84,7 +84,7 @@ for path in json.loads(os.environ['CHANGED_PATHS']): sys.stdout.buffer.write(pat
                         "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/github -p '*_test.py'",
                         'bash deploy/github/actionlint.sh',
                         'bash deploy/host/render-units-test.sh',
-                        'python3 deploy/host/check-mounts.py']:
+                        'python3 deploy/host/check-mounts.py deploy/host/deploy-policy.json']:
             self.assertIn(command, commands)
         self.assertIn("if: needs.preflight.outputs.go == 'true'", static)
         self.assertIn('test "$STATIC" = success', workflow.split('\n  ci:\n', 1)[1])

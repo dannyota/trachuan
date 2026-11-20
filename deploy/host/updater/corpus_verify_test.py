@@ -54,7 +54,8 @@ class CorpusVerificationTest(unittest.TestCase):
             calls = []
             v.verify(path, self.rules, lambda args: calls.append(args))
             args = calls[0]
-            for flag, value in [('--certificate-identity-regexp', self.rules['corpus_identity']),
+            for flag, value in [('--certificate-identity-regexp', self.rules['corpus_identity'][self.m['repository']]),
+                                ('--certificate-github-workflow-repository', self.m['repository']),
                                 ('--certificate-github-workflow-ref', 'refs/heads/main'),
                                 ('--certificate-github-workflow-sha', self.m['commit'])]:
                 self.assertEqual(args[args.index(flag)+1], value)

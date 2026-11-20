@@ -6,8 +6,16 @@ pins=$1
 destination=$2
 user_destination=${3:-$destination}
 templates=${QUADLET_TEMPLATES:-$here/quadlet}
+policy=${DEPLOY_POLICY:-/etc/trachuan/deploy-policy.json}
 fail() { echo "render-units: $*" >&2; exit 1; }
 [[ -f $pins && ! -L $pins ]] || fail 'expected a regular images.env'
+[[ -f $policy && ! -L $policy ]] || fail 'expected a regular deploy policy'
+names=$(python3 -I -c 'import json, sys
+policy = json.load(open(sys.argv[1], "rb"))
+for repository in policy["repositories"]:
+    images = policy["images"][repository]
+    print(images["server"], images["web"], images["queryembed"], policy["upstream"]["caddy"], images["postgres"])' "$policy") ||
+ fail 'unreadable deploy policy'
 for key in SERVER_IMAGE WEB_IMAGE QUERYEMBED_IMAGE CADDY_IMAGE POSTGRES_IMAGE; do
  printf -v "$key" '%s' ''
 done
@@ -17,20 +25,24 @@ while IFS= read -r line || [[ -n $line ]]; do
  key=${line%%=*}
  value=${line#*=}
  case $key in
-  SERVER_IMAGE) repository=ghcr.io/dannyota/trachuan-server ;;
-  WEB_IMAGE) repository=ghcr.io/dannyota/trachuan-web ;;
-  QUERYEMBED_IMAGE) repository=ghcr.io/dannyota/trachuan-queryembed ;;
-  CADDY_IMAGE) repository=docker.io/library/caddy ;;
-  POSTGRES_IMAGE) repository=ghcr.io/dannyota/trachuan-postgres ;;
+  SERVER_IMAGE|WEB_IMAGE|QUERYEMBED_IMAGE|CADDY_IMAGE|POSTGRES_IMAGE) ;;
   *) fail 'unknown image key' ;;
  esac
  [[ -z ${!key} ]] || fail "duplicate $key"
- [[ $value == "$repository"@* && ${value#*@} =~ ^sha256:[0-9a-f]{64}$ ]] || fail "invalid digest reference for $key"
+ [[ ${value#*@} =~ ^sha256:[0-9a-f]{64}$ ]] || fail "invalid digest reference for $key"
  printf -v "$key" '%s' "$value"
 done <"$pins"
 for key in SERVER_IMAGE WEB_IMAGE QUERYEMBED_IMAGE CADDY_IMAGE POSTGRES_IMAGE; do
  [[ -n ${!key} ]] || fail "missing $key"
 done
+listed=false
+while read -r server web queryembed caddy postgres; do
+ if [[ ${SERVER_IMAGE%@*} == "$server" && ${WEB_IMAGE%@*} == "$web" && ${QUERYEMBED_IMAGE%@*} == "$queryembed" &&
+  ${CADDY_IMAGE%@*} == "$caddy" && ${POSTGRES_IMAGE%@*} == "$postgres" ]]; then
+  listed=true
+ fi
+done <<<"$names"
+[[ $listed == true ]] || fail 'images do not belong to one policy repository'
 files=() contents=()
 for file in "$templates"/*.container "$templates"/*.volume "$here"/systemd/*.service "$here"/systemd/*.timer; do
  [[ -e $file ]] || continue

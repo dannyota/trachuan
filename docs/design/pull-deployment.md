@@ -26,8 +26,8 @@ the production host with no SSH session. Corpus releases follow
 
 Workflow files change only through pull requests, which the `main` ruleset
 already requires. `deploy/github/settings.json` holds these settings and
-`deploy/github/apply-settings.sh` applies them with `gh api`; CI checks the
-file's shape.
+`deploy/github/apply-settings.sh` applies them with `gh api` (outside Actions it
+needs `--repository <owner/name>`); CI checks the file's shape.
 
 ## Release workflow
 
@@ -100,17 +100,19 @@ inputs `current` and `target` (manifest SHA-256). It fetches both published
 manifests, requires `target` to have a lower sequence and
 `rollback_target: null`, and signs
 `{"kind":"trachuan.rollback","version":1,"current":...,"target":...,"sequence":<run_number>}`
-the same way, published as `ghcr.io/dannyota/trachuan-rollback:<sequence>`.
+the same way, published as `ghcr.io/dannyota/trachuan-rollback:<sequence>`. It
+refuses before signing as [repository move](repository-move.md) decision 5 says.
 
 ## Host policy and state
 
 `/etc/trachuan/deploy-policy.json`, root 0644, installed by the bundle:
-repository, the workflow identities as anchored regular expressions, OIDC issuer
-`https://token.actions.githubusercontent.com`, artifact repositories, image
-names, upstream repositories, the extension allowlist, and the Sigstore trust
-root pinned by the cosign release. Values come from this policy only, never from
-a manifest. Mode (`verify` or `activate`) lives in `/etc/trachuan/deploy-mode`,
-root 0644, written only by bootstrap and the owner, never by a bundle.
+`repositories` (one or two `owner/name`), the workflow identities as anchored
+regular expressions and the image names keyed by repository, OIDC issuer
+`https://token.actions.githubusercontent.com`, artifact repositories, upstream
+repositories, the extension allowlist, and the Sigstore trust root pinned by the
+cosign release. Values come from this policy only, never from a manifest. Mode
+(`verify` or `activate`) lives in `/etc/trachuan/deploy-mode`, root 0644,
+written only by bootstrap and the owner, never by a bundle.
 
 State in `/var/lib/trachuan-deploy/`, root 0700: active image and corpus
 manifest hashes, every accepted sequence with its manifest hash (image, rollback
@@ -142,9 +144,10 @@ retries. A run has three phases, each skipped when nothing changed: secrets
 2. Verify the manifest: `cosign verify-blob --bundle` with
    `--certificate-oidc-issuer` and `--certificate-identity-regexp` from policy;
    the transparency log proof is required and no skip flag is ever passed. Check
-   `kind`, `version`, `repository` and `target`, and bind the manifest's `ref`
-   and `commit` to the certificate with `--certificate-github-workflow-ref` and
-   `--certificate-github-workflow-sha`.
+   `kind`, `version` and `target`; require `repository` in `repositories` and
+   pass it, with its identity, to `--certificate-github-workflow-repository`;
+   bind the manifest's `ref` and `commit` to the certificate with
+   `--certificate-github-workflow-ref` and `--certificate-github-workflow-sha`.
 3. Apply the [acceptance rule](#acceptance).
 4. Verify images: pull each by digest, retried once on a timeout; verify its
    build attestation from the registry with the policy's build identity; require
@@ -228,31 +231,9 @@ readiness. Model provisioning stays a manual owner step.
 
 ### Release floor
 
-The policy may set `release_floor`, an image sequence. Every release at or above
-the first floor-aware release reads an optional `release_floor` key in
-`state.json`; the key is written only once a floor is in force, so older
-updaters still read their state before then, and once it is set no older updater
-can run again. The key is saved in the same atomic write that journals
-`activated`, as the maximum of its previous value and the floor in the activated
-bundle's policy; it never falls, and a lower or missing policy value leaves it
-unchanged. With a floor in force:
-
-- verification rejects a candidate whose sequence is below the floor its own
-  bundle declares, before installation;
-- acceptance refuses an image manifest below the stored floor;
-- a rollback authorization whose target is below it is refused and not consumed;
-- failure recovery never reactivates a retained manifest below it: the journal
-  reads `stopped`, the result names the release floor, and the hold keeps Caddy
-  down whichever phase runs next.
-
-Losing `state.json` is the existing lost-state case: the updater changes nothing
-until bootstrap, so the serving image stays. Corpus manifests are unaffected.
-The result file carries `release_floor` and the metrics timer publishes
-`deploy_release_floor`. Because a rollback installs the target's own updater,
-the floor must be at least the sequence of the first floor-aware release: that
-release ships with no floor and the next sets `release_floor` to its sequence. A
-feature that depends on the floor ships in a later release, after the floor is
-confirmed active ([accounts](accounts.md)).
+The policy may set `release_floor`, an image sequence below which nothing is
+accepted, reactivated or rolled back to; [release floor](release-floor.md) owns
+the rule.
 
 ## Bootstrap
 

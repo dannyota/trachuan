@@ -10,8 +10,8 @@ retention window, not by a manual swap, so the tag follows it.
 
 ## Upload
 
-`scripts/corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>` runs
-on the MacBook after the run is `evaluated` and uploads to bucket
+`scripts/corpus-upload.sh [--dry-run] --repository <owner/name> <cc> <rel> <build-dir> <report.json>`
+runs on the MacBook after the run is `evaluated` and uploads to bucket
 `trachuan-releases`, prefix `<cc>/<rel>/`:
 
 - `corpus.dump`: the build's verified dump.

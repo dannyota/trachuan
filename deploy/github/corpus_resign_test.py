@@ -1,6 +1,7 @@
 import copy
 import io
 import json
+import os
 from contextlib import redirect_stdout
 from pathlib import Path
 import tempfile
@@ -55,13 +56,13 @@ class SignedFieldsTest(unittest.TestCase):
         reviews = self.path / 'reviews.yaml'
         reviews.write_text(json.dumps([dict(release=REL, projection=1, scan_sha256='c' * 64, exclusions_sha256='d' * 64,
                                             reviewer='coordinator', date='2099-01-02')]))
-        self.full = json.loads(create('a' * 40, 7, 'vn', REL, self.path, self.path / 'report.json',
+        self.full = json.loads(create('dannyota/trachuan', 'a' * 40, 7, 'vn', REL, self.path, self.path / 'report.json',
                                       heading_reviews_path=reviews))
 
     def signable(self, rebuilt):
         with patch('corpus_production.production', return_value=self.full), \
                 patch('corpus_production.existing_release', return_value=self.full):
-            return corpus_production.require_signable(rebuilt, report_for(), DECISION, self.path)
+            return corpus_production.require_signable(rebuilt, report_for(), DECISION, self.path, 'dannyota/trachuan')
 
     def test_exempt_set_is_exactly_the_three_fields(self):
         self.assertEqual(corpus_production.RESIGN_MAY_CHANGE, EXEMPT)
@@ -102,7 +103,7 @@ class SignedFieldsTest(unittest.TestCase):
                         evidence=dict(findings_sha256=digest((self.path / 'findings.json').read_bytes()),
                                       identity_sha256=digest((self.path / 'identity.jsonl').read_bytes()),
                                       changes_sha256=digest((self.path / 'changes.jsonl').read_bytes())))
-        actual = manifest_fields('f' * 40, 9, 'vn', REL, self.path, self.path / 'report.json')
+        actual = manifest_fields('dannyota/trachuan', 'f' * 40, 9, 'vn', REL, self.path, self.path / 'report.json')
         self.assertEqual(actual, expected, 'a derived manifest field changed: signed releases keep their old value, '
                                            'so run resign-check for the production and rollback releases first')
 
@@ -117,7 +118,8 @@ class SigningTraceTest(unittest.TestCase):
         with patch('corpus_production.production', return_value=current), \
                 patch('corpus_production.existing_release', return_value=existing):
             return corpus_production.require_signable(rebuilt, report or report_for(),
-                                                      DECISION if run is None else run, self.path, resign=resign)
+                                                      DECISION if run is None else run, self.path, 'dannyota/trachuan',
+                                                      resign=resign)
 
     def production(self, rel=PREVIOUS, sequence=9, digest='b' * 64):
         return manifest(rel=rel, sequence=sequence, report=digest)
@@ -220,23 +222,25 @@ class ResignCheckTest(unittest.TestCase):
         cutoff.start()
         self.addCleanup(cutoff.stop)
         save_older_shape(self.path, self.row)
-        self.signed = json.loads(create('c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
+        self.signed = json.loads(create('dannyota/trachuan', 'c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
 
     def run_check(self, directory=True):
         output = io.StringIO()
-        argv = ['corpus_production.py', 'resign-check', 'vn', REL] + ([str(self.path)] if directory else [])
-        with patch('sys.argv', argv), redirect_stdout(output), \
+        argv = ['corpus_production.py', 'resign-check', 'vn', REL] + ([str(self.path)] if directory else []) + \
+            ['--repository', 'dannyota/trachuan']
+        with patch('sys.argv', argv), redirect_stdout(output), patch.dict(os.environ), \
                 patch('corpus_production.existing_release', return_value=self.signed) as existing:
+            os.environ.pop('GITHUB_REPOSITORY', None)
             try:
                 corpus_production.main()
                 code = 0
             except SystemExit as stop:
                 code = stop.code
-        self.assertEqual(existing.call_args.args[:2], ('vn', REL))
+        self.assertEqual(existing.call_args.args[:3], ('dannyota/trachuan', 'vn', REL))
         return code, output.getvalue()
 
     def dispatch(self):
-        return ('gh workflow run corpus-release.yml --ref main -f country=vn '
+        return ('gh workflow run corpus-release.yml --repo dannyota/trachuan --ref main -f country=vn '
                 f"-f rel={REL} -f report_sha256={self.signed['report']['sha256']}\n")
 
     def test_without_an_upload_directory_prints_only_the_dispatch_of_the_verified_manifest(self):
@@ -293,7 +297,7 @@ class ResignCheckTest(unittest.TestCase):
     def test_new_local_field_is_a_difference(self):
         add_heading_build(self.path, self.row, self.report)
         save_older_shape(self.path, self.row)
-        self.signed = json.loads(create('c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
+        self.signed = json.loads(create('dannyota/trachuan', 'c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
         self.signed.pop('heading_evidence')
         code, output = self.run_check()
         self.assertEqual(code, 3)
@@ -328,7 +332,7 @@ class ResignCheckTest(unittest.TestCase):
 
     def test_upload_whose_evidence_differs_from_the_signed_manifest_is_reported(self):
         write_evidence(self.path, self.row, self.report)
-        self.signed = json.loads(create('c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
+        self.signed = json.loads(create('dannyota/trachuan', 'c' * 40, 7, 'vn', REL, self.path, self.path / 'report.json'))
         self.assertEqual(self.run_check(), (0, 'no signed field would change\n' + self.dispatch()))
         findings = json.loads((self.path / 'findings.json').read_bytes())
         findings['detectors']['unmatched_operative_claim']['observed'] = 4

@@ -7,7 +7,7 @@ import re
 from .deploy_corpus_heading import validate_headings
 from .deploy_corpus_sql import RELEASE
 from .deploy_io import canonical, decode
-from .deploy_verify import flags, match, positive
+from .deploy_verify import accepted, flags, match, positive
 
 
 def release_name(value):
@@ -34,8 +34,8 @@ def manifest(data, rules):
     validate_headings(obj)
     if 'evidence' in obj:
         release_evidence(obj['evidence'])
-    for key, value in dict(kind='trachuan.corpus-release', version=1,
-                           repository=rules['repository'], country='vn').items():
+    accepted(obj['repository'], rules, 'corpus repository')
+    for key, value in dict(kind='trachuan.corpus-release', version=1, country='vn').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError('invalid corpus ' + key)
     match('[0-9a-f]{40}', obj['commit'], 'corpus commit')
@@ -80,7 +80,7 @@ def verify(directory, rules, runner):
     obj = manifest(data, rules)
     runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-blob', '--bundle',
             str(Path(directory) / 'manifest.sigstore.json'),
-            *flags(rules, 'corpus', 'refs/heads/main', obj['commit']), str(path)])
+            *flags(rules, 'corpus', obj['repository'], 'refs/heads/main', obj['commit']), str(path)])
     return hashlib.sha256(data).hexdigest(), obj
 
 

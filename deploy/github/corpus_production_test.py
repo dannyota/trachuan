@@ -39,13 +39,13 @@ class ProductionTest(unittest.TestCase):
     def settled(self, candidate=None, current=None, **answer):
         self.curl.answer(**({'release': PREVIOUS} | answer))
         with patch('corpus_production.production', return_value=current or manifest()) as production:
-            result = corpus_production.require_settled(candidate or report(), self.path)
+            result = corpus_production.require_settled(candidate or report(), self.path, 'dannyota/trachuan')
         return result, production
 
     def test_settled_production_passes_with_the_exact_status_request(self):
         result, production = self.settled()
         self.assertEqual(result['rel'], PREVIOUS)
-        self.assertEqual(production.call_args.args[0], 'vn')
+        self.assertEqual(production.call_args.args[:2], ('dannyota/trachuan', 'vn'))
         self.assertEqual(self.calls()[0]['args'],
                          ['-q', '--silent', '--show-error', '--noproxy', '*', '--proto', '=https',
                           '--max-redirs', '0', '--max-time', '30', '--max-filesize', str(1024**2),
@@ -85,7 +85,7 @@ class ProductionTest(unittest.TestCase):
 
     def test_refuses_when_no_production_manifest_exists(self):
         with patch('corpus_production.production', return_value=None), self.assertRaises(ValueError):
-            corpus_production.require_settled(report(), self.path)
+            corpus_production.require_settled(report(), self.path, 'dannyota/trachuan')
         self.assertEqual(self.calls(), [])
 
     def test_refuses_any_other_status_answer(self):
@@ -104,7 +104,7 @@ class ProductionTest(unittest.TestCase):
 
     def test_other_country_is_refused_without_any_call(self):
         with patch('corpus_production.production') as production, self.assertRaises(ValueError):
-            corpus_production.require_settled(report(country='us'), self.path)
+            corpus_production.require_settled(report(country='us'), self.path, 'dannyota/trachuan')
         production.assert_not_called()
         self.assertEqual(self.calls(), [])
 
@@ -112,7 +112,7 @@ class ProductionTest(unittest.TestCase):
         run = dict(eval_report_sha256='e' * 64, previous_report_sha256='b' * 64)
         with patch('corpus_production.production', return_value=current), \
                 patch('corpus_production.existing_release', return_value=existing, side_effect=existing_error):
-            return corpus_production.require_signable(manifest(rel=REL, sequence=11), candidate, run, self.path)
+            return corpus_production.require_signable(manifest(rel=REL, sequence=11), candidate, run, self.path, 'dannyota/trachuan')
 
     def test_first_signing_requires_the_comparison(self):
         self.assertEqual(self.signable(report(), manifest())['rel'], PREVIOUS)

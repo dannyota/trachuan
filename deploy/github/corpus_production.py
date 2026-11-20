@@ -10,6 +10,7 @@ from corpus_manifest import decode, identity, manifest_fields, validate_manifest
 from corpus_registry import existing_release, production
 from corpus_rules import first_signing_allowed, require_status_country
 from manifest import canonical
+from repositories import workflow
 
 STATUS_URL = 'https://trachuan.vn/api/v1/public/status'
 STATUS_LIMIT = 1024**2
@@ -57,10 +58,10 @@ def served_release():
     return status['release']
 
 
-def require_settled(report, directory):
+def require_settled(report, directory, repository):
     country = report['previous_diff']['previous']['country']
     require_status_country(country)
-    current = production(country, directory / 'production')
+    current = production(repository, country, directory / 'production')
     require_compared_with(report, current)
     if served_release() != current['rel']:
         raise ValueError('served release differs from the production manifest')
@@ -72,12 +73,12 @@ def changed_fields(signed, rebuilt):
                   and (field not in signed or field not in rebuilt or canonical(rebuilt[field]) != canonical(signed[field])))
 
 
-def require_signable(manifest, report, run, directory, resign=False):
+def require_signable(manifest, report, run, directory, repository, resign=False):
     country, rel = manifest['country'], manifest['rel']
-    current = production(country, directory)
+    current = production(repository, country, directory)
     if current is None:
         raise ValueError('no verified production manifest')
-    existing = existing_release(country, rel, directory)
+    existing = existing_release(repository, country, rel, directory)
     if existing is None:
         if resign:
             raise ValueError(f'an empty release SHA-256 signs only an already signed {country}-{rel}')
@@ -92,8 +93,8 @@ def require_signable(manifest, report, run, directory, resign=False):
     return current
 
 
-def signed_release(country, rel, temporary):
-    signed = existing_release(country, rel, temporary)
+def signed_release(repository, country, rel, temporary):
+    signed = existing_release(repository, country, rel, temporary)
     if signed is None:
         raise ValueError(f'no signed manifest for {country}-{rel}')
     return signed
@@ -103,9 +104,9 @@ def shown(manifest, field):
     return canonical(manifest[field]).decode() if field in manifest else 'absent'
 
 
-def resign_differences(country, rel, directory, temporary):
-    signed = signed_release(country, rel, temporary)
-    rebuilt = validate_manifest(manifest_fields(signed['commit'], signed['sequence'], country, rel,
+def resign_differences(country, rel, directory, temporary, repository):
+    signed = signed_release(repository, country, rel, temporary)
+    rebuilt = validate_manifest(manifest_fields(repository, signed['commit'], signed['sequence'], country, rel,
                                                 directory, directory / 'report.json'))
     return signed, [(field, shown(signed, field), shown(rebuilt, field)) for field in changed_fields(signed, rebuilt)]
 
@@ -116,18 +117,21 @@ def main():
     parser.add_argument('country')
     parser.add_argument('rel')
     parser.add_argument('directory', type=Path, nargs='?')
+    parser.add_argument('--repository')
     args = parser.parse_args()
     identity(args.country, args.rel)
+    repository = workflow(args.repository)
     with tempfile.TemporaryDirectory() as temporary:
         if args.directory is None:
-            signed, differences = signed_release(args.country, args.rel, Path(temporary)), []
+            signed, differences = signed_release(repository, args.country, args.rel, Path(temporary)), []
         else:
-            signed, differences = resign_differences(args.country, args.rel, args.directory, Path(temporary))
+            signed, differences = resign_differences(args.country, args.rel, args.directory, Path(temporary),
+                                                     repository)
     for field, old, new in differences:
         print(f'{field}: signed {old} rebuilt {new}')
     if args.directory is not None and not differences:
         print('no signed field would change')
-    print(' '.join(dispatch_command(args.country, args.rel, signed['report']['sha256'], '')))
+    print(' '.join(dispatch_command(repository, args.country, args.rel, signed['report']['sha256'], '')))
     if differences:
         sys.exit(RESIGN_DRIFT_EXIT)
 

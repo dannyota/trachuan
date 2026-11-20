@@ -31,6 +31,7 @@ jobs:
       REF: ${{ github.ref }}
       REF_PROTECTED: ${{ github.ref_protected }}
       EVENT: ${{ github.event_name }}
+      REGISTRY: ghcr.io/${{ github.repository_owner }}
     steps:
       - name: Check source ref
         run: |
@@ -44,6 +45,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Check repository policy
+        run: PYTHONPATH=deploy/github python3 -c 'from repositories import write_repository; write_repository()'
       - name: Check release helpers
         run: |
           bash deploy/host/render-units-test.sh
@@ -52,7 +55,7 @@ jobs:
       - name: Build and inspect production images
         run: |
           for name in server web queryembed postgres; do
-            image="ghcr.io/dannyota/trachuan-$name:sha-$COMMIT"
+            image="$REGISTRY/trachuan-$name:sha-$COMMIT"
             docker build --platform linux/arm64 --file "deploy/images/$name.Containerfile" \
               --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$COMMIT" --tag "$image" .
@@ -62,8 +65,8 @@ jobs:
             [[ $(docker inspect --format '{{.Config.User}}' "$image") == "$expected_user" ]]
             python3 deploy/images/check-image.py "$image" "$name"
           done
-          [[ $(docker run --rm "ghcr.io/dannyota/trachuan-web:sha-$COMMIT" --version) == v24.22.2 ]]
-          if output=$(docker run --rm "ghcr.io/dannyota/trachuan-queryembed:sha-$COMMIT" --invalid 2>&1); then
+          [[ $(docker run --rm "$REGISTRY/trachuan-web:sha-$COMMIT" --version) == v24.22.2 ]]
+          if output=$(docker run --rm "$REGISTRY/trachuan-queryembed:sha-$COMMIT" --invalid 2>&1); then
             echo 'queryembed accepted an invalid invocation' >&2; exit 1
           else
             [[ $? == 1 && $output == 'queryembed: invalid startup configuration (--model-dir, --ort-lib, --listen)' ]]
@@ -72,7 +75,7 @@ jobs:
         run: |
           container=trachuan-nitro-listener-check
           trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
-          docker run --detach --name "$container" "ghcr.io/dannyota/trachuan-web:sha-$COMMIT" >/dev/null
+          docker run --detach --name "$container" "$REGISTRY/trachuan-web:sha-$COMMIT" >/dev/null
           ready=false
           for ((attempt=0; attempt<30; attempt++)); do
             if docker exec "$container" /usr/local/bin/node -e '
@@ -98,7 +101,7 @@ jobs:
         run: |
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
           for name in server web queryembed postgres; do
-            repository="ghcr.io/dannyota/trachuan-$name"
+            repository="$REGISTRY/trachuan-$name"
             image="$repository:sha-$COMMIT"
             for attempt in 1 2 3; do
               if docker push "$image"; then
@@ -118,25 +121,25 @@ jobs:
       - name: Attest server
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          subject-name: ghcr.io/dannyota/trachuan-server
+          subject-name: ${{ env.REGISTRY }}/trachuan-server
           subject-digest: ${{ steps.push.outputs.server }}
           push-to-registry: true
       - name: Attest web
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          subject-name: ghcr.io/dannyota/trachuan-web
+          subject-name: ${{ env.REGISTRY }}/trachuan-web
           subject-digest: ${{ steps.push.outputs.web }}
           push-to-registry: true
       - name: Attest queryembed
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          subject-name: ghcr.io/dannyota/trachuan-queryembed
+          subject-name: ${{ env.REGISTRY }}/trachuan-queryembed
           subject-digest: ${{ steps.push.outputs.queryembed }}
           push-to-registry: true
       - name: Attest postgres
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          subject-name: ghcr.io/dannyota/trachuan-postgres
+          subject-name: ${{ env.REGISTRY }}/trachuan-postgres
           subject-digest: ${{ steps.push.outputs.postgres }}
           push-to-registry: true
       - name: Record image references
@@ -147,10 +150,10 @@ jobs:
           POSTGRES: ${{ steps.push.outputs.postgres }}
         run: |
           {
-            echo "ghcr.io/dannyota/trachuan-server@$SERVER"
-            echo "ghcr.io/dannyota/trachuan-web@$WEB"
-            echo "ghcr.io/dannyota/trachuan-queryembed@$QUERYEMBED"
-            echo "ghcr.io/dannyota/trachuan-postgres@$POSTGRES"
+            echo "$REGISTRY/trachuan-server@$SERVER"
+            echo "$REGISTRY/trachuan-web@$WEB"
+            echo "$REGISTRY/trachuan-queryembed@$QUERYEMBED"
+            echo "$REGISTRY/trachuan-postgres@$POSTGRES"
           } >>"$GITHUB_STEP_SUMMARY"
       - name: Log out of image registry
         if: always()

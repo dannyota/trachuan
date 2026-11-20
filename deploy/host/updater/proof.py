@@ -49,19 +49,26 @@ def rejected(callback, expected):
     return expected
 
 
+def dispatch_repository(image, rules):
+    for repository in rules['repositories']:
+        names = '|'.join(re.escape(name) for name in rules['images'][repository].values())
+        if re.fullmatch('(?:' + names + ')@sha256:[0-9a-f]{64}', image):
+            return repository
+    raise ValueError('invalid dispatch image')
+
+
 def dispatch_manifest(image, rules, runner):
-    repositories = '|'.join(re.escape(name) for name in rules['images'].values())
-    match('(?:' + repositories + ')@sha256:[0-9a-f]{64}', image, 'dispatch image')
-    identity = '^' + re.escape('https://github.com/' + rules['repository'] + '/' + rules['workflow_path']) + '@refs/heads/main$'
-    main_rules = dict(rules, build_identity=identity)
+    repository = dispatch_repository(image, rules)
+    identity = '^' + re.escape('https://github.com/' + repository + '/' + rules['workflow_path']) + '@refs/heads/main$'
+    main_rules = dict(rules, build_identity={repository: identity})
     raw = runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-attestation',
         '--new-bundle-format', '--type', 'slsaprovenance1',
-        *flags(main_rules, 'build', 'refs/heads/main'),
+        *flags(main_rules, 'build', repository, 'refs/heads/main'),
         '--certificate-github-workflow-trigger', 'workflow_dispatch', image])
     statements = envelopes(raw)
     commit = statements[0]['predicate']['buildDefinition']['resolvedDependencies'][0]['digest']['gitCommit']
     match('[0-9a-f]{40}', commit, 'dispatch commit')
-    manifest = {'ref': 'refs/heads/main', 'commit': commit}
+    manifest = {'repository': repository, 'ref': 'refs/heads/main', 'commit': commit}
     for statement in statements:
         provenance(statement, manifest, image, main_rules)
     return manifest

@@ -39,7 +39,9 @@ run, the `trachuan-rollback` package does not exist, and the host policy has no
    - `deploy/github` takes the repository from `GITHUB_REPOSITORY` for the
      manifests' `repository`, image names, annotations, signing identities,
      `settings.py` and `wait_ci.py`. Outside Actions it takes it from a required
-     `--repository`.
+     `--repository`. The full `owner/name` must be in the policy before any
+     upload, publish, dispatch or settings change; matching only the owner is
+     not enough.
    - When `deploy/github` verifies an earlier artifact (the previous release, a
      previous corpus manifest), it accepts the repositories of
      `deploy/host/deploy-policy.json`, as the host does.
@@ -59,7 +61,8 @@ run, the `trachuan-rollback` package does not exist, and the host policy has no
      manifest's images must be that repository's images. The signature binds the
      manifest bytes, so a manifest cannot claim the other owner.
    - A rollback manifest carries no `repository`. It is verified against each
-     entry in turn, with that entry's rollback identity.
+     entry in turn, with that entry's rollback identity. Only a positive
+     non-zero cosign exit moves on to the next entry; any other error stops.
 3. **The host reads one channel per kind, switched once by a copy.**
    - `release_repository`, `rollback_repository`, `corpus_repository` and, when
      the policy has it, `frameworks.repository` stay single values. The first
@@ -196,6 +199,36 @@ Packages under `ghcr.io/dannyota` stay as they are. Nothing reads them after C.
 
 - **A fails to verify or activate.** It is an ordinary failed release, and the
   transfer waits.
+- **The host stops between A's policy and A's updater.** `install.sh` writes the
+  policy before it installs the updater, and neither updater reads the other's
+  policy, so a crash or power loss in that second leaves every later run failing
+  at `configuration` while the old images keep serving. Set `bundle` to the
+  previous release's verified bundle directory. Its name is the active
+  manifest's `host_bundle.sha256`; `status` cannot read it while the policy is
+  wrong. Take the deploy lock, then the backup lock, as the updater does:
+
+  ```sh
+  bundle='/srv/trachuan/bundles/<sha256>'
+  sudo test -f /srv/trachuan/state/backup/backup.lock &&
+    sudo flock -n -o /run/trachuan-deploy.lock \
+      flock -n -o /srv/trachuan/state/backup/backup.lock \
+      bash -eu -c '
+        marker=/srv/trachuan/state/backup/active-job
+        if [[ -e "$marker" || -L "$marker" ]]; then
+          printf "Backup cancellation unconfirmed; wait.\n" >&2
+          exit 1
+        fi
+        bash "$1/install.sh" "$1"
+      ' bash "$bundle"
+  ```
+
+  If the backup lock is missing, either lock is busy, or `active-job` exists,
+  stop without installing. The next updater run after a successful install
+  recovers as for any failed activation: it stops Caddy briefly, reinstalls the
+  previous release, writes `rolled_back`, and marks A failed. A then ships again
+  under a new patch tag. A one-time window does not justify an old-shape branch
+  in the policy validator.
+
 - **The transfer drops a secret, variable, environment or ruleset.** Re-create
   it before B: the image and corpus workflows read the release bucket with those
   secrets.

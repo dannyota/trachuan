@@ -12,6 +12,11 @@ from .deploy_bundle import bundle
 from .deploy_io import canonical, command, CommandError
 
 
+COSIGN = '/usr/local/libexec/trachuan/bin/cosign'
+IDENTITIES = ('release_identity', 'build_identity', 'rollback_identity', 'corpus_identity')
+NAMES = ('server', 'web', 'queryembed', 'postgres')
+
+
 def match(pattern, value, field):
     if not isinstance(value, str) or re.fullmatch(pattern, value) is None:
         raise ValueError('invalid ' + field)
@@ -22,19 +27,45 @@ def positive(value, field):
         raise ValueError('invalid ' + field)
 
 
+def anchored(expression, field):
+    if not isinstance(expression, str) or not expression.startswith('^') or not expression.endswith('$'):
+        raise ValueError(field + ' must be anchored')
+    try:
+        re.compile(expression)
+    except re.error as error:
+        raise ValueError('invalid ' + field) from error
+
+
+def keyed(value, repositories, field):
+    if not isinstance(value, dict) or set(value) != set(repositories):
+        raise ValueError(field + ' must be keyed by repository')
+    return value.items()
+
+
+def repositories(value):
+    if (not isinstance(value, list) or not 1 <= len(value) <= 2
+            or not all(isinstance(name, str) for name in value) or len(set(value)) != len(value)):
+        raise ValueError('invalid policy repositories')
+    for name in value:
+        match(r'[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+', name, 'repository')
+    return value
+
+
+def accepted(value, rules, field):
+    if not isinstance(value, str) or value not in rules['repositories']:
+        raise ValueError('invalid ' + field)
+    return value
+
+
 def frameworks_policy(value):
     block = value['frameworks']
     if not isinstance(block, dict) or set(block) != {'repository', 'identity', 'namespace', 'bucket', 'min_release_floor'}:
         raise ValueError('invalid frameworks policy fields')
     match(r'ghcr\.io/[a-z0-9_./-]+', block['repository'], 'frameworks repository')
-    identity = block['identity']
-    if (not isinstance(identity, str) or not identity.startswith('^') or not identity.endswith('$')
-            or identity == value['corpus_identity']):
-        raise ValueError('frameworks identity must be anchored and differ from corpus identity')
-    try:
-        re.compile(identity)
-    except re.error as error:
-        raise ValueError('invalid frameworks identity') from error
+    for repository, identity in keyed(block['identity'], value['repositories'], 'frameworks identity'):
+        anchored(identity, 'frameworks identity')
+        if identity == value['corpus_identity'][repository]:
+            raise ValueError('frameworks identity must differ from corpus identity')
     match(r'[a-z0-9]+', block['namespace'], 'frameworks namespace')
     match(r'[a-z0-9][a-z0-9-]{0,62}', block['bucket'], 'frameworks bucket')
     positive(block['min_release_floor'], 'frameworks release floor')
@@ -42,7 +73,7 @@ def frameworks_policy(value):
 
 def policy(path):
     value = json.loads(Path(path).read_bytes())
-    keys = {'version', 'repository', 'release_repository', 'rollback_repository',
+    keys = {'version', 'repositories', 'release_repository', 'rollback_repository',
             'release_identity', 'build_identity', 'rollback_identity', 'issuer',
             'workflow_path', 'images', 'upstream', 'extensions', 'sigstore_trust_root',
             'vault_id', 'region', 'secrets', 'corpus_repository', 'corpus_identity',
@@ -58,19 +89,21 @@ def policy(path):
         raise ValueError('invalid policy secret names')
     if value['sigstore_trust_root'] != 'cosign-v3.1.4':
         raise ValueError('unsupported trust root')
-    for key in ('release_identity', 'build_identity', 'rollback_identity', 'corpus_identity'):
-        expression = value[key]
-        if not isinstance(expression, str) or not expression.startswith('^') or not expression.endswith('$'):
-            raise ValueError('policy identity must be anchored')
-        re.compile(expression)
-    if set(value['images']) != {'server', 'web', 'queryembed', 'postgres'} or set(value['upstream']) != {'caddy'}:
+    listed = repositories(value['repositories'])
+    for key in IDENTITIES:
+        for _, expression in keyed(value[key], listed, key):
+            anchored(expression, 'policy identity')
+    for repository, images in keyed(value['images'], listed, 'policy images'):
+        if not isinstance(images, dict) or set(images) != set(NAMES):
+            raise ValueError('invalid policy images')
+        for image in images.values():
+            match(r'ghcr\.io/' + re.escape(repository.split('/')[0]) + r'/[a-z0-9_./-]+', image, 'policy image')
+    if not isinstance(value['upstream'], dict) or set(value['upstream']) != {'caddy'}:
         raise ValueError('invalid policy images')
+    for repository in value['upstream'].values():
+        match(r'[a-z0-9.-]+/[a-z0-9_./-]+', repository, 'policy image')
     for name in ('release_repository', 'rollback_repository', 'corpus_repository'):
         match(r'ghcr\.io/[a-z0-9_./-]+', value[name], name)
-    for name in ('images', 'upstream'):
-        for repository in value[name].values():
-            match(r'[a-z0-9.-]+/[a-z0-9_./-]+', repository, 'policy image')
-    match(r'[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+', value['repository'], 'repository')
     match(r'[a-z0-9]+', value['release_namespace'], 'release namespace')
     match(r'[a-z0-9][a-z0-9-]{0,62}', value['release_bucket'], 'release bucket')
     if not isinstance(value['extensions'], list) or value['extensions'] not in (['vector','ltree'], ['ltree','vector']):
@@ -88,8 +121,8 @@ def release(data, rules):
         raise ValueError('invalid release fields')
     if obj['corpus_release'] is not None:
         raise ValueError('paired corpus and image activation is not implemented')
-    for key, value in {'kind': 'trachuan.image-release', 'version': 1,
-                       'repository': rules['repository'], 'target': 'production',
+    repository = accepted(obj['repository'], rules, 'repository')
+    for key, value in {'kind': 'trachuan.image-release', 'version': 1, 'target': 'production',
                        'corpus_release': None, 'rollback_target': None}.items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError('invalid ' + key)
@@ -98,11 +131,11 @@ def release(data, rules):
     if obj['release'] != obj['ref'][10:]:
         raise ValueError('release does not match ref')
     positive(obj['sequence'], 'sequence')
-    for kind in ('images', 'upstream'):
-        if not isinstance(obj[kind], dict) or set(obj[kind]) != set(rules[kind]):
+    for kind, names in (('images', rules['images'][repository]), ('upstream', rules['upstream'])):
+        if not isinstance(obj[kind], dict) or set(obj[kind]) != set(names):
             raise ValueError('unlisted or missing image')
-        for name, repository in rules[kind].items():
-            match(re.escape(repository) + r'@sha256:[0-9a-f]{64}', obj[kind][name], 'image digest')
+        for name, image in names.items():
+            match(re.escape(image) + r'@sha256:[0-9a-f]{64}', obj[kind][name], 'image digest')
     metadata = obj['host_bundle']
     if not isinstance(metadata, dict) or set(metadata) != {'sha256', 'size'}:
         raise ValueError('invalid host bundle fields')
@@ -129,24 +162,35 @@ def rollback(data):
     return obj
 
 
-def flags(rules, kind, ref, commit=None):
-    args = ['--certificate-identity-regexp', rules[kind + '_identity'],
+def flags(rules, kind, repository, ref, commit=None):
+    args = ['--certificate-identity-regexp', rules[kind + '_identity'][repository],
             '--certificate-oidc-issuer', rules['issuer'],
-            '--certificate-github-workflow-repository', rules['repository'],
+            '--certificate-github-workflow-repository', repository,
             '--certificate-github-workflow-ref', ref]
     if commit is not None:
         args += ['--certificate-github-workflow-sha', commit]
     return args
 
 
+def verify_blob(directory, rules, runner, kind, repository, ref, commit=None):
+    runner([COSIGN, 'verify-blob', '--bundle', str(Path(directory) / 'manifest.sigstore.json'),
+            *flags(rules, kind, repository, ref, commit), str(Path(directory) / 'manifest.json')])
+
+
 def verify_manifest(directory, rules, runner=command, kind='release'):
-    path = Path(directory) / 'manifest.json'
-    data = path.read_bytes()
-    obj = release(data, rules) if kind == 'release' else rollback(data)
-    ref, commit = (obj['ref'], obj['commit']) if kind == 'release' else ('refs/heads/main', None)
-    runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-blob', '--bundle',
-            str(Path(directory) / 'manifest.sigstore.json'), *flags(rules, kind, ref, commit), str(path)])
-    return hashlib.sha256(data).hexdigest(), obj
+    data = (Path(directory) / 'manifest.json').read_bytes()
+    if kind == 'release':
+        obj = release(data, rules)
+        verify_blob(directory, rules, runner, kind, obj['repository'], obj['ref'], obj['commit'])
+        return hashlib.sha256(data).hexdigest(), obj
+    obj = rollback(data)
+    for index, repository in enumerate(rules['repositories']):
+        try:
+            verify_blob(directory, rules, runner, kind, repository, 'refs/heads/main')
+            return hashlib.sha256(data).hexdigest(), obj
+        except CommandError as error:
+            if index == len(rules['repositories']) - 1 or error.returncode is None or error.returncode < 0:
+                raise
 
 
 class SubjectMismatch(ValueError):
@@ -163,7 +207,7 @@ def provenance(obj, manifest, image, rules):
             raise SubjectMismatch('wrong attestation subject digest')
         definition = obj['predicate']['buildDefinition']
         workflow = definition['externalParameters']['workflow']
-        source = 'https://github.com/' + rules['repository']
+        source = 'https://github.com/' + manifest['repository']
         if workflow['ref'] != manifest['ref'] or workflow['repository'] != source or workflow['path'] != rules['workflow_path']:
             raise ValueError('wrong attestation workflow')
         dependency = definition['resolvedDependencies'][0]
@@ -224,9 +268,8 @@ class Verifier:
         self.user_prefix = as_user() if user_prefix is None else user_prefix
 
     def attestation(self, manifest, image, expected_image=None):
-        raw = self.runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-attestation',
-            '--new-bundle-format', '--type', 'slsaprovenance1',
-            *flags(self.rules, 'build', manifest['ref'], manifest['commit']), image])
+        raw = self.runner([COSIGN, 'verify-attestation', '--new-bundle-format', '--type', 'slsaprovenance1',
+                           *flags(self.rules, 'build', manifest['repository'], manifest['ref'], manifest['commit']), image])
         statements = envelopes(raw)
         for statement in statements:
             provenance(statement, manifest, expected_image or image, self.rules)

@@ -6,6 +6,17 @@ if [[ ${1:-} == --dry-run ]]; then
   dry_run=true
   shift
 fi
+repository=
+if [[ ${1:-} == --repository && $# -ge 2 ]]; then
+  repository=$2
+  shift 2
+fi
+usage() {
+  echo 'usage: corpus-upload.sh [--dry-run] --repository <owner/name> <cc> <rel> <build-dir> <report.json>' >&2
+  echo '       corpus-upload.sh [--dry-run] --repository <owner/name> frameworks <rel>' >&2
+  exit 2
+}
+[[ $repository =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || usage
 frameworks=false
 if [[ $# == 2 && $1 == frameworks ]]; then
   frameworks=true
@@ -14,9 +25,7 @@ if [[ $# == 2 && $1 == frameworks ]]; then
     echo 'Invalid frameworks release identity' >&2; exit 2;
   }
 elif [[ $# != 4 ]]; then
-  echo 'usage: corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>' >&2
-  echo '       corpus-upload.sh [--dry-run] frameworks <rel>' >&2
-  exit 2
+  usage
 else
   country=$1
   rel=$2
@@ -42,9 +51,9 @@ if [[ $dry_run != true ]]; then
 fi
 if [[ $frameworks == true ]]; then
   if [[ $dry_run == true ]]; then
-    exec python3 "$root/deploy/github/frameworks_upload.py" --dry-run "$rel"
+    exec python3 "$root/deploy/github/frameworks_upload.py" --dry-run --repository "$repository" "$rel"
   fi
-  exec python3 "$root/deploy/github/frameworks_upload.py" "$rel"
+  exec python3 "$root/deploy/github/frameworks_upload.py" --repository "$repository" "$rel"
 fi
 files=$(python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$rel" "$build_dir" "$report" --list-files)
 prefix="$country/$rel/"
@@ -57,7 +66,7 @@ if [[ $dry_run == true ]]; then
   while IFS= read -r file; do
     printf 'Upload and verify size and ETag: s3://trachuan-releases/%s%s\n' "$prefix" "$file"
   done <<< "$files"
-  exec python3 "$root/deploy/github/corpus_upload.py" --dry-run "$country" "$rel" "$build_dir" "$report"
+  exec python3 "$root/deploy/github/corpus_upload.py" --dry-run --repository "$repository" "$country" "$rel" "$build_dir" "$report"
 fi
 
 version=$(aws --version)
@@ -78,4 +87,4 @@ count=$(aws_release s3api list-objects-v2 --bucket trachuan-releases --prefix "$
 [[ $count == 0 ]] || { echo 'Release prefix already holds objects; choose a new rel' >&2; exit 1; }
 
 cp "$report" "$directory/report.json"
-python3 "$root/deploy/github/corpus_upload.py" "$country" "$rel" "$build_dir" "$directory/report.json"
+python3 "$root/deploy/github/corpus_upload.py" --repository "$repository" "$country" "$rel" "$build_dir" "$directory/report.json"

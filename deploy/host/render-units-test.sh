@@ -3,6 +3,7 @@ set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d "${TMPDIR:-/tmp}/trachuan-render-test.XXXXXX")
 trap 'rm -rf "$work"' EXIT
+export DEPLOY_POLICY=$here/deploy-policy.json
 pins=$work/images.env
 digest=sha256:$(printf '%064d' 1)
 cat >"$pins" <<PINS
@@ -42,4 +43,34 @@ if QUADLET_TEMPLATES="$work/templates" bash "$here/render-units.sh" "$pins" "$wo
  echo 'accepted unknown template placeholder' >&2; exit 1
 fi
 [[ ! -e $work/units/bad.container ]]
+sed 's|ghcr.io/dannyota/|ghcr.io/dntmakers/|' "$pins" >"$work/moved.env"
+bash "$here/render-units.sh" "$work/moved.env" "$work/moved"
+grep -qxF "Image=ghcr.io/dntmakers/trachuan-server@$digest" "$work/moved/trachuan-server.container"
+installed=$(python3 -I -B -c 'import sys; sys.path.insert(0, sys.argv[1]); from updater.deploy_store import Paths; print(Paths().policy)' "$here")
+grep -qxF "policy=\${DEPLOY_POLICY:-$installed}" "$here/render-units.sh"
+python3 -I -c 'import json, sys; p = json.load(open(sys.argv[1])); r = p["repositories"][-1]
+p.update(repositories=[r], images={r: p["images"][r]}); json.dump(p, open(sys.argv[2], "w"))' "$DEPLOY_POLICY" "$work/narrow.json"
+ln -s "$DEPLOY_POLICY" "$work/linked.json"
+for name in server web queryembed postgres; do
+ sed "s|ghcr.io/dannyota/trachuan-$name@|ghcr.io/dntmakers/trachuan-$name@|" "$pins" >"$work/mixed-$name.env"
+done
+sed 's|docker.io/library/caddy@|docker.io/library/other@|' "$pins" >"$work/mixed-caddy.env"
+short=sha256:$(printf '%063d' 1) long=sha256:$(printf '%065d' 1) upper=sha256:$(printf 'A%063d' 1)
+for bad in "$short" "$long" "$upper" "$digest:latest" "x$digest"; do
+ index=$((${index:-0} + 1))
+ sed "s|^SERVER_IMAGE=.*|SERVER_IMAGE=ghcr.io/dannyota/trachuan-server@$bad|" "$pins" >"$work/digest-$index.env"
+done
+for attack in mixed-server mixed-web mixed-queryembed mixed-postgres mixed-caddy narrowed missing-policy linked-policy \
+ digest-1 digest-2 digest-3 digest-4 digest-5; do
+ case $attack in
+  mixed-*|digest-*) policy=$DEPLOY_POLICY env=$work/$attack.env ;;
+  narrowed) policy=$work/narrow.json env=$pins ;;
+  missing-policy) policy=$work/absent.json env=$pins ;;
+  linked-policy) policy=$work/linked.json env=$pins ;;
+ esac
+ if DEPLOY_POLICY=$policy bash "$here/render-units.sh" "$env" "$work/units"; then
+  echo "accepted $attack" >&2; exit 1
+ fi
+ cmp "$work/before" "$work/units/trachuan-server.container"
+done
 echo 'render-units: all checks passed'

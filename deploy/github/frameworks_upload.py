@@ -11,6 +11,7 @@ from frameworks_paths import private_directory, release_directory, source_file
 from frameworks_previous import require_active
 from frameworks_release import BUCKET, object_key, release_id, validate_release
 from object_store import s3_endpoint
+from repositories import require_listed, write_repository
 
 SOURCES = {'frameworks.dump': 'build/frameworks.dump', 'build.json': 'build/build.json',
            'evaluate.json': 'evaluate/manifest.json', 'report.json': 'evaluate/report.json',
@@ -20,18 +21,18 @@ CONFIG = (f'[profile {PROFILE}]\nregion = ap-singapore-1\ns3 =\n'
           '    addressing_style = path\n    signature_version = s3v4\n')
 
 
-def dispatch_command(rel, report_sha256):
-    return ['gh', 'workflow', 'run', 'frameworks-release.yml', '--ref', 'main',
+def dispatch_command(rel, report_sha256, repository):
+    return ['gh', 'workflow', 'run', 'frameworks-release.yml', '--repo', require_listed(repository), '--ref', 'main',
             '-f', f'rel={rel}', '-f', f'report_sha256={report_sha256}']
 
 
-def print_plan(rel, report_sha256):
+def print_plan(rel, report_sha256, repository):
     prefix = f's3://{BUCKET}/frameworks/{rel}/'
     print('Verify frameworks-production signed manifest and previous report SHA-256 before upload')
     print(f'Check empty prefix {prefix} with profile {PROFILE}')
     for name in SOURCES:
         print(f'Upload and verify size and ETag: {prefix}{name}')
-    print(' '.join(dispatch_command(rel, report_sha256)))
+    print(' '.join(dispatch_command(rel, report_sha256, repository)))
 
 
 def confine(directory):
@@ -62,7 +63,8 @@ def require_empty_prefix(command, rel):
         raise ValueError('Release prefix already holds objects; choose a new rel')
 
 
-def upload(rel, base, paths, facts, endpoint):
+def upload(rel, base, paths, facts, endpoint, repository):
+    require_listed(repository)
     os.umask(0o077)
     with private_directory(base) as directory:
         confine(directory)
@@ -74,33 +76,35 @@ def upload(rel, base, paths, facts, endpoint):
             return json.loads(result.stdout)
 
         require_empty_prefix(command, rel)
-        require_active(facts.report, directory / 'previous', client)
+        require_active(facts.report, directory / 'previous', client, repository)
         receipts = {object_key(rel, name): upload_file(path, object_key(rel, name), client, bucket=BUCKET,
                                                        expected=facts.files[name])
                     for name, path in paths.items()}
         verify_receipts(receipts, client, bucket=BUCKET)
-        subprocess.run(dispatch_command(rel, facts.report_sha256), check=True)
+        subprocess.run(dispatch_command(rel, facts.report_sha256, repository), check=True)
 
 
-def run(rel, dry_run):
+def run(rel, dry_run, repository):
+    require_listed(repository)
     release_id(rel)
     endpoint = s3_endpoint()
     base = release_directory(rel)
     paths = {name: source_file(base, relative) for name, relative in SOURCES.items()}
     facts = validate_release(rel, paths)
-    document('0' * 40, 1, rel, facts)
+    document(repository, '0' * 40, 1, rel, facts)
     if dry_run:
-        print_plan(rel, facts.report_sha256)
+        print_plan(rel, facts.report_sha256, repository)
     else:
-        upload(rel, base, paths, facts, endpoint)
+        upload(rel, base, paths, facts, endpoint, repository)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--repository')
     parser.add_argument('rel')
     args = parser.parse_args()
-    guarded(lambda: run(args.rel, args.dry_run))
+    guarded(lambda: run(args.rel, args.dry_run, write_repository(args.repository)))
 
 
 if __name__ == '__main__':

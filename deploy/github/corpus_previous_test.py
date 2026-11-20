@@ -36,7 +36,7 @@ class CorpusPreviousTest(unittest.TestCase):
             row = recipe_fixture(candidate['retrieval_recipe'])[0]
             if run is not None:
                 row['run'] = run
-            return verified_previous(candidate, self.path, client or self.client, release_row=row, sidecars=sidecars)
+            return verified_previous(candidate, self.path, client or self.client, 'dannyota/trachuan', release_row=row, sidecars=sidecars)
 
     def test_decision_release_compares_its_predecessor_with_the_signed_evidence(self):
         run = dict(eval_report_sha256='e' * 64)
@@ -73,7 +73,7 @@ class CorpusPreviousTest(unittest.TestCase):
         from corpus_previous import verified_previous
         for error in (FileNotFoundError('missing report'), ValueError('signature')):
             with patch('corpus_registry.release', side_effect=error), self.assertRaises(type(error)):
-                verified_previous(self.report, self.path, self.client)
+                verified_previous(self.report, self.path, self.client, 'dannyota/trachuan')
         with self.assertRaises(ValueError):
             self.verify(client=lambda args: dict(ContentLength=16 * 1024**2 + 1, ETag='opaque'))
 

@@ -42,7 +42,7 @@ class FrameworksPreviousTest(unittest.TestCase):
         publish_tag(self.registry, tag, manifest_object(self.earlier) | changes)
 
     def active(self, previous):
-        return self.module.require_active(dict(previous=previous), self.path / 'work', self.client)
+        return self.module.require_active(dict(previous=previous), self.path / 'work', self.client, 'dannyota/trachuan')
 
     def test_first_release_needs_null_previous_and_no_fetch(self):
         self.active(None)
@@ -78,7 +78,7 @@ class FrameworksPreviousTest(unittest.TestCase):
         self.publish()
         with self.assertRaises(ValueError):
             self.module.require_active(dict(previous=self.named), self.path / 'work',
-                                       lambda args: dict(ContentLength=16 * 1024**2 + 1, ETag='"opaque"'))
+                                       lambda args: dict(ContentLength=16 * 1024**2 + 1, ETag='"opaque"'), 'dannyota/trachuan')
         size = len(self.stored)
 
         def bad_range(args):
@@ -88,7 +88,7 @@ class FrameworksPreviousTest(unittest.TestCase):
             return dict(ETag='"opaque"', ContentRange=f'bytes 0-{size - 1}/{size + 1}')
 
         with self.assertRaises(ValueError):
-            self.module.require_active(dict(previous=self.named), self.path / 'work', bad_range)
+            self.module.require_active(dict(previous=self.named), self.path / 'work', bad_range, 'dannyota/trachuan')
 
     def test_bad_signature_stops_the_active_check_before_any_fetch(self):
         self.publish()
@@ -97,24 +97,24 @@ class FrameworksPreviousTest(unittest.TestCase):
         self.assertEqual(self.requests, [])
 
     def test_signed_check_allows_null_and_a_retry_or_rollback_target(self):
-        self.module.require_signed(dict(previous=None), self.path / 'previous')
+        self.module.require_signed(dict(previous=None), self.path / 'previous', 'dannyota/trachuan')
         self.assertEqual(calls(self.log), [])
         self.publish('frameworks-' + PREVIOUS)
         self.publish('frameworks-production', rel='20990103', database='frameworks_20990103',
                      dump=dict(object='frameworks/20990103/frameworks.dump', sha256='1' * 64, size=1))
-        self.module.require_signed(dict(previous=self.named), self.path / 'previous')
+        self.module.require_signed(dict(previous=self.named), self.path / 'previous', 'dannyota/trachuan')
         resolved = [call['args'][1] for call in calls(self.log) if call['args'][0] == 'resolve']
         self.assertEqual(resolved, ['ghcr.io/dannyota/trachuan-corpus-release:frameworks-' + PREVIOUS])
         self.assertTrue(any(call['name'] == 'cosign' for call in calls(self.log)))
 
     def test_signed_check_refuses_missing_unsigned_or_different_reports(self):
         with self.assertRaises(ValueError):
-            self.module.require_signed(dict(previous=self.named), self.path / 'previous')
+            self.module.require_signed(dict(previous=self.named), self.path / 'previous', 'dannyota/trachuan')
         self.publish('frameworks-' + PREVIOUS)
         with self.assertRaises(ValueError):
-            self.module.require_signed(dict(previous=dict(self.named, report_sha256='0' * 64)), self.path / 'previous')
+            self.module.require_signed(dict(previous=dict(self.named, report_sha256='0' * 64)), self.path / 'previous', 'dannyota/trachuan')
         with patch.dict(os.environ, FAKE_BAD_SIGNATURE='1'), self.assertRaises(subprocess.CalledProcessError):
-            self.module.require_signed(dict(previous=self.named), self.path / 'previous')
+            self.module.require_signed(dict(previous=self.named), self.path / 'previous', 'dannyota/trachuan')
         self.assertEqual(json.loads(json.dumps(self.named))['rel'], PREVIOUS)
 
 

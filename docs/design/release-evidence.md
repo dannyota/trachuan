@@ -234,8 +234,8 @@ The host updater accepts the optional `evidence` field and does not read the
 files. An older updater refuses the manifest at verification, before it binds
 the sequence, and the host accepts the same manifest once the newer updater is
 installed. Before the first release with a decision is signed, that updater is
-live and the [release floor](pull-deployment.md#release-floor) is confirmed at
-its image, so an image rollback cannot strand corpus activation.
+live and the [release floor](release-floor.md) is confirmed at its image, so an
+image rollback cannot strand corpus activation.
 
 Upload and signing both apply every row of the gate. The five `run` fields
 appear together or not at all. Upload and signing require the three file hashes,

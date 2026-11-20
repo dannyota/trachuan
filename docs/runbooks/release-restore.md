@@ -43,6 +43,7 @@ regenerating the manifest. With `CORPUS_DATABASE_URL`,
 ```sh
 CC=vn
 REL=20261120_1
+REPOSITORY=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 BUILD=/path/to/verified-build-artifact
 UPLOAD=/path/to/new-upload-directory
 PREVIOUS=/path/to/production-upload-directory/report.json
@@ -67,8 +68,8 @@ mkdir "$UPLOAD"
 cp "$BUILD/corpus.dump" "$BUILD/MANIFEST.sha256" "$BUILD/build.json" "$UPLOAD/"
 cp "$EVIDENCE/findings.json" "$EVIDENCE/identity.jsonl" "$EVIDENCE/changes.jsonl" "$UPLOAD/"
 corpus release-row "$CC" "$REL" --out "$UPLOAD/release.json"
-bash scripts/corpus-upload.sh --dry-run "$CC" "$REL" "$UPLOAD" "$REPORT"
-bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
+bash scripts/corpus-upload.sh --dry-run --repository "$REPOSITORY" "$CC" "$REL" "$UPLOAD" "$REPORT"
+bash scripts/corpus-upload.sh --repository "$REPOSITORY" "$CC" "$REL" "$UPLOAD" "$REPORT"
 ```
 
 The older path is for `vn/20261118_2` only, whose run predates this rule: it has
@@ -140,7 +141,7 @@ be read anonymously or verified (an `oras` or `cosign` error there); sign a new
 release first from its upload, with its pins:
 
 ```sh
-python3 deploy/github/corpus_production.py resign-check vn <active rel> [<upload-dir>]
+python3 deploy/github/corpus_production.py resign-check vn <active rel> [<upload-dir>] --repository "$REPOSITORY"
 ```
 
 Then run the printed `gh workflow run corpus-release.yml ...` line.
@@ -150,17 +151,17 @@ Then run the printed `gh workflow run corpus-release.yml ...` line.
 Before uploading the first release whose `release.json` carries the decision
 fields, confirm that production runs the updater release that accepts the
 manifest's `evidence` field, and that the
-[release floor](../design/pull-deployment.md#release-floor) is at or above that
-image. An older updater refuses the manifest before it binds the sequence; the
-same manifest activates once the newer updater is installed.
+[release floor](../design/release-floor.md) is at or above that image. An older
+updater refuses the manifest before it binds the sequence; the same manifest
+activates once the newer updater is installed.
 
 ### First release with reviewed knowledge
 
 Before uploading the first release whose `sources/<cc>-knowledge.yaml` holds a
 `provision_effect` or `relation` entry, confirm that production runs v0.1.19 or
 later, which admits relation method `reviewed`, and that the
-[release floor](../design/pull-deployment.md#release-floor) is at or above that
-image, so no rollback can reach an image that drops the warning.
+[release floor](../design/release-floor.md) is at or above that image, so no
+rollback can reach an image that drops the warning.
 
 ### Roll back a corpus release
 
@@ -182,7 +183,7 @@ would be added, so that release cannot be signed again. Without the upload
 directory it only verifies the manifest and prints the command:
 
 ```sh
-python3 deploy/github/corpus_production.py resign-check vn <rel> [<upload-dir>]
+python3 deploy/github/corpus_production.py resign-check vn <rel> [<upload-dir>] --repository <owner/name>
 ```
 
 `no signed field would change` does not prove the rollback will sign. Signing

@@ -11,6 +11,7 @@ from corpus_manifest import identity, release_files, sha256, validated_inputs
 from corpus_previous import verified_previous
 from corpus_production import require_settled
 from manifest import positive
+from repositories import require_listed, write_repository
 
 
 def etag(result):
@@ -83,7 +84,8 @@ def verify_receipts(receipts, client, bucket='trachuan-releases'):
             raise ValueError('uploaded object size or ETag changed: ' + key.rsplit('/', 1)[1])
 
 
-def upload(country, rel, directory, report):
+def upload(country, rel, directory, report, repository):
+    require_listed(repository)
     identity(country, rel)
     command = ['aws', '--profile', 'trachuan-release-upload', '--endpoint-url',
                os.environ['OCI_S3_ENDPOINT'], '--no-cli-pager', 's3api']
@@ -99,8 +101,8 @@ def upload(country, rel, directory, report):
         print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
         print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))
     with tempfile.TemporaryDirectory() as temporary:
-        require_settled(candidate, Path(temporary))
-        verified_previous(candidate, Path(temporary), client, release_row=row, sidecars=sidecars)
+        require_settled(candidate, Path(temporary), repository)
+        verified_previous(candidate, Path(temporary), client, repository, release_row=row, sidecars=sidecars)
 
     receipts = {}
     with tempfile.TemporaryDirectory() as temporary:
@@ -113,13 +115,13 @@ def upload(country, rel, directory, report):
             receipts[key] = upload_file(source, key, client, expected=inputs.expected[name])
     verify_receipts(receipts, client)
     (directory / 'report.json').write_bytes(inputs.data['report.json'])
-    subprocess.run(dispatch_command(country, rel, inputs.expected['report.json'][0],
+    subprocess.run(dispatch_command(repository, country, rel, inputs.expected['report.json'][0],
                                     inputs.expected['release.json'][0]), check=True)
 
 
-def print_dispatch(country, rel, directory, report):
+def print_dispatch(country, rel, directory, report, repository):
     identity(country, rel)
-    print(' '.join(dispatch_command(country, rel, sha256(report), sha256(directory / 'release.json'))))
+    print(' '.join(dispatch_command(repository, country, rel, sha256(report), sha256(directory / 'release.json'))))
 
 
 def main():
@@ -129,11 +131,13 @@ def main():
     parser.add_argument('rel')
     parser.add_argument('directory', type=Path)
     parser.add_argument('report', type=Path)
+    parser.add_argument('--repository')
     args = parser.parse_args()
+    repository = write_repository(args.repository)
     if args.dry_run:
-        print_dispatch(args.country, args.rel, args.directory, args.report)
+        print_dispatch(args.country, args.rel, args.directory, args.report, repository)
     else:
-        upload(args.country, args.rel, args.directory, args.report)
+        upload(args.country, args.rel, args.directory, args.report, repository)
 
 
 if __name__ == '__main__':

@@ -183,6 +183,8 @@ class CorpusUploadTest(unittest.TestCase):
         script = repo / 'scripts/corpus-upload.sh'
         shutil.copyfile(ROOT / 'scripts/corpus-upload.sh', script)
         shutil.copytree(ROOT / 'deploy/github', repo / 'deploy/github', ignore=shutil.ignore_patterns('__pycache__'))
+        (repo / 'deploy/host').mkdir()
+        shutil.copyfile(ROOT / 'deploy/host/deploy-policy.json', repo / 'deploy/host/deploy-policy.json')
         rules = repo / 'deploy/github/corpus_rules.py'
         text = rules.read_text()
         cutoff = f"LEGACY_CUTOFF = {{'vn': {corpus_rules.LEGACY_CUTOFF['vn']!r}}}"
@@ -195,8 +197,8 @@ class CorpusUploadTest(unittest.TestCase):
     def repo_tool(self, name):
         return self.script.parents[1] / 'deploy/github' / name
 
-    def upload_command(self, *flags, script=None):
-        return ['bash', str(script or self.script), *flags, 'vn', '20990102_1',
+    def upload_command(self, *flags, script=None, repository='dannyota/trachuan'):
+        return ['bash', str(script or self.script), *flags, '--repository', repository, 'vn', '20990102_1',
                 str(self.build), str(self.build / 'report.json')]
 
     def run_upload(self, *flags):
@@ -219,9 +221,9 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(uploaded, support.digest((self.build / 'report.json').read_bytes()))
         release = support.digest((self.remote / 'release.json').read_bytes())
         self.assertEqual(release, support.digest((self.build / 'release.json').read_bytes()))
-        self.assertEqual(calls[-1]['args'], ['workflow', 'run', 'corpus-release.yml', '--ref', 'main',
-                                           '-f', 'country=vn', '-f', 'rel=20990102_1', '-f', f'report_sha256={uploaded}',
-                                           '-f', f'release_sha256={release}'])
+        self.assertEqual(calls[-1]['args'], ['workflow', 'run', 'corpus-release.yml', '--repo', 'dannyota/trachuan',
+                                           '--ref', 'main', '-f', 'country=vn', '-f', 'rel=20990102_1',
+                                           '-f', f'report_sha256={uploaded}', '-f', f'release_sha256={release}'])
         lock_dir = self.path / '.cache/trachuan'
         self.assertEqual(lock_dir.stat().st_mode & 0o777, 0o700)
         self.assertTrue((lock_dir / 'corpus-upload.lock').exists())
@@ -231,6 +233,14 @@ class CorpusUploadTest(unittest.TestCase):
                 self.assertIn(self.env['OCI_S3_ENDPOINT'], call['args'])
                 self.assertEqual(call['checksum'], 'when_required')
                 self.assertIn('addressing_style = path', call['config'])
+
+    def test_dispatch_names_the_given_repository(self):
+        result = subprocess.run(self.upload_command(repository='dntmakers/trachuan'), env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = self.calls()[-1]['args']
+        self.assertEqual(args[:10], ['workflow', 'run', 'corpus-release.yml', '--repo', 'dntmakers/trachuan',
+                                     '--ref', 'main', '-f', 'country=vn', '-f'])
+        self.assertEqual([arg.split('=', 1)[0] for arg in args[10:]], ['rel', '-f', 'report_sha256', '-f', 'release_sha256'])
 
     def test_preserves_uploaded_report_in_upload_directory(self):
         external = self.path / 'evaluation report.json'
@@ -250,10 +260,16 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertIn('s3://trachuan-releases/vn/20990102_1/corpus.dump', result.stdout)
         report_sha256 = support.digest((self.build / 'report.json').read_bytes())
         release_sha256 = support.digest((self.build / 'release.json').read_bytes())
-        self.assertEqual(result.stdout.splitlines()[-1], 'gh workflow run corpus-release.yml --ref main '
-                         f'-f country=vn -f rel=20990102_1 -f report_sha256={report_sha256} -f release_sha256={release_sha256}')
+        self.assertEqual(result.stdout.splitlines()[-1], 'gh workflow run corpus-release.yml --repo dannyota/trachuan '
+                         f'--ref main -f country=vn -f rel=20990102_1 -f report_sha256={report_sha256} '
+                         f'-f release_sha256={release_sha256}')
         self.assertIn('vn-production', result.stdout)
         self.assertIn('https://trachuan.vn/api/v1/public/status', result.stdout)
+        self.assertEqual(self.calls(), [])
+        result = subprocess.run(self.upload_command('--dry-run', repository='dntmakers/trachuan'),
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('gh workflow run corpus-release.yml --repo dntmakers/trachuan --ref main', result.stdout)
         self.assertEqual(self.calls(), [])
 
     def test_upload_checks_served_release_before_any_object(self):
@@ -359,8 +375,9 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertEqual(sum('put-object' in call['args'] for call in self.calls()), 7)
 
     def resign_check(self, directory=True):
-        return subprocess.run(['python3', str(self.repo_tool('corpus_production.py')), 'resign-check', 'vn', REL,
-                               *([str(self.build)] if directory else [])], env=self.env, capture_output=True, text=True)
+        return subprocess.run(['python3', str(self.repo_tool('corpus_production.py')), 'resign-check', '--repository',
+                               'dannyota/trachuan', 'vn', REL, *([str(self.build)] if directory else [])],
+                              env=self.env, capture_output=True, text=True)
 
     def dispatched(self):
         args = next(call['args'] for call in reversed(self.calls()) if call['name'] == 'gh')
@@ -369,14 +386,14 @@ class CorpusUploadTest(unittest.TestCase):
     def signed_manifest(self, **changes):
         from manifest import canonical
         support.save_fixture(self.build, self.row, self.report)
-        signed = json.loads(create('c' * 40, 7, 'vn', REL, self.build, self.build / 'report.json'))
+        signed = json.loads(create('dannyota/trachuan', 'c' * 40, 7, 'vn', REL, self.build, self.build / 'report.json'))
         signed.pop('evidence')
         save_older_shape(self.build, self.row)
         (self.build / 'signed-manifest.json').write_bytes(canonical(signed | changes))
 
     def test_resign_check_compares_the_verified_manifest_with_the_upload_directory(self):
         local = support.digest((self.build / 'report.json').read_bytes())
-        dispatch = f'gh workflow run corpus-release.yml --ref main -f country=vn -f rel={REL} -f report_sha256='
+        dispatch = f'gh workflow run corpus-release.yml --repo dannyota/trachuan --ref main -f country=vn -f rel={REL} -f report_sha256='
         self.signed_manifest()
         result = self.resign_check()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -512,7 +529,7 @@ class CorpusUploadTest(unittest.TestCase):
         with patch.dict(os.environ, self.env), patch.dict('corpus_rules.LEGACY_CUTOFF', {'vn': REL}), \
                 patch('corpus_upload.validated_inputs', validate), patch('corpus_upload.verify_receipts', verify), \
                 patch('corpus_upload.require_settled'), patch('corpus_upload.verified_previous'):
-            corpus_upload.upload('vn', REL, self.build, report)
+            corpus_upload.upload('vn', REL, self.build, report, 'dannyota/trachuan')
 
     def decision_release(self):
         support.add_heading_build(self.build, self.row, self.report)
@@ -597,7 +614,7 @@ class CorpusUploadTest(unittest.TestCase):
         from corpus_test_support import digest
         from manifest import canonical
 
-        self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10')
+        self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10', GITHUB_REPOSITORY='dannyota/trachuan')
         for fault in ('empty development', 'version downgrade'):
             self.row, self.report = write_fixture(self.build)
             self.log.unlink(missing_ok=True)
@@ -634,7 +651,7 @@ class CorpusUploadTest(unittest.TestCase):
                     self.assertFalse(any('put-object' in call['args'] or call['name'] == 'gh' for call in self.calls()))
 
     def test_signing_cli_checks_previous_before_creating_manifest(self):
-        self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10')
+        self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10', GITHUB_REPOSITORY='dannyota/trachuan')
         command = ['python3', str(self.repo_tool('corpus_manifest.py')), 'create', 'vn', '20990102_1',
                    str(self.build), str(self.build / 'report.json')]
         result = subprocess.run(command, env=self.env, capture_output=True, text=True)

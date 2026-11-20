@@ -41,8 +41,8 @@ class UploadCase(unittest.TestCase):
                         OCI_S3_ENDPOINT=ENDPOINT, FRAMEWORKS_WORK_DIR=str(self.work), TMPDIR=str(self.outer_tmp),
                         FAKE_LOG=str(self.log), FAKE_REMOTE=str(self.remote), FAKE_REGISTRY=str(self.registry))
 
-    def upload(self, *flags, rel=REL, **extra):
-        return subprocess.run(['bash', str(SCRIPT), *flags, 'frameworks', rel], env=self.env | extra,
+    def upload(self, *flags, rel=REL, repository='dannyota/trachuan', **extra):
+        return subprocess.run(['bash', str(SCRIPT), *flags, '--repository', repository, 'frameworks', rel], env=self.env | extra,
                               capture_output=True, text=True)
 
     def save(self, value=None):
@@ -92,7 +92,8 @@ class FrameworksUploadTest(UploadCase):
         self.assertEqual((len(puts), len(heads)), (5, 5))
         self.assertLess(max(puts), min(heads))
         self.assertEqual(log[-1]['name'], 'gh')
-        self.assertEqual(log[-1]['args'], ['workflow', 'run', 'frameworks-release.yml', '--ref', 'main', '-f', f'rel={REL}',
+        self.assertEqual(log[-1]['args'], ['workflow', 'run', 'frameworks-release.yml', '--repo', 'dannyota/trachuan',
+                                           '--ref', 'main', '-f', f'rel={REL}',
                                            '-f', f'report_sha256={report_hash(self.value)}'])
         self.assertEqual([call['args'] for call in log if call['name'] == 'oras'],
                          [['resolve', 'ghcr.io/dannyota/trachuan-corpus-release:frameworks-production']])
@@ -142,8 +143,12 @@ class FrameworksUploadTest(UploadCase):
         self.assert_clean()
         for name in OBJECTS:
             self.assertIn(f's3://{BUCKET}/frameworks/{REL}/{name}', result.stdout)
-        self.assertIn(f'gh workflow run frameworks-release.yml --ref main -f rel={REL} -f report_sha256={report_hash(self.value)}',
-                      result.stdout)
+        self.assertIn(f'gh workflow run frameworks-release.yml --repo dannyota/trachuan --ref main -f rel={REL} '
+                      f'-f report_sha256={report_hash(self.value)}', result.stdout)
+        moved = self.upload('--dry-run', repository='dntmakers/trachuan')
+        self.assertEqual(moved.returncode, 0, moved.stderr)
+        self.assertIn('gh workflow run frameworks-release.yml --repo dntmakers/trachuan --ref main', moved.stdout)
+        self.assertEqual(self.calls(), [])
         self.assertNotIn(SENTINEL, result.stdout)
         self.value['report']['quality_pass'] = False
         self.save()
@@ -182,7 +187,8 @@ class FrameworksUploadTest(UploadCase):
         self.assert_refused(self.upload(rel='20990103'))
         env = dict(self.env)
         del env['FRAMEWORKS_WORK_DIR']
-        self.assert_refused(subprocess.run(['bash', str(SCRIPT), 'frameworks', REL], env=env, capture_output=True, text=True))
+        self.assert_refused(subprocess.run(['bash', str(SCRIPT), '--repository', 'dannyota/trachuan', 'frameworks', REL], env=env,
+                                           capture_output=True, text=True))
         self.assert_refused(self.upload(OCI_S3_ENDPOINT='http://synthetic.example'))
 
     def test_previous_refusals_stop_before_any_upload(self):
@@ -259,10 +265,18 @@ class FrameworksUploadTest(UploadCase):
     def test_law_argument_forms_are_untouched(self):
         for arguments in ([], ['vn'], ['frameworks'], ['frameworks', REL, 'extra'], ['frameworks', REL, 'x', 'y', 'z']):
             with self.subTest(arguments=arguments):
+                result = subprocess.run(['bash', str(SCRIPT), '--repository', 'dannyota/trachuan', *arguments], env=self.env,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('usage: corpus-upload.sh [--dry-run] --repository <owner/name> <cc> <rel> <build-dir> <report.json>',
+                              result.stderr)
+        for arguments in (['frameworks', REL], ['--dry-run', 'frameworks', REL], ['--repository', 'frameworks', REL],
+                          ['--repository', 'bad name', 'frameworks', REL], ['vn', '20990102_1', 'b', 'c']):
+            with self.subTest(arguments=arguments):
                 result = subprocess.run(['bash', str(SCRIPT), *arguments], env=self.env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 2)
-                self.assertIn('usage: corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>', result.stderr)
-        result = subprocess.run(['bash', str(SCRIPT), 'frameworks', '20990102_1', 'b', 'c'], env=self.env,
+                self.assertIn('--repository <owner/name>', result.stderr)
+        result = subprocess.run(['bash', str(SCRIPT), '--repository', 'dannyota/trachuan', 'frameworks', '20990102_1', 'b', 'c'], env=self.env,
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertEqual(self.calls(), [])
