@@ -144,9 +144,14 @@ rename is a removal: a revision that removes a case is refused.
   `rejection_ids`, both taken from the same history by the report's `Legacy` and
   `OldProduct` hashes. In each of these cohorts every case has a `hybrid` row in
   both modes at limits 8 and 20, with `expected` equal to its citation count,
-  and `rejections` names exactly the rejection IDs. An old product fixture whose
-  `legacy_sha256` is not the legacy fixture's hash is refused. The `legacy`
-  cohort is not checked, since no gate reads it.
+  and `rejections` names exactly the rejection IDs. Each rejection record holds
+  only `case_id`, `reason` and `passed`, with `passed` true and `reason`
+  `diacritics_required`, the only refusal the evaluator counts as passed. The
+  previous report's `old_product` cohort and `rejections` are checked the same
+  way. An old product fixture whose `legacy_sha256` is not the legacy fixture's
+  hash is refused. The `legacy` cohort is not checked, since no gate reads it.
+- Version 2 candidates also need three distinct rejection IDs with the same
+  passing records, but do not use the version 3 fixture partition checks.
 
 Accepted costs: a loss on an added or changed case is not gated in the release
 that revises it, and a case moved into `development_period` leaves the gate for

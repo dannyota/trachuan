@@ -99,7 +99,7 @@ def write_fixture(path):
                            'old_product': {'case_count': 5, 'non_regression': [item.copy() for item in comparisons]},
                            'development': {'case_count': 2, 'non_regression': [item.copy() for item in comparisons]}})
     report['fixture_hashes'] = dict(Legacy='legacy', OldProduct='old', Development='development')
-    report['rejections'] = [dict(case_id=f'r{i}', passed=True) for i in range(3)]
+    report['rejections'] = [dict(case_id=f'r{i}', reason='diacritics_required', passed=True) for i in range(3)]
     report['cases'] = []
     for name in ('old_product', 'development'):
         cohort = report['cohorts'][name]

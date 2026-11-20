@@ -92,7 +92,8 @@ def build_report(version, rel, fixture, ranks, cohorts=None, old_ranks=None):
                   previous_diff={'previous': dict(country='vn', rel=PREVIOUS_REL, report_sha256='a' * 64)},
                   fixture_hashes=dict(Legacy=digest(LEGACY_FIXTURE), OldProduct=digest(OLD_PRODUCT_FIXTURE),
                                       Development=digest(fixture)),
-                  rejections=[dict(case_id=f'r{i}', passed=True) for i in range(3)], not_run={}, cases=[])
+                  rejections=[dict(case_id=f'r{i}', reason='diacritics_required', passed=True) for i in range(3)],
+                  not_run={}, cases=[])
     for case_id, case_ranks in (OLD_RANKS | (old_ranks or {})).items():
         report['cases'] += case_rows(case_id, 'old_product', *case_ranks)
     for case in json.loads(fixture):
@@ -225,4 +226,9 @@ def validate_go_reports(directory):
                 mutate(record)
         if not refuses(report, reports[previous[name]], row, history):
             raise AssertionError(f'tampered {name} {cohort} {metric} record accepted')
+    for tampered in ('r1', 'r0'):
+        pair = {name: copy.deepcopy(reports[name]) for name in ('r1', 'r0')}
+        pair[tampered]['rejections'][0]['passed'] = False
+        if not refuses(pair['r1'], pair['r0'], row, history):
+            raise AssertionError(f'{tampered} rejection that did not pass accepted')
     return ' '.join(name for name, _ in pairs)

@@ -69,10 +69,14 @@ def check_partition(report, history):
     counts = {case['id']: len(case.get('expected_citations') or ()) for case in fixture}
     check_cohorts(report, wanted, counts, 'development',
                   'development cohorts differ from the fixture partition by the historical tag')
-    scored, counts = old_product_partition(report, history.root)
+    check_old_product(report, history.root)
+    return fixture
+
+
+def check_old_product(report, root):
+    scored, counts = old_product_partition(report, root)
     check_cohorts(report, {'old_product': scored}, counts, 'old_product',
                   'old_product cohort differs from the legacy fixture without its rejections')
-    return fixture
 
 
 def metric_value(report, key):

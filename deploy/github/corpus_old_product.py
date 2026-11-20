@@ -5,6 +5,18 @@ from corpus_fixture_history import CASE_FIELDS, CITATION_FIELDS, FixtureHistory,
 
 LEGACY = 'apps/corpus/internal/evaluation/testdata/vn/legacy.json'
 OLD_PRODUCT = 'apps/corpus/internal/evaluation/testdata/vn/old-product.json'
+REJECTION_FIELDS = {'case_id', 'reason', 'passed'}
+
+
+def check_rejection_records(rows):
+    if not isinstance(rows, list) or len(rows) != 3 or any(not isinstance(row, dict) for row in rows):
+        raise ValueError('rejection records are not three records')
+    ids = [row.get('case_id') for row in rows]
+    if any(not isinstance(case_id, str) or not case_id for case_id in ids) or len(set(ids)) != 3:
+        raise ValueError('rejection records are not three distinct nonempty case ids')
+    if any(set(row) != REJECTION_FIELDS or row['passed'] is not True or row['reason'] != 'diacritics_required'
+           for row in rows):
+        raise ValueError('rejection record is not a passed diacritics_required refusal')
 
 
 def decode(data, name):
@@ -78,7 +90,9 @@ def old_product_partition(report, root):
     legacy_hash, old_hash = fixture_hashes(report)
     cases = legacy_cases(FixtureHistory(root, LEGACY).fixture(legacy_hash))
     rejected = rejection_ids(FixtureHistory(root, OLD_PRODUCT).fixture(old_hash), legacy_hash, cases)
-    if sorted(row['case_id'] for row in report['rejections']) != sorted(rejected):
+    rows = report['rejections']
+    if sorted(row['case_id'] for row in rows) != sorted(rejected):
         raise ValueError('report rejections differ from the old product fixture rejection_ids')
+    check_rejection_records(rows)
     counts = {case['id']: len(case.get('expected_citations') or ()) for case in cases}
     return {case_id for case_id in counts if case_id not in rejected}, counts
