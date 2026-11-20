@@ -1,8 +1,15 @@
+import os
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import unittest
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
+WORKFLOW = ROOT / '.github/workflows/corpus-release.yml'
+HASH = 'a' * 64
 
 
 class CorpusWorkflowTest(unittest.TestCase):
@@ -53,6 +60,79 @@ class CorpusWorkflowTest(unittest.TestCase):
                 continue
             for flag in ('--insecure-ignore-tlog', '--insecure-ignore-sct', '--allow-insecure-registry'):
                 self.assertNotIn(flag, path.read_text())
+
+
+class CorpusDispatchInputTest(unittest.TestCase):
+    def setUp(self):
+        self.workflow = yaml.safe_load(WORKFLOW.read_text())
+        self.job = self.workflow['jobs']['release']
+        self.steps = self.job['steps']
+
+    def step(self, prefix):
+        return next(step for step in self.steps if step.get('name', '').startswith(prefix))
+
+    def test_dispatch_takes_three_required_inputs_and_an_optional_release_pin(self):
+        inputs = self.workflow[True]['workflow_dispatch']['inputs']
+        self.assertEqual(list(inputs), ['country', 'rel', 'report_sha256', 'release_sha256'])
+        self.assertTrue(all(item['type'] == 'string' for item in inputs.values()))
+        self.assertEqual([name for name, item in inputs.items() if item['required'] is True], ['country', 'rel', 'report_sha256'])
+        self.assertEqual((inputs['release_sha256']['required'], inputs['release_sha256']['default']), (False, ''))
+
+    def test_hashes_reach_commands_only_through_the_environment(self):
+        self.assertEqual(self.job['env']['REPORT_SHA256'], '${{ inputs.report_sha256 }}')
+        self.assertEqual(self.job['env']['RELEASE_SHA256'], '${{ inputs.release_sha256 }}')
+        self.assertIn('[[ $REPORT_SHA256 =~ ^[0-9a-f]{64}$ ]]', self.steps[0]['run'])
+        self.assertIn('[[ -z $RELEASE_SHA256 || $RELEASE_SHA256 =~ ^[0-9a-f]{64}$ ]]', self.steps[0]['run'])
+        self.assertNotIn('${{ inputs', ''.join(step.get('run', '') for step in self.steps))
+        self.assertEqual(self.step('Require a signed release')['run'],
+                         'python3 deploy/github/corpus_pin.py "$COUNTRY" "$REL" "$RELEASE_SHA256"')
+        self.assertEqual(self.step('Download corpus objects')['run'],
+                         'python3 deploy/github/corpus_storage.py "$COUNTRY" "$REL" "$REPORT_SHA256" "$RELEASE_SHA256" "$RELEASE_DIR"')
+        self.assertIn('python3 deploy/github/corpus_publish.py "$REPORT_SHA256" "$RELEASE_SHA256" "$RELEASE_DIR"',
+                      self.step('Validate, sign')['run'])
+
+    def test_signed_release_check_runs_without_credentials_between_the_tools_and_the_download(self):
+        order = [self.steps.index(self.step(name)) for name in ('Install signing', 'Require a signed release', 'Download corpus objects')]
+        self.assertEqual(order, sorted(order))
+        self.assertNotIn('env', self.step('Require a signed release'))
+        self.assertFalse([step for step in self.steps if 'if' in step or 'continue-on-error' in step])
+
+    def test_no_step_before_publish_runs_registry_tools_with_the_read_key(self):
+        publish = self.steps.index(self.step('Validate, sign'))
+        for step in self.steps[:publish]:
+            holds_key = re.search(r'secrets\.|AWS_|OCI_', yaml.safe_dump(step.get('env', {})))
+            runs_tools = re.search(r'\b(oras|cosign)\b|corpus_pin\.py|install-tools', step.get('run', ''))
+            with self.subTest(step=step.get('name')):
+                self.assertFalse(holds_key and runs_tools)
+        self.assertIn('secrets.', yaml.safe_dump(self.step('Download corpus objects')['env']))
+
+    def first_step(self, **values):
+        with tempfile.TemporaryDirectory() as temporary:
+            github_env = Path(temporary) / 'github-env'
+            env = dict(PATH=os.environ['PATH'], GITHUB_REF='refs/heads/main', GITHUB_ENV=str(github_env),
+                       RUNNER_TEMP=temporary, COUNTRY='vn', REL='20990102_1', REPORT_SHA256=HASH,
+                       RELEASE_SHA256='b' * 64) | values
+            env = {key: value for key, value in env.items() if value is not None}
+            result = subprocess.run(['bash', '-e', '-c', self.steps[0]['run']], env=env, capture_output=True, text=True)
+            return result.returncode, github_env.exists()
+
+    def test_first_step_refuses_a_missing_or_malformed_report_hash(self):
+        self.assertEqual(self.first_step(), (0, True))
+        for value in (None, '', 'a' * 63, 'a' * 65, 'A' * 64, 'a' * 63 + 'F', 'g' * 64, HASH + '\n',
+                      ' ' + 'a' * 63, 'sha256:' + HASH, 'a' * 32 + ' ' + 'a' * 31):
+            with self.subTest(value=value):
+                self.assertEqual(self.first_step(REPORT_SHA256=value), (1, False))
+        for values in (dict(COUNTRY='VN'), dict(REL='20990102')):
+            with self.subTest(values=values):
+                self.assertEqual(self.first_step(**values), (1, False))
+
+    def test_first_step_accepts_an_empty_release_pin_and_refuses_a_malformed_one(self):
+        for value in (None, ''):
+            with self.subTest(value=value):
+                self.assertEqual(self.first_step(RELEASE_SHA256=value), (0, True))
+        for value in ('b' * 63, 'b' * 65, 'B' * 64, 'g' * 64, 'b' * 64 + '\n', ' ', 'sha256:' + 'b' * 64):
+            with self.subTest(value=value):
+                self.assertEqual(self.first_step(RELEASE_SHA256=value), (1, False))
 
 
 if __name__ == '__main__':
