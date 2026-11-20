@@ -54,7 +54,7 @@ no earlier release can be signed again. The job:
    [gate](release-evidence.md#gate), writes canonical JSON and signs it with
    `cosign sign-blob --bundle`, keyless, like the image manifest.
 5. Pushes `manifest.json` and `manifest.sigstore.json` to
-   `ghcr.io/dannyota/trachuan-corpus-release`, tagged `<cc>-<rel>` and
+   `ghcr.io/dntmakers/trachuan-corpus-release`, tagged `<cc>-<rel>` and
    `<cc>-production`.
 
 `release_eligible` in the report stays false; the signed corpus manifest is the
@@ -69,7 +69,7 @@ requested. No MacBook signing key exists.
 ```json
 {
   "kind": "trachuan.corpus-release", "version": 1,
-  "repository": "dannyota/trachuan", "commit": "<workflow commit>",
+  "repository": "dntmakers/trachuan", "commit": "<workflow commit>",
   "country": "vn", "rel": "20261114_3", "database": "corpus_vn_20261114_3",
   "sequence": 57, "previous": "20261112_2",
   "dump": {"object": "vn/20261114_3/corpus.dump", "sha256": "<64 hex>",
@@ -97,7 +97,7 @@ from `release.json`, where `corpus release-row` records the build database's
 and `ltree` and logs the versions, and the smoke check in
 [activation step 3](corpus-release.md#activation-steps) proves the restored data
 works with the image's versions. The certificate identity is
-`https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
+`https://github.com/dntmakers/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
 `heading_review` is present only when `sources/vn-heading-reviews.yaml` has an
 entry for the release; signing copies it unchanged. `heading_evidence` is copied
 by signing from the build record `build.json`, which the upload directory holds

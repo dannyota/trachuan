@@ -94,7 +94,7 @@ its own certificate identity and its own `run_number` sequence. The job:
    {
      "kind": "trachuan.corpus-release", "version": 1,
      "corpus_kind": "frameworks",
-     "repository": "dannyota/trachuan", "commit": "<workflow commit>",
+     "repository": "dntmakers/trachuan", "commit": "<workflow commit>",
      "rel": "20261116", "database": "frameworks_20261116",
      "sequence": 3, "previous": null,
      "dump": {"object": "frameworks/20261116/frameworks.dump",
@@ -114,14 +114,14 @@ its own certificate identity and its own `run_number` sequence. The job:
    counts. The field set is closed.
 
 4. Signs it keyless with `cosign sign-blob --bundle` and pushes `manifest.json`
-   and `manifest.sigstore.json` to `ghcr.io/dannyota/trachuan-corpus-release`,
+   and `manifest.sigstore.json` to `ghcr.io/dntmakers/trachuan-corpus-release`,
    tagged `frameworks-<rel>` and `frameworks-production`, moving the production
    tag only above the current verified frameworks sequence.
 5. Deletes `$RUNNER_TEMP`'s copies in a step that always runs. It uploads no
    workflow artifact and caches nothing.
 
 The certificate identity is
-`https://github.com/dannyota/trachuan/.github/workflows/frameworks-release.yml@refs/heads/main`.
+`https://github.com/dntmakers/trachuan/.github/workflows/frameworks-release.yml@refs/heads/main`.
 Dispatching again for the same `rel`, with its report's hash from the signed
 manifest, signs a new sequence (a retry); dispatching for an older retained
 `rel` is a rollback, as for law.

@@ -93,7 +93,7 @@ The signing workflow and the corpus manifest are in
 ## Host activation
 
 The [updater](pull-deployment.md#updater) checks
-`ghcr.io/dannyota/trachuan-corpus-release:<cc>-production` on every run, under
+`ghcr.io/dntmakers/trachuan-corpus-release:<cc>-production` on every run, under
 the same locks, so image and corpus changes never overlap. Until the host has
 accepted a corpus manifest, a missing or anonymously unreadable package (GHCR
 answers `denied`) or a missing production tag is status `current` with "no
