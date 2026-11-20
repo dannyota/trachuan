@@ -89,20 +89,22 @@ class RevisionGateTest(unittest.TestCase):
         set_records(candidate, 'development', 'mrr', tolerance=0)
         self.refused(candidate, previous, before, after, message='did not pass')
 
-    def test_comparable_rows_or_rejections_that_differ_drop_the_tolerance(self):
-        for change in ('dense row', 'rejection'):
-            with self.subTest(change=change):
-                previous, candidate, before, after = revision_pair()
-                base_revision_records(candidate)
-                if change == 'dense row':
-                    row = next(row for row in candidate['cases'] if row['case_id'] == 'p1')
-                    candidate['cases'].append(row | dict(arms='dense'))
-                else:
-                    previous['rejections'][0]['case_id'] = 'r9'
-                    set_records(candidate, 'old_product', 'mrr', tolerance=0)
-                self.refused(candidate, previous, before, after, message='revised comparison differs')
-                set_records(candidate, 'development', 'mrr', tolerance=0)
-                self.validate(candidate, previous, before, after)
+    def test_comparable_rows_that_differ_drop_the_tolerance(self):
+        previous, candidate, before, after = revision_pair()
+        base_revision_records(candidate)
+        row = next(row for row in candidate['cases'] if row['case_id'] == 'p1')
+        candidate['cases'].append(row | dict(arms='dense'))
+        self.refused(candidate, previous, before, after, message='revised comparison differs')
+        set_records(candidate, 'development', 'mrr', tolerance=0)
+        self.validate(candidate, previous, before, after)
+
+    def test_previous_rejections_that_differ_from_the_fixture_are_refused(self):
+        previous, candidate, before, after = revision_pair()
+        base_revision_records(candidate)
+        previous['rejections'][0]['case_id'] = 'r9'
+        set_records(candidate, 'old_product', 'mrr', tolerance=0)
+        set_records(candidate, 'development', 'mrr', tolerance=0)
+        self.refused(candidate, previous, before, after, message='report rejections differ')
 
     def test_old_product_records_are_checked_in_a_revised_report(self):
         for field, value in (('high_water', 1.001), ('tolerance', 0), ('status', 'fail'), ('previous_value', .5)):

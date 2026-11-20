@@ -116,6 +116,38 @@ class OldProductPartitionTest(unittest.TestCase):
                 self.refused(candidate, message='report rejections differ')
                 self.refused(candidate, previous, message='report rejections differ')
 
+    def test_each_rejection_is_a_passed_diacritics_refusal(self):
+        changes = [('failed', lambda row: row.update(passed=False)), ('passed one', lambda row: row.update(passed=1)),
+                   ('passed text', lambda row: row.update(passed='true')), ('passed null', lambda row: row.update(passed=None)),
+                   ('unsupported', lambda row: row.update(reason='unsupported_query')),
+                   ('empty reason', lambda row: row.update(reason='')), ('reason null', lambda row: row.update(reason=None)),
+                   ('extra field', lambda row: row.update(message='Vui lòng nhập câu hỏi tiếng Việt có dấu.')),
+                   ('no reason', lambda row: row.pop('reason')), ('no passed', lambda row: row.pop('passed'))]
+        for name, change in changes:
+            with self.subTest(name=name):
+                previous, candidate = self.pair()
+                change(candidate['rejections'][1])
+                self.assertIs(candidate['quality_pass'], True)
+                self.refused(candidate, message='rejection record is not a passed diacritics_required refusal')
+                self.refused(candidate, previous, message='rejection record is not a passed diacritics_required refusal')
+        previous, candidate = self.pair()
+        candidate['rejections'][1].pop('case_id')
+        self.refused(candidate, previous, message='invalid rejection identity')
+
+    def test_previous_old_product_partition_is_checked(self):
+        changes = [('failed rejection', lambda report: report['rejections'][0].update(passed=False), 'rejection record'),
+                   ('other rejections', lambda report: report['rejections'][0].update(case_id='r9'),
+                    'report rejections differ'),
+                   ('rejected case scored', lambda report: report['cases'].append(old_rows(report, 'o1')[0] |
+                                                                               dict(case_id='r0', arms='dense')),
+                    'old_product cohort differs')]
+        for name, change, message in changes:
+            with self.subTest(name=name):
+                previous, candidate = self.pair()
+                change(previous)
+                self.validate(candidate)
+                self.refused(candidate, previous, message=message)
+
     def test_old_product_rows_hold_the_legacy_citation_count(self):
         ranks = dict(o2=([1, 1], [1, 1]))
         previous = build_report(3, PREVIOUS_REL, FIXTURE, CURRENT_RANKS, old_ranks=ranks)

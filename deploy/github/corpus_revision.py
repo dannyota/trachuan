@@ -1,9 +1,10 @@
 from collections import namedtuple
 
+from corpus_cohorts import cohort_counts
 from corpus_comparison import (TOLERANCE, cases, check_mrr_fields, compatible, indexed, losses, metric, number,
                                record_key, same, same_recipes, validate_comparisons, verify_metric_cases, versions)
 from corpus_fixture_history import cohort_of, content, development_cases
-from corpus_period import check_period, fixture_hash, no_historical_policy
+from corpus_period import check_old_product, check_period, fixture_hash, no_historical_policy
 from corpus_watermark import MRR_FIELDS, revised_high_water, validate_previous_mrr
 
 Revision = namedtuple('Revision', 'comparable previous_order revised')
@@ -177,6 +178,8 @@ def validate_version_three(report, previous, history, fixture):
     no_historical_policy(previous)
     validate_previous_mrr(previous)
     revision = resolve_revision(report, previous, history, fixture)
+    cohort_counts(previous)
+    check_old_product(previous, history.root)
     validate_comparisons(report, previous, revised=revision is not None)
     if revision is not None:
         check_revision_records(report, previous, revision)
