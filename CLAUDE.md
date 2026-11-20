@@ -3,16 +3,16 @@
 ## Claude Code specifics
 
 - The primary session runs as `manager` (`.claude/settings.json`); duties are in AGENTS.md "Agents".
-- Dispatch Codex: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. The script reads model, effort, sandbox and developer instructions from `<worktree>/.codex/agents/<role>.toml`, redirects stdin from `/dev/null`, and saves the worker's final message to `<report-file>`.
-- Codex workers run offline unit checks in the sandbox: the launcher makes the Go build and lint caches writable, allows loopback listeners and sets `GOPROXY=off`; integration tests and proofs stay with the primary. Workers mount `.codex/` read-only; the primary edits role files.
-- When a worker stops with a question, answer in a short file and continue it with `--resume <session id from its log> --model <the model that started it>` instead of a fresh run; copy the report first, because `-o` overwrites it. Put standing answers for small ambiguities in the brief.
+- Agent dispatch and model routes are in `instructions/workflow.md`. The CLI fallback reads `.codex/agents/<role>.toml` from the worker's worktree and saves its final message to the report file.
+- Codex CLI workers run offline unit checks in the sandbox: the launcher makes the Go build and lint caches writable, allows loopback listeners and sets `GOPROXY=off`; integration tests and proofs stay with the primary. Workers mount `.codex/` read-only; the primary edits role files.
+- When a CLI worker stops with a question, answer in a short file and resume it instead of starting a fresh worker; copy the previous report first, because `-o` overwrites it. Put standing answers for small ambiguities in the brief.
 - Write briefs with a quoted heredoc (`<<'EOF'`); point workers at exact files, not whole dependencies.
 - Probe and fixture-recording scripts record what the source returns and stop only on real errors (transport failure, non-2xx), never on valid but unexpected shapes such as nullable fields or an HTTP 200 with an error envelope.
 - When a reviewer keeps finding variants of one edge case, close the class with one fail-closed rule in the design instead of patching each variant.
 - Low-risk slices (read-only paths, decode fixes, docs) get one review round, and low findings are fixed without a separate confirmation; writes, security and release paths keep the full process.
 - Keep briefs, reports and temporary source files in the scratchpad, outside the checkout. Go tools can scan `.go` files under gitignored `work/`. Findings not fixed at once become lines in `docs/plans/backlog.md`.
 - Capture a check's exit status before filtering its log; `make pre-push | tail -1` can hide a failure.
-- Local checks are allowed on this MacBook: `make pre-push` before every push; `make test` and `make eval` as the brief requires. Run long jobs with `run_in_background`.
+- Run `make pre-push` before every push and the checks the brief names from `instructions/testing.md` on this MacBook. Run long jobs with `run_in_background`.
 - Discuss with the owner in Vietnamese; write every file in English.
 
 ## Gotchas

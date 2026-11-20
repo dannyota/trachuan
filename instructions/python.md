@@ -1,6 +1,6 @@
 # Python
 
-Read for `apps/docembed`. Python is used only for document embedding on the MacBook (ADR 0011); the query embedder is Go; spikes under `spikes/` are throwaway and follow nothing here.
+Read for the document embedder in `apps/docembed` (ADR 0011); the query embedder is Go. Python under `deploy/` follows [deploy](deploy.md) and [testing](testing.md), not this docembed toolchain. `spikes/` are throwaway.
 
 - uv manages the project: `.python-version` pins Python 3.14, `uv.lock` is committed, commands run as `uv run --frozen ...`. Add a dependency with `uv add`, never by editing the lock. The `document` dependency group holds PyTorch; the `dev` group holds pytest and ruff.
 - Style: `ruff format` and `ruff check` (rules E, F, I, B, UP, line length 100). Type hints on every public function. One concern per module, at most 400 lines, named after the concern; `__main__.py` only wires startup.

@@ -1,26 +1,29 @@
 # Workflow
 
-The primary session (`manager`) plans, writes and reviews designs, ADRs and documentation, makes the decisions, briefs, verifies and owns Git. Codex workers do implementation and troubleshooting; a Codex reviewer on a different model from the author reviews architecture designs and code independently. The primary asks the owner only for decisions the owner must make, one at a time, with a recommendation.
+The primary session (`manager`) plans, writes and reviews designs, ADRs and documentation, makes the decisions, briefs, verifies and owns Git. Workers implement and troubleshoot bounded tasks; a reviewer on a different model from the author reviews architecture designs and code independently. The primary asks the owner only for decisions the owner must make, one at a time, with a recommendation.
 
 ## Routes
 
 |Work|Role and model|
 |-|-|
 |Design, ADR, contract proposal, documentation, decisions|The primary (`manager`), which reviews its own documentation and prose|
-|Independent review of an architecture design or ADR|Codex `reviewer`, `gpt-6.1-sol` high; `--model gpt-6-astra` when the design is hard (`--search` when sources are needed)|
-|Routine implementation, troubleshooting with supplied evidence|Codex `implementer`, `gpt-6.1-terra` high|
-|Hard or complex implementation|Codex `implementer` with `--model gpt-6.1-sol`|
-|Review of code, adversarial pass|Codex `reviewer`: `gpt-6.1-sol` high for code `gpt-6.1-terra` or the primary wrote; `--model gpt-6-astra` for code `gpt-6.1-sol` wrote or hard code the primary wrote|
+|Independent review of an architecture design, ADR or routine code|`sol-reviewer` or Opus|
+|Routine implementation, troubleshooting with supplied evidence|`terra-implementer` or Sonnet|
+|Hard or complex implementation|Sol or Opus|
+|Hard independent review (security, concurrency, migration, or repeated failure)|`astra-reviewer` or Fable; neither implements code|
 |Searches, summaries, mechanical reading|Claude `Explore` agent|
+|Optional second design draft|Codex CLI `designer`, docs only, at the primary's discretion|
 
-Dispatch: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. The primary decides and states the route in each brief, and picks the hard route only when a task is too hard for the routine one or has already taken too long. A resume names the model that started the worker with `--model`; the launcher refuses a resume without it, because the role default may be another model. No model reviews its own work; the original reviewer confirms each fix.
+Prefer a fresh direct `Agent` with the named `subagent_type` and no `model` override. Give read-only reviewers the exact diff, worktree status, local checks and exact-commit CI evidence. State the route in the brief; choose a different model from the author and resume the same reviewer for confirmations.
+
+If direct dispatch is unavailable, use `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. A CLI resume requires the model that started the worker, even when it differs from the role default.
 
 ## Flow
 
 1. Read the design and accepted ADRs for the area. An accepted ADR wins over design text; design wins over a plan.
-2. For a contract or architecture change, the primary writes the proposal and the Codex `reviewer` reviews it before any code. Documentation and prose the primary wrote need no independent review. Small changes skip design.
+2. For a contract or architecture change, the primary writes the proposal and an independent reviewer reviews it before any code. Documentation and prose the primary wrote need no independent review. Small changes skip design.
 3. Brief one implementer per bounded task with exact owned paths. Failing test first, then the smallest fix. Adversarial cases for hostile input, authorization, races and bounds belong to the author.
-4. The primary runs `make pre-push` and the checks the brief names, inspects the diff and report, then dispatches the Codex `reviewer` once after the last code task. One-line and test-only changes skip review.
+4. The primary runs `make pre-push` and the checks the brief names, inspects the diff and report, then dispatches the independent reviewer once after the last code task. One-line and test-only changes skip review.
 5. Return findings to the author; the same reviewer confirms the fixes.
 6. Push a branch, open a draft pull request, mark it ready when complete. Landing needs independent review and green CI on the exact head. The owner merges with a signed merge; delete merged branches.
 7. When CI fails, the primary saves the failing job logs to the scratchpad and briefs `implementer` with them. Two red runs from the same cause means stop and repair the process.

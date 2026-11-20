@@ -37,16 +37,7 @@ Precedence: an accepted ADR wins over design text; design wins over a plan. Code
 
 ## Agents
 
-The owner talks to the primary Claude session, which runs as `manager`. It plans, writes designs, ADRs and documentation, reviews them itself and makes the decisions; it writes briefs, verifies results, runs local checks, and owns Git, tags and deploys. Codex `implementer` does implementation and troubleshooting, and Codex `reviewer` independently reviews architecture designs and code, through `scripts/codex-agent.sh <role> <worktree> <brief> <report>`. The reviewer's model follows the author's: routine work is implemented by `gpt-6.1-terra` and reviewed by `gpt-6.1-sol`; hard or complex work is implemented by `gpt-6.1-sol` and reviewed by `gpt-6-astra`; designs and code the primary writes go to `gpt-6.1-sol`, or `gpt-6-astra` when hard. Documentation and prose the primary wrote need no independent review.
-
-|Role|Where|Model, effort|Duty|
-|-|-|-|-|
-|`reviewer`|Codex `.codex/agents/reviewer.toml`|`gpt-6.1-sol` high, or `gpt-6-astra` for work `gpt-6.1-sol` wrote; read-only|Independent review of architecture designs, ADRs and code; adversarial pass|
-|`implementer`|Codex `.codex/agents/implementer.toml`|`gpt-6.1-terra` high for routine work, `gpt-6.1-sol` for hard work; workspace-write|One bounded task in named paths; root-causes and fixes a failure from supplied evidence|
-|exploration|Claude `Explore` agent|default|Searches and mechanical reading|
-|`designer`|Codex `.codex/agents/designer.toml`|`gpt-6-astra` high, workspace-write in `docs/`|Optional second author of a design draft, only when the primary chooses it; never the default|
-
-No model reviews its own work. The primary states the route in every brief. Local builds and tests run on the owner's MacBook; the primary runs them and gives reviewers the output.
+The primary session (`manager`) owns designs, ADRs, documentation, decisions, briefs, verification, Git, tags and deploys. Workers implement bounded tasks and reviewers independently review architecture designs and code. `instructions/workflow.md` owns dispatch and model routing. No model reviews its own work.
 
 |Lane|Owned paths|Never|
 |-|-|-|
@@ -65,7 +56,7 @@ No model reviews its own work. The primary states the route in every brief. Loca
 
 ## Briefs and reports
 
-A brief names the objective, authorities to read, owned paths, forbidden actions, definition of done, checks the primary will run, and the report contract. Workers start with `git status --short` and leave existing changes alone. Stop at a document conflict, overlapping ownership or missing decision; report it instead of inventing a contract.
+A brief names the objective, authorities to read, owned paths, forbidden actions, definition of done, checks the primary will run, and the report contract. Implementers and CLI reviewers start with `git status --short`; the primary supplies it to Agent roles without shell access. Leave existing changes alone. Stop at a document conflict, overlapping ownership or missing decision; report it instead of inventing a contract.
 
 A report lists exact new, changed and deleted files; checks run with results; checks not run with the command and reason; evidence paths; open items. The Codex launcher saves only the final message, so the complete report goes there.
 
