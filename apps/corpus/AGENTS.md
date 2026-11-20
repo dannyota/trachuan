@@ -5,3 +5,5 @@
 The backend lane owns `apps/corpus/`, `apps/server/`, `packages/schema/` and migrations; stay within the paths named by the brief.
 
 Checks: `make test`, `make test-integration`, `make test-proof`, `make pre-push`.
+
+When a Vietnam-only source blocks access, check the public egress country and network route first. If the route exits outside Vietnam, ask the owner to switch to a Vietnam IP before changing retries or code.

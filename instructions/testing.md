@@ -2,11 +2,11 @@
 
 |Layer|When|Command|
 |-|-|-|
-|Static|before every push|`make pre-push`: gofmt, goimports, golangci-lint, eslint, prettier check, markdownlint, lengths, shellcheck|
+|Static|before every push|`make pre-push` ([checks](../scripts/pre-push.sh))|
 |Unit|every push|`make test`|
 |Integration with PostgreSQL|every push|`make test-integration` (native PostgreSQL from `make services-up`)|
-|Corpus evaluation|before every `corpus release`|`make eval`: product suite gates (ADR 0010) current-law precision 0.99, rejections 3/3, and no regression of recall@20 or MRR@8 against the previous release; targets reported, not gates: recall@20 0.90, MRR@8 0.66, abstention balanced accuracy 0.85 (positive answer rate and negative abstention rate reported per cohort), recall@8 as a diagnostic; filtered cases; diff against previous release|
-|Browser|every pull request|`make e2e` (`scripts/e2e.sh`): starts the local stack (a fresh auth database, `apps/server/cmd/fakegoogle`, `apps/server/cmd/fakeembed` with a 2099 fixture release, the Go server with `SERVER_GOOGLE_ISSUER`; Nuxt from Plan 10), runs the Go flow tests (`-tags e2e`), then Playwright once it exists, and tears the stack down; CI sets `SERVER_PUBLIC_SUMMARIES=true`, and the summary specs skip without it|
+|Corpus evaluation|before publishing a corpus|Use the staged `eval` report and signed upload gate in [the corpus release runbook](../docs/runbooks/release-restore.md#release-a-corpus); [ADR 0010](../docs/adr/0010-retrieval-evaluation-for-agents.md) owns the gates and targets.|
+|End-to-end|pull requests when the changed paths require it|`make e2e` starts and tears down the local stack, running Go flow tests and Playwright. CI sets `SERVER_PUBLIC_SUMMARIES=true` for summary specs.|
 
 Rules: write the failing test first; observe the failure before the fix. A report claims only checks that ran and shows failures with output. Reviewers read the primary's check output and the exact-commit CI run; they do not run checks. Never lower an evaluation gate or target, or edit golden cases, to admit a change; add a new case and record why. An ADR History entry may revise a gate or target when it records the measured evidence and the trade-off for agents; a change made only so a release passes is not such a revision.
 
