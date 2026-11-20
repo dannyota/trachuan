@@ -230,8 +230,13 @@ or `amends_supplements`, read the document's relations
 `in:implements` documents for detailed rules; follow `next` tokens to the last
 page before citing read text. It says that a snippet is not the provision, that
 `[…]` marks omitted text, that pointer direction is as recorded by the source,
-that a pointer outside the release must not be replaced by a number lookup, and
-that only text returned complete may be cited.
+that a pointer outside the release must not be replaced by a number lookup, that
+only text returned complete may be cited, that a question about a past period
+sends `in_force_only:false`, since by default `search` puts documents in force
+today first and returns few others in `non_current`
+([retrieval validity](retrieval-validity.md#validity-and-evidence)), and that
+`abstain:true` is advisory, keeps its hits and judges only `hits`, not
+`non_current`.
 
 ## Evaluation
 
