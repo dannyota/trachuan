@@ -66,6 +66,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [corpus activation](corpus-release-activation.md)                                | What a dump may do on the host, activation steps, recovery and cleanup                                           |
 | [corpus signing](corpus-signing.md)                                              | The signing workflow and the signed corpus manifest                                                              |
 | [activation record](activation-record.md)                                        | What the host keeps about each activation; recovery and drops                                                    |
+| [repository move](repository-move.md)                                            | Moving the repository to dntmakers: owner-neutral code, two accepted owners, the channel switch and cleanup      |
 | [corpus release changes](corpus-release-changes.md)                              | The order in which schema versions and recipe changes ship                                                       |
 | [budgets](budgets.md)                                                            | Request, pipeline, indexing, retrieval and Temporal limits                                                       |
 | [host budgets](budgets-host.md)                                                  | Hosting cost, host memory, alarms and disk                                                                       |
@@ -83,6 +84,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [search results](mcp-results.md)                                                 | Compact search hits, snippets, related pointers, batch `read`, guide flow                                        |
 | [evaluation](evaluation.md)                                                      | Cohorts, identity mapping, calibration, metrics and caches                                                       |
 | [MRR@8 tolerance](evaluation-mrr-tolerance.md)                                   | The bounded exception to MRR@8 non-regression on a corpus-only release, against a high-water mark                |
+| [period cases](evaluation-period-cases.md)                                       | Development cases about a past period: a reported cohort under the agent's period request, not gated             |
 | [evaluation fixtures](evaluation-fixtures.md)                                    | Authored case fixtures, the identity map and identity validation                                                 |
 | [serialized recipe](retrieval-recipe-serialized.md)                              | Serialized retrieval recipe, hash and checks                                                                     |
 | [retrieval performance](retrieval-performance.md)                                | Measured statement costs per search and topic page; one change per cost                                          |

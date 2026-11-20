@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import io
+import shutil
 import subprocess
 from contextlib import redirect_stdout
 from types import SimpleNamespace
@@ -12,6 +13,7 @@ from unittest.mock import patch
 
 from corpus_evidence import LIMITS, SIDECARS
 from corpus_upload_test import FAKE
+from corpus_manifest import create
 from corpus_test_support import add_heading_build, digest, save_fixture, save_older_shape, write_fixture
 
 
@@ -35,10 +37,87 @@ class CorpusStorageTest(unittest.TestCase):
                         OCI_S3_ENDPOINT='https://synthetic.example', PYTHONDONTWRITEBYTECODE='1',
                         FAKE_AWS_VERSION='2.40.0')
 
+    def report_sha256(self):
+        return digest((self.remote / 'report.json').read_bytes())
+
+    def release_sha256(self):
+        return digest((self.remote / 'release.json').read_bytes())
+
+    def install_registry_fakes(self):
+        for name in ('oras', 'cosign'):
+            executable = self.path / name
+            executable.write_text(FAKE)
+            executable.chmod(0o755)
+
+    def sign_remote_release(self):
+        signed = create('c' * 40, 7, 'vn', '20990102_1', self.remote, self.remote / 'report.json')
+        (self.remote / 'signed-manifest.json').write_bytes(signed)
+
+    def gets(self):
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
+        return [call['args'][call['args'].index('--key') + 1] for call in calls if 'get-object' in call['args']]
+
+    def test_report_and_release_are_the_first_objects_fetched(self):
+        with patch.dict(os.environ, self.env, clear=True):
+            self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'first')
+        self.assertEqual(self.gets()[:2], ['vn/20990102_1/report.json', 'vn/20990102_1/release.json'])
+
+    def test_release_with_another_hash_stops_before_any_other_object(self):
+        dispatched = self.release_sha256()
+        row = json.loads((self.remote / 'release.json').read_bytes())
+        (self.remote / 'release.json').write_text(json.dumps(dict(reversed(row.items()))))
+        output = self.path / 'swapped-release'
+        for value in (dispatched, '0' * 64):
+            with self.subTest(value=value), patch.dict(os.environ, self.env, clear=True), \
+                    self.assertRaisesRegex(ValueError, 'release.json differs from the dispatched SHA-256'):
+                self.storage.download('vn', '20990102_1', self.report_sha256(), value, output)
+            self.assertEqual(self.gets(), ['vn/20990102_1/report.json', 'vn/20990102_1/release.json'])
+            self.assertFalse((output / 'corpus.dump').exists())
+            self.log.unlink()
+            shutil.rmtree(output)
+
+    def test_malformed_release_hash_never_calls_clients(self):
+        for value in ('short', self.release_sha256().upper(), 'g' * 64, self.release_sha256() + '\n', ' ', None):
+            with self.subTest(value=value), patch.dict(os.environ, self.env, clear=True), \
+                    self.assertRaises(ValueError):
+                self.storage.download('vn', '20990102_1', self.report_sha256(), value, self.path / 'malformed')
+            self.assertFalse(self.log.exists())
+            self.assertFalse((self.path / 'malformed').exists())
+
+    def test_empty_release_pin_downloads_without_registry_tools(self):
+        self.install_registry_fakes()
+        with patch.dict(os.environ, self.env, clear=True):
+            self.storage.download('vn', '20990102_1', self.report_sha256(), '', self.path / 'resign')
+        self.assertEqual((self.path / 'resign/corpus.dump').read_bytes(), (self.remote / 'corpus.dump').read_bytes())
+        names = {json.loads(line)['name'] for line in self.log.read_text().splitlines()}
+        self.assertEqual(names, {'aws'})
+
+    def test_report_with_another_hash_stops_before_any_other_object(self):
+        dispatched = self.report_sha256()
+        swapped = (self.remote / 'report.json').read_bytes() + b' '
+        (self.remote / 'report.json').write_bytes(swapped)
+        output = self.path / 'swapped'
+        for value in (dispatched, '0' * 64):
+            with self.subTest(value=value), patch.dict(os.environ, self.env, clear=True), \
+                    self.assertRaisesRegex(ValueError, 'dispatched SHA-256'):
+                self.storage.download('vn', '20990102_1', value, self.release_sha256(), output)
+            self.assertEqual(self.gets(), ['vn/20990102_1/report.json'])
+            self.assertFalse((output / 'corpus.dump').exists())
+            self.log.unlink()
+            shutil.rmtree(output)
+
+    def test_malformed_report_hash_never_calls_clients(self):
+        for value in ('', 'short', self.report_sha256().upper(), 'g' * 64, self.report_sha256() + '\n', None):
+            with self.subTest(value=value), patch.dict(os.environ, self.env, clear=True), \
+                    self.assertRaises(ValueError):
+                self.storage.download('vn', '20990102_1', value, self.release_sha256(), self.path / 'malformed')
+            self.assertFalse(self.log.exists())
+            self.assertFalse((self.path / 'malformed').exists())
+
     def test_downloads_all_seven_objects_of_a_decision_release_with_path_style_and_size_checks(self):
         output = self.path / 'download'
         with patch.dict(os.environ, self.env, clear=True):
-            self.storage.download('vn', '20990102_1', output)
+            self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), output)
         for name in ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json') + SIDECARS:
             self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
@@ -61,22 +140,22 @@ class CorpusStorageTest(unittest.TestCase):
     def test_size_mismatch_and_invalid_identity_stop_download(self):
         with patch.dict(os.environ, self.env | {'FAKE_BAD_SIZE': 'corpus.dump'}, clear=True):
             with self.assertRaises(ValueError):
-                self.storage.download('vn', '20990102_1', self.path / 'download')
+                self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'download')
         self.log.unlink()
         with self.assertRaises(ValueError):
-            self.storage.download('../', '20990102_1', self.path / 'unused')
+            self.storage.download('../', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'unused')
         self.assertFalse(self.log.exists())
 
     def test_older_shape_downloads_four_objects_and_never_its_stray_evidence(self):
         save_older_shape(self.remote, self.row)
         output = self.path / 'older'
         with patch.dict(os.environ, self.env, clear=True):
-            self.storage.download('vn', '20990102_1', output)
+            self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), output)
         self.assertEqual(sorted(path.name for path in output.iterdir()), sorted(['corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json']))
         for name in SIDECARS:
             (self.remote / name).unlink()
         with patch.dict(os.environ, self.env, clear=True):
-            self.storage.download('vn', '20990102_1', self.path / 'older-without-evidence')
+            self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'older-without-evidence')
 
     def test_decision_release_missing_evidence_refuses_before_dump_download(self):
         for name in SIDECARS:
@@ -85,7 +164,7 @@ class CorpusStorageTest(unittest.TestCase):
                 (self.remote / name).unlink()
                 self.log.unlink(missing_ok=True)
                 with patch.dict(os.environ, self.env, clear=True), self.assertRaisesRegex(ValueError, 'evidence files'):
-                    self.storage.download('vn', '20990102_1', self.path / ('missing-' + name))
+                    self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / ('missing-' + name))
                 calls = [json.loads(line) for line in self.log.read_text().splitlines()]
                 self.assertFalse(any('get-object' in call['args'] and 'vn/20990102_1/corpus.dump' in call['args'] for call in calls))
                 (self.remote / name).write_bytes(data)
@@ -100,7 +179,7 @@ class CorpusStorageTest(unittest.TestCase):
             with self.subTest(name=name), patch.dict(os.environ, self.env | {
                     'FAKE_HEAD_SIZES': json.dumps({name: limit + 1})}, clear=True):
                 with self.assertRaises(ValueError):
-                    self.storage.download('vn', '20990102_1', self.path / name)
+                    self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / name)
                 calls = [json.loads(line) for line in self.log.read_text().splitlines()]
                 self.assertFalse(any('get-object' in call['args'] or 'cp' in call['args'] for call in calls))
                 self.log.unlink()
@@ -112,7 +191,7 @@ class CorpusStorageTest(unittest.TestCase):
             with self.subTest(free=free), patch.dict(os.environ, self.env, clear=True), \
                     patch('shutil.disk_usage', return_value=SimpleNamespace(free=free)):
                 with self.assertRaises(ValueError):
-                    self.storage.download('vn', '20990102_1', self.path / str(free))
+                    self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / str(free))
                 calls = [json.loads(line) for line in self.log.read_text().splitlines()]
                 self.assertFalse(any('get-object' in call['args'] or 'cp' in call['args'] for call in calls))
                 self.log.unlink()
@@ -121,12 +200,12 @@ class CorpusStorageTest(unittest.TestCase):
         output = self.path / 'bounded'
         with patch.dict(os.environ, self.env | {'FAKE_GROW_AFTER_HEAD': 'corpus.dump'}, clear=True):
             with self.assertRaises(ValueError):
-                self.storage.download('vn', '20990102_1', output)
+                self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), output)
         self.assertEqual((output / 'corpus.dump').read_bytes(), (self.remote / 'corpus.dump').read_bytes())
         with patch.dict(os.environ, self.env | {'FAKE_GROW_AFTER_HEAD': 'corpus.dump',
                                               'FAKE_IGNORE_RANGE': 'corpus.dump'}, clear=True):
             with self.assertRaises(ValueError):
-                self.storage.download('vn', '20990102_1', self.path / 'bad-range')
+                self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'bad-range')
 
     def test_response_identity_and_total_are_required_when_if_match_is_ignored(self):
         name = 'corpus.dump'
@@ -146,14 +225,14 @@ class CorpusStorageTest(unittest.TestCase):
             env = self.env | extra_env | {'FAKE_GET_METADATA': json.dumps({name: metadata})}
             with self.subTest(metadata=metadata), patch.dict(os.environ, env, clear=True):
                 with self.assertRaises(ValueError):
-                    self.storage.download('vn', '20990102_1', output)
+                    self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), output)
                 self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
 
     def test_missing_head_etag_refuses_before_downloading(self):
         env = self.env | {'FAKE_HEAD_ETAGS': json.dumps({'corpus.dump': None})}
         with patch.dict(os.environ, env, clear=True):
             with self.assertRaises(ValueError):
-                self.storage.download('vn', '20990102_1', self.path / 'missing-etag')
+                self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'missing-etag')
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertFalse(any('get-object' in call['args'] for call in calls))
 
@@ -161,7 +240,7 @@ class CorpusStorageTest(unittest.TestCase):
         version = '2.40.0 Python/synthetic synthetic-os'
         with patch.dict(os.environ, self.env | {'FAKE_AWS_VERSION': version}, clear=True), \
                 redirect_stdout(io.StringIO()) as output:
-            self.storage.download('vn', '20990102_1', self.path / 'logged')
+            self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'logged')
         self.assertIn('aws-cli/' + version, output.getvalue())
 
     def test_rejects_other_aws_versions_before_download(self):
@@ -169,14 +248,14 @@ class CorpusStorageTest(unittest.TestCase):
             with self.subTest(version=version), patch.dict(os.environ, self.env | {
                     'FAKE_AWS_VERSION': version}, clear=True):
                 with self.assertRaises(ValueError):
-                    self.storage.download('vn', '20990102_1', self.path / version)
+                    self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / version)
                 self.assertFalse((self.path / version).exists())
 
     def test_schema_eight_downloads_all_eight_objects_after_all_heads(self):
         add_heading_build(self.remote, self.row, self.report)
         output = self.path / 'schema-eight'
         with patch.dict(os.environ, self.env, clear=True):
-            self.storage.download('vn', '20990102_1', output)
+            self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), output)
         names = ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json', 'build.json') + SIDECARS
         for name in names:
             self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
@@ -204,14 +283,14 @@ class CorpusStorageTest(unittest.TestCase):
         for index, fault in enumerate(faults):
             with self.subTest(fault=fault), patch.dict(os.environ, self.env | fault, clear=True):
                 with self.assertRaises(ValueError):
-                    self.storage.download('vn', '20990102_1', self.path / f'fault-{index}')
+                    self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / f'fault-{index}')
 
     def test_schema_eight_missing_build_record_refuses_before_dump_download(self):
         add_heading_build(self.remote, self.row, self.report)
         (self.remote / 'build.json').unlink()
         with patch.dict(os.environ, self.env, clear=True):
             with self.assertRaises(ValueError):
-                self.storage.download('vn', '20990102_1', self.path / 'missing-build')
+                self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'missing-build')
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertFalse(any('get-object' in call['args'] and 'vn/20990102_1/corpus.dump' in call['args'] for call in calls))
 
@@ -222,7 +301,7 @@ class CorpusStorageTest(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=True), \
                 patch('shutil.disk_usage', return_value=SimpleNamespace(free=2 * 1024**3 + total)):
             with self.assertRaises(ValueError):
-                self.storage.download('vn', '20990102_1', self.path / 'space-boundary')
+                self.storage.download('vn', '20990102_1', self.report_sha256(), self.release_sha256(), self.path / 'space-boundary')
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertFalse(any('get-object' in call['args'] for call in calls))
 
@@ -233,10 +312,54 @@ class CorpusStorageTest(unittest.TestCase):
         workflow = yaml.safe_load((root / '.github/workflows/corpus-release.yml').read_text())
         step = next(step for step in workflow['jobs']['release']['steps'] if step.get('name', '').startswith('Download corpus objects'))
         output = self.path / 'workflow-download'
-        env = self.env | dict(COUNTRY='vn', REL='20990102_1', RELEASE_DIR=str(output))
+        env = self.env | dict(COUNTRY='vn', REL='20990102_1', REPORT_SHA256=self.report_sha256(),
+                              RELEASE_SHA256=self.release_sha256(), RELEASE_DIR=str(output))
+        self.install_registry_fakes()
+        refusals = [(dict(REPORT_SHA256='0' * 64), ['vn/20990102_1/report.json']),
+                    (dict(RELEASE_SHA256='0' * 64), ['vn/20990102_1/report.json', 'vn/20990102_1/release.json'])]
+        for index, (change, fetched) in enumerate(refusals):
+            with self.subTest(change=change):
+                forged = subprocess.run(['bash', '-c', step['run']], env=env | change | dict(RELEASE_DIR=str(self.path / f'forged-{index}')),
+                                        cwd=root, capture_output=True, text=True)
+                self.assertNotEqual(forged.returncode, 0)
+                self.assertEqual(self.gets(), fetched)
+                self.assertFalse((self.path / f'forged-{index}/corpus.dump').exists())
+                self.log.unlink(missing_ok=True)
         result = subprocess.run(['bash', '-c', step['run']], env=env, cwd=root, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((output / 'build.json').read_bytes(), (self.remote / 'build.json').read_bytes())
+
+    def run_step(self, step, env):
+        root = Path(__file__).resolve().parents[2]
+        values = {'${{ secrets.' + name + ' }}': 'secret-' + name for name in ('RELEASES_READ_KEY_ID', 'RELEASES_READ_KEY_SECRET')}
+        values['${{ vars.OCI_S3_ENDPOINT }}'] = 'https://synthetic.example'
+        step_env = {key: values.get(value, value) for key, value in step.get('env', {}).items()}
+        return subprocess.run(['bash', '-e', '-c', step['run']], env=env | step_env, cwd=root, capture_output=True, text=True)
+
+    def test_workflow_signed_release_check_stops_the_job_and_never_sees_the_read_key(self):
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        steps = yaml.safe_load((root / '.github/workflows/corpus-release.yml').read_text())['jobs']['release']['steps']
+        publish = next(index for index, step in enumerate(steps) if step.get('name', '').startswith('Validate, sign'))
+        runnable = [step for step in steps[:publish] if 'deploy/github/corpus_' in step.get('run', '')]
+        self.assertEqual([step['name'].split()[0] for step in runnable], ['Require', 'Download'])
+        self.install_registry_fakes()
+        env = dict(PATH=self.env['PATH'], FAKE_BUILD=str(self.remote), FAKE_LOG=str(self.log), FAKE_AWS_VERSION='2.40.0',
+                   PYTHONDONTWRITEBYTECODE='1', COUNTRY='vn', REL='20990102_1', REPORT_SHA256=self.report_sha256(),
+                   RELEASE_SHA256='', RELEASE_DIR=str(self.path / 'unsigned'))
+        refused = self.run_step(runnable[0], env)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn('empty release SHA-256 signs only an already signed vn-20990102_1', refused.stderr)
+        self.sign_remote_release()
+        for step in runnable:
+            result = self.run_step(step, env | dict(RELEASE_DIR=str(self.path / 'resign')))
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.path / 'resign/corpus.dump').read_bytes(), (self.remote / 'corpus.dump').read_bytes())
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        tools = [call for call in calls if call['name'] in ('oras', 'cosign')]
+        self.assertEqual({call['name'] for call in tools}, {'oras', 'cosign'})
+        self.assertEqual([call['cloud'] for call in tools], [[]] * len(tools))
+        self.assertTrue(any('AWS_ACCESS_KEY_ID' in call['cloud'] for call in calls if call['name'] == 'aws'))
 
 
 if __name__ == '__main__':

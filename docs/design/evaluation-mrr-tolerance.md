@@ -19,8 +19,9 @@ not the number of cases that moved.
 
 The gated MRR@8 records are four: cohorts `old_product` and `development`, each
 in modes `exact` and `ann`, hybrid arms, limit 8. The top-level records repeat
-`old_product` and must equal it. Recall@20 is gated separately and is never
-relaxed; abstention is not a gate.
+`old_product` and must equal it. The `development` records leave out the
+[period cohort](evaluation-period-cases.md). Recall@20 is gated separately and
+is never relaxed; abstention is not a gate.
 
 ## When the tolerance applies
 
@@ -35,9 +36,12 @@ candidate report and the previous report; otherwise the strict rule applies:
 2. The scorer versions are equal, or are a pair the evaluator and the validators
    list as compatible because product matching and the metric definitions are
    unchanged between them.
-3. The legacy, old-product and development fixture hashes are equal, and the
-   cohort has the same case ids, positive count and denominators, the same
-   rejection set, and the same modes, arms and limits.
+3. The cohort's own fixture hashes are equal (legacy and old product for
+   `old_product`, development for `development`), and the cohort has the same
+   case ids, positive count and denominators, the same rejection set, and the
+   same modes, arms and limits. Across a revised development fixture, a
+   `development` record meets this condition over its comparable cases instead
+   ([revisions](evaluation-fixtures.md#revisions)).
 4. For every case of the record whose first-correct reciprocal rank at limit 8
    fell, every scoring alternative the previous report records for the case
    (`mapped_identities`, compared by the fields the matcher uses, not by
@@ -53,7 +57,12 @@ candidate report and the previous report; otherwise the strict rule applies:
   the previous report's value and the previous report's `high_water`. A previous
   report of the earlier version has no such field and gives its value alone. A
   previous report under other recipes gives its value alone too: a watermark
-  never crosses a recipe change. The candidate's own value is not part of it.
+  never crosses a recipe change. A previous record with `revision` gives its
+  value plus the tolerance it used. The candidate's own value is not part of it.
+- **Tolerance used** by a record is its `high_water` minus the value its status
+  was judged on, when positive, and otherwise 0: its `value` for a plain record,
+  its `revision` candidate value for a
+  [revision](evaluation-fixtures.md#revisions) record.
 - **Pass** when the value is at least `high_water` minus the tolerance.
 - The record states `previous`, `high_water`, `tolerance`, the value, its
   `status`, `within_tolerance: true` when the value is below `previous`, and
@@ -97,7 +106,7 @@ both:
   [When the tolerance applies](#when-the-tolerance-applies) from the two
   reports, recompute `high_water`, the comparison and `losses` from their case
   records, with the tolerance as their own constant, and refuse a record whose
-  stated fields or status differ, a non-finite value, or a version 2 record
+  stated fields or status differ, a non-finite value, or a version 2 or 3 record
   without its fields.
 
 The previous signed manifest is verified under the release policy before its

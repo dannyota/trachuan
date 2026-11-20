@@ -149,7 +149,7 @@ func summarizeTiming(values []float64) timingSummary {
 
 func cacheKey(c Cache, o Options, hashes FixtureHashes) string {
 	var policies any
-	if o.HistoricalPolicy != nil || o.NotYetEligible || (o.NonCurrentTail != nil && *o.NonCurrentTail > 0) {
+	if o.NotYetEligible || (o.NonCurrentTail != nil && *o.NonCurrentTail > 0) {
 		policies = o.ValidityOverrides
 	}
 	value := struct {

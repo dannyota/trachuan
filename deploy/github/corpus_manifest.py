@@ -1,4 +1,5 @@
 import argparse
+from collections import namedtuple
 import hashlib
 import json
 import os
@@ -9,7 +10,10 @@ from manifest import canonical, positive, require_match
 from corpus_cohorts import cohort_counts
 from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
-from corpus_evidence import SIDECARS, validate_evidence_field, validate_sidecars
+from corpus_evidence import RUN_FIELDS, SIDECARS, validate_evidence_field, validate_sidecars
+from corpus_fixture_history import FixtureHistory
+from corpus_period import PERIOD, check_partition, check_period, check_record_fields, no_historical_policy
+from corpus_revision import validate_version_three
 from corpus_rules import DECISION_FIELDS, has_decision, older_shape_allowed, require_status_country
 
 
@@ -65,7 +69,8 @@ def non_regression_contract():
                    for mode in ('exact', 'ann')
                    for name, limit, gating in (('recall', 20, True), ('mrr', 8, True),
                                                ('abstention_balanced_accuracy', 8, False))]
-    return {'legacy': [], 'old_product': comparisons, 'development': comparisons}
+    return {'legacy': [], 'old_product': comparisons, 'development': comparisons,
+            'development_period': [entry.copy() for entry in PERIOD]}
 
 
 def check_comparisons(records, expected):
@@ -90,7 +95,7 @@ def check_comparisons(records, expected):
                 raise ValueError('required non_regression gate missing or not passing')
 
 
-def validate_report(report, country, rel, previous_report=None, release_row=None):
+def validate_report(report, country, rel, previous_report=None, release_row=None, history=None):
     if not isinstance(report, dict):
         raise ValueError('invalid report')
     versions(report)
@@ -102,9 +107,11 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
     if release_row is not None:
         validate_recipes(release_row, report)
     scanned = report
-    if report['version'] == 2 and release_row is not None:
+    if report['version'] >= 2 and release_row is not None:
         scanned = {key: value for key, value in report.items() if key != 'retrieval_recipe'}
     no_research_override(scanned)
+    if report['version'] >= 3:
+        no_historical_policy(report)
     diff = report.get('previous_diff')
     if not isinstance(diff, dict) or 'reason' in diff or not isinstance(diff.get('previous'), dict):
         raise ValueError('report must compare a previous release')
@@ -114,6 +121,8 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
     require_match(r'[0-9]{8}(?:_[0-9]+)?', previous.get('rel'), 'previous rel')
     require_match(r'[0-9a-f]{64}', previous.get('report_sha256'), 'previous report hash')
     contract = non_regression_contract()
+    if report['version'] < 3:
+        del contract['development_period']
     check_comparisons(report.get('non_regression'), contract['old_product'])
     cohorts = report.get('cohorts')
     if not isinstance(cohorts, dict) or set(cohorts) != set(contract):
@@ -124,17 +133,25 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
             raise ValueError('invalid cohort')
         if cohort['case_count'] > 0:
             check_comparisons(cohort.get('non_regression', []), contract[name])
-    if report['version'] == 2:
+    if report['version'] >= 2:
         for records in [report['non_regression'], *(cohort.get('non_regression', []) for cohort in cohorts.values() if cohort['case_count'] > 0)]:
             for record in records:
                 if record.get('name') == 'mrr' and record.get('gating'):
                     check_mrr_fields(record)
     if report['non_regression'] != cohorts['old_product'].get('non_regression'):
         raise ValueError('top-level non_regression differs from old_product')
+    if report['version'] >= 3:
+        history = history or FixtureHistory()
+        check_record_fields(report)
+        check_period(report)
+        fixture = check_partition(report, history)
     if previous_report is not None:
         if previous_report.get('country') != country or previous_report.get('rel') != previous['rel']:
             raise ValueError('previous report identity differs from inputs')
-        validate_comparisons(report, previous_report)
+        if report['version'] >= 3:
+            validate_version_three(report, previous_report, history, fixture)
+        else:
+            validate_comparisons(report, previous_report)
 
 
 def validate_recipes(row, report):
@@ -147,7 +164,7 @@ def validate_recipes(row, report):
     objects = dict(query=dense.get('query'), document=dense.get('document'),
                    chunk=row.get('chunk_recipe'), lexical=row.get('lexical_recipe'),
                    retrieval=row.get('retrieval_recipe'))
-    if report['version'] == 2 and canonical(report.get('retrieval_recipe')) != canonical(objects['retrieval']):
+    if report['version'] >= 2 and canonical(report.get('retrieval_recipe')) != canonical(objects['retrieval']):
         raise ValueError('report retrieval recipe object differs from release row')
     inputs, hashes = row.get('recipe_hash_inputs'), report.get('recipes')
     if not isinstance(inputs, dict) or set(inputs) != set(objects) or not isinstance(hashes, dict) or set(hashes) != set(objects):
@@ -186,14 +203,18 @@ def validate_selected_report(row, report, report_bytes, signing):
         raise ValueError('report previous differs from the frozen previous report')
 
 
+Inputs = namedtuple('Inputs', 'row report evidence sidecars expected data')
+
+
 def validate_inputs(country, rel, directory, report_path, signing=False):
-    row, report, _, _ = validated_inputs(country, rel, directory, report_path, signing)
-    return row, report
+    inputs = validated_inputs(country, rel, directory, report_path, signing)
+    return inputs.row, inputs.report
 
 
 def validated_inputs(country, rel, directory, report_path, signing=False):
     identity(country, rel)
-    row = decode((directory / 'release.json').read_bytes())
+    row_bytes = (directory / 'release.json').read_bytes()
+    row = decode(row_bytes)
     report_bytes = report_path.read_bytes()
     report = decode(report_bytes)
     if not isinstance(row, dict) or row.get('country') != country or row.get('rel') != rel:
@@ -219,7 +240,11 @@ def validated_inputs(country, rel, directory, report_path, signing=False):
                   if re.fullmatch(r'[0-9a-f]{64}  corpus\.dump', line)]
     if dump_lines != [dump_hash + '  corpus.dump']:
         raise ValueError('build manifest must name the dump hash exactly once')
-    positive((directory / 'corpus.dump').stat().st_size, 'dump size')
+    dump_size = (directory / 'corpus.dump').stat().st_size
+    positive(dump_size, 'dump size')
+    data = {'report.json': report_bytes, 'release.json': row_bytes}
+    expected = {name: (hashlib.sha256(value).hexdigest(), len(value)) for name, value in data.items()}
+    expected |= {'corpus.dump': (dump_hash, dump_size), 'MANIFEST.sha256': (build_hash, len(manifest_bytes))}
     evidence = None
     if row['schema_version'] >= 8:
         build_bytes = (directory / 'build.json').read_bytes()
@@ -227,6 +252,7 @@ def validated_inputs(country, rel, directory, report_path, signing=False):
         build_lines = [line for line in manifest_lines if re.fullmatch(r'[0-9a-f]{64}  build\.json', line)]
         if build_lines != [build_digest + '  build.json']:
             raise ValueError('build manifest must name the build.json hash exactly once')
+        expected['build.json'] = (build_digest, len(build_bytes))
         record = decode(build_bytes)
         if not isinstance(record, dict):
             raise ValueError('invalid build record')
@@ -237,7 +263,8 @@ def validated_inputs(country, rel, directory, report_path, signing=False):
     sidecars = None
     if has_decision(run):
         sidecars = validate_sidecars(row, report, report_bytes, directory, dump_hash, build_hash)
-    return row, report, evidence, sidecars
+        expected |= {name: (sidecars['evidence'][RUN_FIELDS[name]], (directory / name).stat().st_size) for name in SIDECARS}
+    return Inputs(row, report, evidence, sidecars, expected, data)
 
 
 def validate_heading_evidence(value):
@@ -299,15 +326,15 @@ def read_manifest(data):
 
 
 def manifest_fields(commit, sequence, country, rel, directory, report_path, previous_report=None):
-    row, report, evidence, sidecars = validated_inputs(country, rel, directory, report_path, signing=True)
+    row, report, evidence, sidecars, expected, _ = validated_inputs(country, rel, directory, report_path, signing=True)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
     obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
                commit=commit, country=country, rel=rel, database=f'corpus_{country}_{rel}',
                sequence=sequence, previous=report['previous_diff']['previous']['rel'],
                dump=dict(object=f'{country}/{rel}/corpus.dump', sha256=report['dump_sha256'],
-                         size=(directory / 'corpus.dump').stat().st_size),
-               report=dict(sha256=sha256(report_path), quality_pass=True),
+                         size=expected['corpus.dump'][1]),
+               report=dict(sha256=expected['report.json'][0], quality_pass=True),
                build_artifact_sha256=report['build_artifact_sha256'],
                schema_version=row['schema_version'], extensions=row['extensions'],
                recipes={name: row[name + '_recipe'] for name in ('dense', 'chunk', 'lexical', 'retrieval')})
@@ -346,7 +373,7 @@ def main():
         if os.environ['GITHUB_REF'] != 'refs/heads/main':
             raise ValueError('dispatch corpus release from main')
         from corpus_previous import check_remote
-        row, report, _, sidecars = validated_inputs(args.country, args.rel, args.directory, args.report, signing=True)
+        row, report, _, sidecars, _, _ = validated_inputs(args.country, args.rel, args.directory, args.report, signing=True)
         if sidecars is not None:
             print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
             print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))

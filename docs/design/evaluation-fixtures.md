@@ -82,3 +82,74 @@ not found under the rule above stays `mapping_incomplete` until re-adjudicated.
 Map bytes are pinned by the [build input hash](index.md#build-stage) and eval
 input hash, not a recipe; editing the map requires new build/eval input, not
 changed frozen recipes.
+
+## Revisions
+
+The development fixture and its identity entries change only through a reviewed
+Git change; build and eval never write them. The legacy and old product fixtures
+are never revised. When the development fixture's hash differs from the previous
+report's, the gated `development` records are compared over the **comparable
+cases** instead of the whole cohort. A case is comparable when it has the same
+ID in both fixtures, `question`, `expected_citations` and `expect_abstain` equal
+as decoded (other fields are ignored; an absent list equals an empty one), and
+the same cohort in both reports, `development` or
+[`development_period`](evaluation-period-cases.md). A case is never removed
+([ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md), item 3), and an ID
+rename is a removal: a revision that removes a case is refused.
+
+- The previous value and the candidate value are both recomputed from the case
+  records over the comparable cases, in fixture order, with the metric's own
+  definition. Recall@20 compares integer matched counts over the same
+  denominator. A value that cannot be recomputed (a missing or duplicate case
+  record, a mapping issue, or no comparable case to score) makes the record
+  `unavailable`, except that when only the previous value is missing and the
+  previous report's metric is null, the status is `no_previous`.
+- `high_water` is the recomputed previous value plus the
+  [tolerance used](evaluation-mrr-tolerance.md#rule) by the previous record. A
+  tag-only revision so keeps the watermark exactly, and a revision never resets
+  it. The [MRR@8 tolerance](evaluation-mrr-tolerance.md) applies against it.
+- The evaluator reads the previous fixture from
+  `testdata/vn/development-previous/<sha256>.json` beside the current one: a
+  revising change commits the replaced bytes there under their SHA-256. It
+  checks the hash and refuses when the file is missing; with equal hashes no
+  file is needed. It also refuses a previous report that holds a case in both
+  development cohorts, whose case records do not match its fixture (an ID
+  missing or extra, or a citation count that differs), or that moves a case
+  between cohorts under an unchanged fixture hash.
+- A revision record's `previous` and `high_water` hold the comparable values its
+  status is judged on, and its `value` stays the value over all its cases. Its
+  `revision` is `{cases, value, revised}`: the count of comparable `development`
+  cases, the comparable candidate value, and every case of either report's
+  `development` cohort outside the comparable set as `{case_id, reason}`, sorted
+  by ID, with one reason chosen in the order `added`, `cohort`, `changed`. A
+  recall record also states `numerator` and `denominator` over the candidate's
+  comparable cases and `previous_numerator` and `previous_denominator` over the
+  previous ones; `previous_value` holds the comparable previous value on every
+  gated record, while a non-gating record such as abstention keeps the previous
+  value over all its cases. `within_tolerance`, `losses` and tolerance condition
+  4 use the comparable cases. When the recipes differ, `high_water` is the
+  recomputed previous value alone, since a watermark never crosses a recipe
+  change.
+- The uploader and the signing validator take each fixture from the main
+  branch's first-parent history: the version of `development.json` whose SHA-256
+  equals that report's development fixture hash, refusing when there is none.
+  The candidate's version must come at or after the previous report's version in
+  that history, comparing the latest commit at which each version appears, so a
+  run built from a stale fixture is refused. They recompute the comparable set,
+  both values, `high_water`, the tolerance check and the status, and refuse a
+  record whose stated fields differ from theirs. They also check that the
+  candidate's `development_period` holds exactly the fixture's cases tagged
+  `historical` and `development` exactly the others, and that `old_product`
+  holds exactly the legacy fixture's cases less the old product fixture's
+  `rejection_ids`, both taken from the same history by the report's `Legacy` and
+  `OldProduct` hashes. In each of these cohorts every case has a `hybrid` row in
+  both modes at limits 8 and 20, with `expected` equal to its citation count,
+  and `rejections` names exactly the rejection IDs. An old product fixture whose
+  `legacy_sha256` is not the legacy fixture's hash is refused. The `legacy`
+  cohort is not checked, since no gate reads it.
+
+Accepted costs: a loss on an added or changed case is not gated in the release
+that revises it, and a case moved into `development_period` leaves the gate for
+good, which takes an ADR 0010 History line naming it. The tolerance already used
+is carried as a difference measured over the previous membership. The guard is
+the Git review of the fixture change, and `revised` lists every such case.

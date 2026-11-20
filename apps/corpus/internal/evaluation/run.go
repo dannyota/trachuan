@@ -12,11 +12,7 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-const ScorerVersion = "agent-eval/5"
-
-func productComparableScorer(previous, current string) bool {
-	return (previous == "agent-eval/3" && (current == "agent-eval/4" || current == "agent-eval/5")) || compatibleMRRScorer(previous, current)
-}
+const ScorerVersion = "agent-eval/6"
 
 type metricKey struct {
 	cohort string
@@ -65,38 +61,16 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	if recipeErr != nil {
 		return Report{}, Cache{}, fmt.Errorf("encode retrieval recipe: %w", recipeErr)
 	}
-	r := Report{Version: 2, RetrievalRecipe: recipeJSON, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	r := Report{Version: 3, RetrievalRecipe: recipeJSON, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
 	if recipe.Version != 2 {
 		r.RetrievalRecipeVersion = recipe.Version
 	}
 	r.CapOverride = o.CapOverride
 	r.ArticleCapOverride = o.ArticleCapOverride
 	r.ValidityOverrides = o.ValidityOverrides
-	var previous *Report
-	var previousHash string
-	if o.PreviousReport != "" {
-		prior, hash, err := readPreviousReport(o.PreviousReport, o.PreviousRelease)
-		if err != nil {
-			return Report{}, Cache{}, err
-		}
-		previousHash = hash
-		if (prior.Version != 1 && prior.Version != 2) || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/4" && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2" && prior.Scorer != "agent-eval/3") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
-			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
-		}
-		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
-			return Report{}, Cache{}, fmt.Errorf("incompatible previous development fixtures")
-		}
-		if prior.Scorer != r.Scorer && !productComparableScorer(prior.Scorer, r.Scorer) {
-			r.PreviousDiff = map[string]any{"reason": "incompatible scorer version"}
-		} else if (prior.CapOverride == nil) != (o.CapOverride == nil) || (prior.CapOverride != nil && o.CapOverride != nil && *prior.CapOverride != *o.CapOverride) {
-			r.PreviousDiff = map[string]any{"reason": "incompatible cap override"}
-		} else if (prior.ArticleCapOverride == nil) != (o.ArticleCapOverride == nil) || (prior.ArticleCapOverride != nil && o.ArticleCapOverride != nil && *prior.ArticleCapOverride != *o.ArticleCapOverride) {
-			r.PreviousDiff = map[string]any{"reason": "incompatible article cap override"}
-		} else if !sameValidityOverrides(prior.ValidityOverrides, o.ValidityOverrides) {
-			r.PreviousDiff = map[string]any{"reason": "incompatible validity policy"}
-		} else {
-			previous = &prior
-		}
+	previous, previousHash, err := comparablePrevious(o, suite, &r)
+	if err != nil {
+		return Report{}, Cache{}, err
 	}
 	rejects := rejectionSet(suite)
 	entries := map[string]map[int]MapEntry{}
@@ -133,7 +107,7 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	for index, input := range inputs {
 		prefetched := results[index]
 		c := input.c
-		force := inForceForCase(c, o.ValidityOverrides)
+		force := input.inForce()
 		product, err := prefetched.product, prefetched.prepareErr
 		if err != nil {
 			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, OfflineError(err))

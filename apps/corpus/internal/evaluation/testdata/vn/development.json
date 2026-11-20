@@ -205,7 +205,7 @@
     ],
     "expected_citations": [
       {
-        "doc_number": "19/2016 /TT-NHNN",
+        "doc_number": "19/2016/TT-NHNN",
         "article": "1"
       },
       {
@@ -307,8 +307,8 @@
     "id": "dev-023",
     "question": "Thông tư 09/2023/TT-NHNN phòng, chống rửa tiền hiệu lực và văn bản thay thế",
     "tags": [
-      "historical",
-      "identifier"
+      "identifier",
+      "transition"
     ],
     "expected_citations": [
       {
@@ -436,7 +436,6 @@
     "id": "dev-032",
     "question": "chấm dứt huy động vốn và cho vay bằng vàng của tổ chức tín dụng",
     "tags": [
-      "historical",
       "multi_document"
     ],
     "expected_citations": [
@@ -762,8 +761,8 @@
     "id": "dev-055",
     "question": "Luật An ninh mạng 2025 ngày có hiệu lực và hiệu lực của Luật An ninh mạng 2018, Luật An toàn thông tin mạng",
     "tags": [
-      "historical",
-      "multi_document"
+      "multi_document",
+      "transition"
     ],
     "expected_citations": [
       {
@@ -984,7 +983,6 @@
     "id": "dev-073",
     "question": "cơ cấu lại thời hạn trả nợ, miễn giảm lãi, giữ nguyên nhóm nợ do dịch Covid-19 và văn bản sửa đổi",
     "tags": [
-      "historical",
       "multi_document"
     ],
     "expected_citations": [
@@ -1015,8 +1013,8 @@
     "id": "dev-076",
     "question": "Thông tư 11/2021/TT-NHNN dự phòng rủi ro hết hiệu lực và văn bản thay thế",
     "tags": [
-      "historical",
-      "identifier"
+      "identifier",
+      "transition"
     ],
     "expected_citations": [
       {
@@ -1121,8 +1119,8 @@
     "id": "dev-093",
     "question": "Nghị định 340/2025/NĐ-CP hiệu lực thi hành và văn bản bị thay thế",
     "tags": [
-      "historical",
-      "identifier"
+      "identifier",
+      "transition"
     ],
     "expected_citations": [
       {

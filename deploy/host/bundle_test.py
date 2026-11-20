@@ -11,6 +11,12 @@ import unittest
 HOST = Path(__file__).resolve().parent
 
 
+def parser(**kwargs):
+    config = configparser.ConfigParser(interpolation=None, **kwargs)
+    config.optionxform = str
+    return config
+
+
 def objects(value):
     if isinstance(value, dict):
         yield value
@@ -30,7 +36,7 @@ class InstallerTest(unittest.TestCase):
             self.assertIn(value, script)
 
     def test_watch_units_hardening_and_bundle_installation(self):
-        service = configparser.ConfigParser(interpolation=None)
+        service = parser()
         service.read(HOST / 'systemd/trachuan-watch.service')
         self.assertIn('Service', service)
         expected = dict(User='trachuan-watch', Type='oneshot', ProtectSystem='strict',
@@ -40,7 +46,7 @@ class InstallerTest(unittest.TestCase):
                         ExecStart='/usr/bin/python3 -I /usr/local/libexec/trachuan/watch.py')
         for key, value in expected.items():
             self.assertEqual(service['Service'][key], value)
-        timer = configparser.ConfigParser(interpolation=None)
+        timer = parser()
         timer.read(HOST / 'systemd/trachuan-watch.timer')
         self.assertEqual(timer['Timer']['OnCalendar'], 'minutely')
         self.assertEqual(timer['Timer']['Persistent'], 'false')
@@ -55,6 +61,40 @@ class InstallerTest(unittest.TestCase):
                 continue
             self.assertIn(path.name, script)
         self.assertIn('/var/log/trachuan/watch/watch.log', (HOST/'logrotate-trachuan').read_text())
+
+    def test_secret_holding_units_forbid_swap_and_cores(self):
+        cases = {
+            'systemd/trachuan-metrics.service': dict(LimitCORE='0', MemorySwapMax='0', MemoryMax='256M'),
+            'systemd/trachuan-deploy.service': dict(LimitCORE='0', MemorySwapMax='0'),
+            'quadlet/trachuan-server.container': dict(LimitCORE='0', MemorySwapMax='0'),
+            'quadlet/trachuan-migrate.container': dict(LimitCORE='0', MemorySwapMax='0'),
+            'quadlet/trachuan-caddy.container': dict(LimitCORE='0', MemorySwapMax='0'),
+            'quadlet/trachuan-web.container': dict(LimitCORE='0', MemorySwapMax='0'),
+        }
+        for path, expected in cases.items():
+            unit = parser(strict=False)
+            unit.read(HOST / path)
+            for key, value in expected.items():
+                self.assertEqual(unit['Service'][key], value, f'{path} {key}')
+        for name in ('postgres', 'queryembed'):
+            excluded = parser(strict=False)
+            excluded.read(HOST / f'quadlet/trachuan-{name}.container')
+            self.assertNotIn('MemorySwapMax', excluded['Service'], name)
+            self.assertEqual(excluded['Service']['LimitCORE'], '0', name)
+
+    def test_host_sysctl_file_disables_core_pipe_and_opens_port_80(self):
+        script = (HOST / 'install.sh').read_text()
+        line = "printf '%s\\n' 'net.ipv4.ip_unprivileged_port_start=80' 'kernel.core_pattern=|/bin/false' >/etc/sysctl.d/90-trachuan.conf"
+        self.assertEqual(script.count('/etc/sysctl.d/90-trachuan.conf'), 2)
+        self.assertIn(line + "\nsysctl -p /etc/sysctl.d/90-trachuan.conf >/dev/null\n", script)
+
+    def test_every_service_and_container_unit_disables_core_dumps(self):
+        paths = sorted(HOST.glob('systemd/*.service')) + sorted(HOST.glob('quadlet/*.container'))
+        self.assertGreaterEqual(len(paths), 10)
+        for path in paths:
+            unit = parser(strict=False)
+            unit.read(path)
+            self.assertEqual(unit['Service']['LimitCORE'], '0', path.name)
 
     def test_watch_cloud_backstop_names_secrets_and_collects_logs(self):
         oci = HOST.parent / 'oci'
@@ -166,18 +206,18 @@ class ListenerTest(unittest.TestCase):
                          "verify": "Wed *-*-* 04:00:00", "health": "*-*-* *:30:00",
                          "restore-check": "*-*-01 05:00:00"}
             for kind, schedule in schedules.items():
-                timer = configparser.ConfigParser(interpolation=None)
+                timer = parser()
                 timer.read(work / "units" / f"trachuan-backup-{kind}.timer")
                 self.assertEqual(timer["Timer"]["OnCalendar"], schedule+" Asia/Ho_Chi_Minh")
                 self.assertEqual(timer["Timer"]["Persistent"], "true")
-                service = configparser.ConfigParser(interpolation=None)
+                service = parser()
                 service.read(work / "units" / f"trachuan-backup-{kind}.service")
                 self.assertIn(f"/srv/trachuan/host/backup.py {kind}", service["Service"]["ExecStart"])
                 self.assertEqual(service["Service"]["UMask"], "0027")
             self.assertEqual(list((work / "units").glob("*.network")), [])
             self.assertFalse((work / "units" / "trachuan-postgres.volume").exists())
             for unit in units:
-                config = configparser.ConfigParser(strict=False, interpolation=None)
+                config = parser(strict=False)
                 config.read(unit)
                 with self.subTest(unit=unit.name):
                     container = config["Container"]

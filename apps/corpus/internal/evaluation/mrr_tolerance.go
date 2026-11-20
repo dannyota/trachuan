@@ -25,8 +25,8 @@ type MRRComparison struct {
 	Losses          []MRRLoss `json:"losses"`
 }
 
-func compatibleMRRScorer(previous, current string) bool {
-	return previous == current || (previous == "agent-eval/4" && current == "agent-eval/5") || (previous == "agent-eval/5" && current == "agent-eval/4")
+func comparableScorer(previous, current string) bool {
+	return previous == current || (previous == "agent-eval/5" && current == "agent-eval/6") || (previous == "agent-eval/6" && current == "agent-eval/5")
 }
 
 func finite(v *float64) bool { return v != nil && !math.IsNaN(*v) && !math.IsInf(*v, 0) }
@@ -37,17 +37,18 @@ func applyMRRComparison(r, p *Report, cohort string, n *NonRegression) {
 		return
 	}
 	sameRecipes := sameMRRRecipes(r, p)
-	if p.Version == 2 && sameRecipes {
-		for _, old := range p.Cohorts[cohort].NonRegression {
-			if old.Name == n.Name && old.Mode == n.Mode && old.Arms == n.Arms && old.Limit == n.Limit && old.MRRComparison != nil && finite(old.HighWater) {
-				v := math.Max(*n.PreviousValue, *old.HighWater)
-				n.HighWater = &v
+	if p.Version >= 2 && sameRecipes {
+		if old := previousMRRRecord(p, cohort, n); old != nil {
+			v := math.Max(*n.PreviousValue, *old.HighWater)
+			if old.Revision != nil {
+				v = *n.PreviousValue + toleranceUsed(old)
 			}
+			n.HighWater = &v
 		}
 	}
-	losses, expectations := mrrLosses(r, p, cohort, n.Mode)
+	losses, expectations := mrrLosses(r, p, cohort, n.Mode, nil)
 	n.Losses = losses
-	if sameRecipes && compatibleMRRScorer(p.Scorer, r.Scorer) && sameMRRFixtures(r, p) && sameMRRCohort(r, p, cohort) && expectations {
+	if sameRecipes && comparableScorer(p.Scorer, r.Scorer) && sameMRRFixtures(r, p, cohort) && sameMRRCohort(r, p, cohort) && expectations {
 		n.Tolerance = mrrTolerance
 	}
 	n.WithinTolerance = *n.Value < *n.PreviousValue
@@ -61,8 +62,31 @@ func applyMRRComparison(r, p *Report, cohort string, n *NonRegression) {
 	}
 }
 
-func sameMRRFixtures(a, b *Report) bool {
-	return a.FixtureHashes.Legacy != "" && a.FixtureHashes.OldProduct != "" && a.FixtureHashes.Development != "" && a.FixtureHashes.Legacy == b.FixtureHashes.Legacy && a.FixtureHashes.OldProduct == b.FixtureHashes.OldProduct && a.FixtureHashes.Development == b.FixtureHashes.Development
+func previousMRRRecord(p *Report, cohort string, n *NonRegression) *NonRegression {
+	for i, old := range p.Cohorts[cohort].NonRegression {
+		if old.Name == n.Name && old.Mode == n.Mode && old.Arms == n.Arms && old.Limit == n.Limit && old.MRRComparison != nil && finite(old.HighWater) {
+			return &p.Cohorts[cohort].NonRegression[i]
+		}
+	}
+	return nil
+}
+
+func toleranceUsed(old *NonRegression) float64 {
+	judged := old.Value
+	if old.Revision != nil {
+		judged = old.Revision.Value
+	}
+	if !finite(judged) || *old.HighWater <= *judged {
+		return 0
+	}
+	return *old.HighWater - *judged
+}
+
+func sameMRRFixtures(a, b *Report, cohort string) bool {
+	if cohort == "development" {
+		return a.FixtureHashes.Development != "" && a.FixtureHashes.Development == b.FixtureHashes.Development
+	}
+	return a.FixtureHashes.Legacy != "" && a.FixtureHashes.OldProduct != "" && a.FixtureHashes.Legacy == b.FixtureHashes.Legacy && a.FixtureHashes.OldProduct == b.FixtureHashes.OldProduct
 }
 
 type mrrCaseKey struct {
@@ -149,13 +173,13 @@ func reciprocal8(rank int) float64 {
 	return 1 / float64(rank)
 }
 
-func mrrLosses(r, p *Report, cohort string, mode retrieval.Mode) ([]MRRLoss, bool) {
+func mrrLosses(r, p *Report, cohort string, mode retrieval.Mode, ids map[string]bool) ([]MRRLoss, bool) {
 	losses := []MRRLoss{}
 	old, _ := cohortCases(p, cohort)
 	current, _ := cohortCases(r, cohort)
 	preserved := true
 	for key, c := range current {
-		if key.Mode != mode || key.Arms != "hybrid" || key.Limit != 8 {
+		if key.Mode != mode || key.Arms != "hybrid" || key.Limit != 8 || (ids != nil && !ids[key.ID]) {
 			continue
 		}
 		before, ok := old[key]
@@ -241,6 +265,11 @@ func validatePreviousMRR(value any) error {
 				return fmt.Errorf("invalid previous MRR losses")
 			}
 		}
+		if revision, present := fields["revision"]; present {
+			if err := validatePreviousRevision(revision); err != nil {
+				return err
+			}
+		}
 		for _, child := range fields {
 			if err := validatePreviousMRR(child); err != nil {
 				return err
@@ -251,6 +280,37 @@ func validatePreviousMRR(value any) error {
 			if err := validatePreviousMRR(child); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func validatePreviousRevision(value any) error {
+	fields, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("invalid previous revision")
+	}
+	if _, ok = fields["cases"].(float64); !ok {
+		return fmt.Errorf("invalid previous revision cases")
+	}
+	if v, present := fields["value"]; !present {
+		return fmt.Errorf("previous revision missing value")
+	} else if _, isNumber := v.(float64); v != nil && !isNumber {
+		return fmt.Errorf("invalid previous revision value")
+	}
+	revised, ok := fields["revised"].([]any)
+	if !ok {
+		return fmt.Errorf("invalid previous revision revised")
+	}
+	for _, entry := range revised {
+		item, isObject := entry.(map[string]any)
+		if !isObject {
+			return fmt.Errorf("invalid previous revised case")
+		}
+		id, _ := item["case_id"].(string)
+		reason, _ := item["reason"].(string)
+		if id == "" || (reason != "added" && reason != "changed" && reason != "cohort") {
+			return fmt.Errorf("invalid previous revised case")
 		}
 	}
 	return nil

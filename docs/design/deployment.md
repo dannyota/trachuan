@@ -101,6 +101,25 @@ recovery and activation until resolved. Changing a database role password is an
 owner runbook step (`ALTER ROLE`, then the Vault version); the updater alters
 only the `activator` role it provisions.
 
+The host has a swap file, so a process holding a secret in memory could write it
+to disk. `install.sh` sets `kernel.core_pattern=|/bin/false`, so the host writes
+no core dump at all, because processes that `podman exec` starts, such as health
+checks and owner sessions with a database password, take the core limit of
+whoever runs the command, not their unit's. systemd-coredump would also save the
+crashed process's environment in the journal
+([`COREDUMP_ENVIRON`](https://www.freedesktop.org/software/systemd/man/252/systemd-coredump.html)).
+Every unit still sets `LimitCORE=0` as a second layer. The server, migrate,
+caddy, web, updater, metrics and [watch](host-watch.md) units set
+`MemorySwapMax=0`. The auth restore check container runs with `--memory-swap`
+equal to its `--memory`: the `podman run` command runs in its service's cgroup,
+but the container gets its own scope under the user manager. PostgreSQL keeps
+its swap as an accepted risk, because blocking swap would turn host memory
+pressure into an OOM kill of the database. What can reach swap there is the
+pgBackRest S3 key pair and the database role passwords that pgBackRest, the
+health check, the updater and owner sessions read there, besides data and role
+verifiers already on disk. The query embedder keeps its swap until its peak is
+measured.
+
 Dynamic group `trachuan-host` (this instance only) gets `read secret-bundles`
 where
 [`target.secret.name`](https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/keypolicyreference.htm)

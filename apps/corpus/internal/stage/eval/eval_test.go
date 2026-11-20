@@ -194,7 +194,7 @@ func TestEvalStage_NoCapOverride(t *testing.T) {
 		return build.Database{}, artifact.Result{SHA256: "build"}, nil
 	}
 	s.evaluate = func(_ context.Context, _ stage.Env, _ stage.Run, _ build.Database, _ artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
-		if opts.CapOverride != nil || opts.HistoricalPolicy != nil || opts.NonCurrentTail != nil || opts.NotYetEligible {
+		if opts.CapOverride != nil || opts.NonCurrentTail != nil || opts.NotYetEligible {
 			t.Error("pipeline stage passed a research override")
 		}
 		return evaluation.Report{}, evaluation.Cache{}, sentinel
@@ -239,13 +239,13 @@ func TestEvaluate_ForwardsValidityOverrides(t *testing.T) {
 	s.evaluate = func(_ context.Context, _ stage.Env, _ stage.Run, _ build.Database, _ artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
 		return evaluation.Report{ValidityOverrides: opts.ValidityOverrides}, evaluation.Cache{}, nil
 	}
-	history, tail := "agent", 3
-	policy := evaluation.ValidityOverrides{HistoricalPolicy: &history, NonCurrentTail: &tail, NotYetEligible: true}
+	tail := 3
+	policy := evaluation.ValidityOverrides{NonCurrentTail: &tail, NotYetEligible: true}
 	report, _, err := s.Evaluate(context.Background(), stage.Env{}, stage.Run{}, evaluation.Options{ValidityOverrides: policy})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.HistoricalPolicy == nil || *report.HistoricalPolicy != "agent" || report.NonCurrentTail == nil || *report.NonCurrentTail != 3 || !report.NotYetEligible {
+	if report.NonCurrentTail == nil || *report.NonCurrentTail != 3 || !report.NotYetEligible {
 		t.Fatalf("validity overrides: %+v", report.ValidityOverrides)
 	}
 }

@@ -99,7 +99,7 @@ func TestLoadDevelopment_ValidatesTagsAndCases(t *testing.T) {
 			t.Fatalf("invalid cases accepted: %s", data)
 		}
 	}
-	for _, tag := range []string{"identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "out_of_domain", "negative"} {
+	for _, tag := range []string{"identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "transition", "out_of_domain", "negative"} {
 		data := `[{"id":"new-negative","question":"Câu hỏi khác","expect_abstain":true,"tags":["` + tag + `"]}]`
 		if _, err := LoadDevelopment(strings.NewReader(data)); err != nil {
 			t.Fatalf("valid tag %s: %v", tag, err)
@@ -133,6 +133,22 @@ func TestLoadSuiteFS_DevelopmentMetadata(t *testing.T) {
 			files["fixtures.json"] = &fstest.MapFile{Data: data}
 			if _, err = LoadSuiteFS(files, "."); err == nil {
 				t.Fatal("invalid development metadata accepted")
+			}
+		})
+	}
+}
+
+func TestLoadSuiteFS_RefusesStrayPreviousDevelopmentEntries(t *testing.T) {
+	for name, path := range map[string]string{
+		"stray file":                     "development-previous/notes.txt",
+		"subdirectory":                   "development-previous/nested/old.json",
+		"directory named like a fixture": "development-previous/old.json/inner.json",
+	} {
+		t.Run(name, func(t *testing.T) {
+			files := suiteFiles(t)
+			files[path] = &fstest.MapFile{Data: []byte("[]")}
+			if _, err := LoadSuiteFS(files, "."); err == nil || !strings.Contains(err.Error(), "unexpected previous development fixture") {
+				t.Fatalf("error = %v", err)
 			}
 		})
 	}

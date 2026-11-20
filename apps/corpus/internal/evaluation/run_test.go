@@ -33,43 +33,6 @@ func (f *fakeEngine) AnchorNodes(context.Context, []retrieval.AnchorRef) (map[re
 	return nil, nil
 }
 
-type validityRequestEngine struct {
-	fakeEngine
-	requests map[string]bool
-}
-
-func (e *validityRequestEngine) Prepare(ctx context.Context, r retrieval.Request) (retrieval.Prepared, error) {
-	e.mu.Lock()
-	e.requests[r.Query] = r.InForceOnly != nil && *r.InForceOnly
-	e.mu.Unlock()
-	return e.fakeEngine.Prepare(ctx, r)
-}
-
-func (e *validityRequestEngine) CollectWithNotYetEligible(ctx context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
-	return e.Collect(ctx, p, d)
-}
-
-func TestHistoricalPolicy_AgentSetsInForceOnlyFalseForTaggedCasesOnly(t *testing.T) {
-	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
-	suite := recordedSuite()
-	suite.Legacy[0].Tags = []string{"historical"}
-	engine := &validityRequestEngine{fakeEngine: fakeEngine{date: date}, requests: map[string]bool{}}
-	var opts Options
-	if err := json.Unmarshal([]byte(`{"historical_policy":"agent"}`), &opts); err != nil {
-		t.Fatal(err)
-	}
-	opts.EvaluationDate, opts.Modes = date, []retrieval.Mode{"exact"}
-	if _, _, err := Run(context.Background(), engine, suite, opts); err != nil {
-		t.Fatal(err)
-	}
-	for _, c := range suite.Legacy {
-		want := c.ID != suite.Legacy[0].ID
-		if engine.requests[c.Question] != want {
-			t.Errorf("case %s: in_force_only=%v, want %v", c.ID, engine.requests[c.Question], want)
-		}
-	}
-}
-
 func (f *fakeEngine) Present(_ context.Context, _ retrieval.Response, d retrieval.Detail) (retrieval.SearchResult, error) {
 	value := f.compactText
 	if d == retrieval.DetailFull {
@@ -639,7 +602,7 @@ func TestPreviousDiff_ValidityPolicyMismatchIncompatible(t *testing.T) {
 	for _, tc := range []struct {
 		key   string
 		value any
-	}{{"historical_policy", "agent"}, {"non_current_tail", 0}, {"not_yet_eligible", true}} {
+	}{{"non_current_tail", 0}, {"not_yet_eligible", true}} {
 		var previous map[string]any
 		if err := json.Unmarshal(encoded, &previous); err != nil {
 			t.Fatal(err)
@@ -1029,7 +992,7 @@ func TestPreviousDiff_ProductComparableScorer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prior.Scorer = "agent-eval/3"
+	prior.Version, prior.Scorer = 2, "agent-eval/5"
 	for i := range prior.Cases {
 		if prior.Cases[i].Cohort == "legacy" || prior.Cases[i].Cohort == "old_product" || prior.Cases[i].Cohort == "development" {
 			prior.Cases[i].Abstain = !prior.Cases[i].Abstain
@@ -1049,7 +1012,7 @@ func TestPreviousDiff_ProductComparableScorer(t *testing.T) {
 		t.Fatal(err)
 	}
 	diff, ok := current.PreviousDiff.(map[string]any)
-	if !ok || diff["previous_scorer"] != "agent-eval/3" || diff["scorer"] != "agent-eval/5" {
+	if !ok || diff["previous_scorer"] != "agent-eval/5" || diff["scorer"] != "agent-eval/6" {
 		t.Fatalf("diff = %v", current.PreviousDiff)
 	}
 	changes, ok := diff["cases"].([]CaseDifference)

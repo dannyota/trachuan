@@ -31,7 +31,7 @@ func releaseComparisons(records []NonRegression) []releaseComparison {
 func TestReleaseValidator_ContractMatchesEvaluationOutput(t *testing.T) {
 	ctx := context.Background()
 	date := retrieval.Date{Year: 2099, Month: 1, Day: 2}
-	report, _, err := Run(ctx, &recordedEngine{fakeEngine: fakeEngine{date: date}}, developmentSuite(), Options{EvaluationDate: date})
+	report, _, err := Run(ctx, &periodEngine{recordedEngine: recordedEngine{fakeEngine: fakeEngine{date: date}}}, periodSuite(), Options{EvaluationDate: date})
 	if err != nil {
 		t.Fatal(err)
 	}

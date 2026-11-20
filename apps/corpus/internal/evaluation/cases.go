@@ -38,16 +38,16 @@ type FixtureHashes struct {
 	Development   string
 }
 
-// Suite holds the cases and adjudications for evaluation.
 type Suite struct {
-	Legacy        []Case
-	Development   []Case
-	ValidityCases []ValidityCase
-	ValidityBytes []byte
-	Map           IdentityMap
-	MapBytes      []byte
-	Rejections    []string
-	Hashes        FixtureHashes
+	Legacy              []Case
+	Development         []Case
+	PreviousDevelopment map[string][]byte
+	ValidityCases       []ValidityCase
+	ValidityBytes       []byte
+	Map                 IdentityMap
+	MapBytes            []byte
+	Rejections          []string
+	Hashes              FixtureHashes
 }
 
 // LoadLegacy decodes and validates the authored cases.
@@ -94,7 +94,6 @@ func loadCases(r io.Reader, allowEmpty bool) ([]Case, error) {
 	return cases, nil
 }
 
-// LoadDevelopment decodes cases with diagnostic tags.
 func LoadDevelopment(r io.Reader) ([]Case, error) {
 	cases, err := loadCases(r, true)
 	if err != nil {
@@ -107,7 +106,7 @@ func LoadDevelopment(r io.Reader) ([]Case, error) {
 		seen := map[string]bool{}
 		for _, tag := range c.Tags {
 			switch tag {
-			case "identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "out_of_domain", "negative":
+			case "identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "transition", "out_of_domain", "negative":
 			default:
 				return nil, fmt.Errorf("case %q: invalid tag", c.ID)
 			}

@@ -1,19 +1,22 @@
 import math
 
 from corpus_cohorts import cohort_counts
+from corpus_watermark import carried_high_water
 
 
 TOLERANCE = .005
+SCORERS = {1: ('agent-eval/1', 'agent-eval/2', 'agent-eval/3', 'agent-eval/4'), 2: ('agent-eval/5',), 3: ('agent-eval/6',)}
+REVISION_FIELDS = ('revision', 'numerator', 'denominator', 'previous_numerator', 'previous_denominator')
+FIXTURES = {'old_product': ('Legacy', 'OldProduct'), 'development': ('Development',)}
 
 
 def versions(report):
-    if type(report.get('version')) is not int or report['version'] not in (1, 2):
+    if type(report.get('version')) is not int or report['version'] not in SCORERS:
         raise ValueError('invalid report version')
-    allowed = ('agent-eval/1', 'agent-eval/2', 'agent-eval/3', 'agent-eval/4') if report['version'] == 1 else ('agent-eval/5',)
-    if report.get('scorer') not in allowed:
+    if report.get('scorer') not in SCORERS[report['version']]:
         raise ValueError('invalid scorer version')
-    if report['version'] == 2 and (not isinstance(report.get('retrieval_recipe'), dict) or not isinstance(report['retrieval_recipe'].get('abstention'), dict)):
-        raise ValueError('version 2 requires the full retrieval recipe')
+    if report['version'] >= 2 and (not isinstance(report.get('retrieval_recipe'), dict) or not isinstance(report['retrieval_recipe'].get('abstention'), dict)):
+        raise ValueError(f"version {report['version']} requires the full retrieval recipe")
 
 
 def finite_values(value):
@@ -75,6 +78,16 @@ def cases(report, cohort):
     return result
 
 
+def same(left, right):
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(same(value, right[key]) for key, value in left.items())
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(same(x, y) for x, y in zip(left, right))
+    if type(left) is bool or type(right) is bool:
+        return type(left) is type(right) and left == right
+    return left == right
+
+
 def same_recipes(a, b):
     if not all(isinstance(a.get('recipes', {}).get(key), str) and a['recipes'][key] and
                a['recipes'][key] == b.get('recipes', {}).get(key)
@@ -89,23 +102,15 @@ def same_recipes(a, b):
         return False
     def comparable(recipe):
         return recipe | {'abstention': {key: value for key, value in recipe['abstention'].items() if key != 'calibration_sha256'}}
-    def equal(left, right):
-        if isinstance(left, dict) and isinstance(right, dict):
-            return left.keys() == right.keys() and all(equal(value, right[key]) for key, value in left.items())
-        if isinstance(left, list) and isinstance(right, list):
-            return len(left) == len(right) and all(equal(x, y) for x, y in zip(left, right))
-        if type(left) is bool or type(right) is bool:
-            return type(left) is type(right) and left == right
-        return left == right
-    return equal(comparable(current), comparable(previous))
+    return same(comparable(current), comparable(previous))
 
 
 def compatible(a, b):
-    return a == b or {a, b} == {'agent-eval/4', 'agent-eval/5'}
+    return a == b or {a, b} in ({'agent-eval/4', 'agent-eval/5'}, {'agent-eval/5', 'agent-eval/6'})
 
 
 def same_inputs(a, b, cohort, current, previous):
-    for key in ('Legacy', 'OldProduct', 'Development'):
+    for key in FIXTURES[cohort] if a['version'] >= 3 else ('Legacy', 'OldProduct', 'Development'):
         if not a.get('fixture_hashes', {}).get(key) or a['fixture_hashes'][key] != b.get('fixture_hashes', {}).get(key):
             return False
     ac, bc = a['cohorts'][cohort], b['cohorts'][cohort]
@@ -156,10 +161,10 @@ def reciprocal(rank):
     return 1 / rank if 1 <= rank <= 8 else 0
 
 
-def losses(current, previous, mode):
+def losses(current, previous, mode, ids=None):
     result, preserved = [], True
     for key, row in current.items():
-        if key[1:] != (mode, 'hybrid', 8) or key not in previous:
+        if key[1:] != (mode, 'hybrid', 8) or key not in previous or (ids is not None and key[0] not in ids):
             continue
         before, rank = first_rank(previous[key]), first_rank(row)
         if reciprocal(rank) >= reciprocal(before):
@@ -202,11 +207,11 @@ def check_mrr_fields(record):
             raise ValueError('invalid MRR loss identity or rank')
 
 
-def validate_comparisons(report, previous):
+def validate_comparisons(report, previous, revised=False):
     versions(previous)
     finite_values(previous)
-    if report['version'] == 1 and previous['version'] == 2:
-        raise ValueError('report version cannot downgrade from 2 to 1')
+    if report['version'] < previous['version']:
+        raise ValueError(f"report version cannot downgrade from {previous['version']} to {report['version']}")
     current_counts, prior_counts = cohort_counts(report), cohort_counts(previous)
     for name, count in prior_counts.items():
         if count > 0 and current_counts.get(name, 0) == 0:
@@ -217,13 +222,15 @@ def validate_comparisons(report, previous):
         records = report['cohorts'][cohort]['non_regression']
         current_cases, prior_cases = cases(report, cohort), cases(previous, cohort)
         prior_records = indexed(previous['cohorts'][cohort].get('non_regression'), ('mode', 'arms', 'limit', 'name'))
-        if previous['version'] == 2:
+        if previous['version'] == 2 and report['version'] == 2:
             for old_record in prior_records.values():
                 if old_record.get('name') == 'mrr' and old_record.get('gating'):
                     check_mrr_fields(old_record)
         for record in records:
-            if not record['gating']:
+            if not record['gating'] or (revised and cohort == 'development'):
                 continue
+            if report['version'] >= 3 and any(field in record for field in REVISION_FIELDS):
+                raise ValueError('revision fields without a development fixture revision')
             key = record_key(record)
             current, old = metric(report, cohort, key), metric(previous, cohort, key)
             verify_metric_cases(current, key, current_cases)
@@ -232,11 +239,14 @@ def validate_comparisons(report, previous):
             if number(record.get('value')) != value or number(record.get('previous_value')) != prior:
                 raise ValueError('comparison differs from metrics')
             threshold = prior
-            if record['name'] == 'mrr' and report['version'] == 2:
+            if record['name'] == 'mrr' and report['version'] >= 2:
                 check_mrr_fields(record)
                 high_water = prior
                 equal_recipes = same_recipes(report, previous)
-                if previous['version'] == 2:
+                if report['version'] >= 3:
+                    if previous['version'] >= 2 and equal_recipes:
+                        high_water = carried_high_water(previous, cohort, key, prior)
+                elif previous['version'] == 2:
                     if key not in prior_records:
                         raise ValueError('missing previous MRR comparison')
                     check_mrr_fields(prior_records[key])

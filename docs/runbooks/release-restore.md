@@ -102,12 +102,17 @@ same owner. The uploader creates the cache directory with mode `0700`, checks
 the prefix is empty, uploads every object (`build.json` too from schema 8), then
 rechecks every size and ETag against its upload receipt. It keeps the uploaded
 report as `$UPLOAD/report.json` before dispatching `corpus-release.yml` from
-`main`. Use that file as `--previous-report` for the next release after this
-release becomes active. If dispatch alone fails, dispatch it manually with the
-same country and release; do not upload again. A partial upload reserves that
-prefix; use a new release id for a rebuilt corpus. The signed manifest
-authorizes release; the report's `release_eligible` remains false. Host
-activation follows
+`main` with the SHA-256 of the uploaded report and `release.json` as
+`report_sha256` and `release_sha256`; signing refuses any other. Use that file
+as `--previous-report` for the next release after this release becomes active.
+If dispatch alone fails, do not upload again: run the uploader again with
+`--dry-run` and the same arguments, whose last line is the dispatch command with
+both hashes, and run that line. An older checkout dispatches without the hashes,
+and the job refuses it; dispatch by hand the same way.
+
+A partial upload reserves that prefix; use a new release id for a rebuilt
+corpus. The signed manifest authorizes release; the report's `release_eligible`
+remains false. Host activation follows
 [corpus release](../design/corpus-release.md#host-activation).
 
 Signing repeats the production comparison before it signs or pushes anything, so
@@ -116,20 +121,29 @@ already exists with a sequence at or below production's is exempt, which keeps
 retry and rollback working. Dispatching the same release again retries a failed
 activation. Signing an existing `<cc>-<rel>` again keeps every field of its
 signed manifest except `commit`, `sequence` and `heading_review`, `evidence`
-included, and refuses before signing when the bucket's objects would change one.
-A release without selected report hashes below `vn/20261118_2` signs only when
-its manifest already exists.
+included, and refuses before signing when the bucket's objects would change one
+or add a field the signed manifest lacks. A release without selected report
+hashes below `vn/20261118_2` signs only when its manifest already exists.
 
 When an earlier run pushed the release but failed to move `<cc>-production`, the
 comparison applies to the retry only while production's sequence is below the
 pushed one. Once another release holds production with a higher sequence, the
 pushed release is exempt too: signing it moves the tag, the host refuses it
 because its `previous` is not the active release, and uploads stay blocked.
-Recover by signing the active release again:
+Recover by signing the active release again. Every re-sign passes
+`report.sha256` from that release's signed manifest and no `release_sha256`,
+which the job accepts only for a release already signed; `resign-check` verifies
+the manifest and prints the exact command as its last line, with or without the
+upload directory. A re-sign that fails at "Require a signed release for an empty
+release pin" names a release that was never signed, or a registry that could not
+be read anonymously or verified (an `oras` or `cosign` error there); sign a new
+release first from its upload, with its pins:
 
 ```sh
-gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<active rel>
+python3 deploy/github/corpus_production.py resign-check vn <active rel> [<upload-dir>]
 ```
+
+Then run the printed `gh workflow run corpus-release.yml ...` line.
 
 ### First release with a decision
 
@@ -151,11 +165,9 @@ image, so no rollback can reach an image that drops the warning.
 ### Roll back a corpus release
 
 Request a lasting rollback by signing the older release again, within its
-retention window:
-
-```sh
-gh workflow run corpus-release.yml --ref main -f country=vn -f rel=<older rel>
-```
+retention window: run `resign-check` for it, as below, then the
+`gh workflow run` line it prints, which carries that release's signed
+`report.sha256`.
 
 The new signature gives that release a new sequence, `<cc>-production` follows
 it, and the host reactivates the retained database. A manual swap of
@@ -164,10 +176,13 @@ until the two agree.
 
 Check a rollback target ahead of need, from its upload directory. The command
 needs `oras` and `cosign`, signs and pushes nothing, prints each signed field
-that would change and exits 3 when any would:
+that would change and exits 3 when any would, and ends with the dispatch command
+for that release. A `signed absent` line means a field the signed manifest lacks
+would be added, so that release cannot be signed again. Without the upload
+directory it only verifies the manifest and prints the command:
 
 ```sh
-python3 deploy/github/corpus_production.py resign-check vn <rel> <upload-dir>
+python3 deploy/github/corpus_production.py resign-check vn <rel> [<upload-dir>]
 ```
 
 `no signed field would change` does not prove the rollback will sign. Signing

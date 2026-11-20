@@ -10,18 +10,7 @@ import (
 )
 
 func sameValidityOverrides(a, b ValidityOverrides) bool {
-	return sameOptional(a.HistoricalPolicy, b.HistoricalPolicy) && sameOptional(a.NonCurrentTail, b.NonCurrentTail) && a.NotYetEligible == b.NotYetEligible
-}
-
-func inForceForCase(c Case, policy ValidityOverrides) bool {
-	if policy.HistoricalPolicy != nil && *policy.HistoricalPolicy == "agent" {
-		for _, tag := range c.Tags {
-			if tag == "historical" {
-				return false
-			}
-		}
-	}
-	return true
+	return sameOptional(a.NonCurrentTail, b.NonCurrentTail) && a.NotYetEligible == b.NotYetEligible
 }
 
 func validityEligibilityHash(date retrieval.Date, force bool, policy ValidityOverrides, arms retrieval.Arms) string {
@@ -38,9 +27,6 @@ func sameOptional[T comparable](a, b *T) bool {
 }
 
 func validateValidityOverrides(v ValidityOverrides) error {
-	if v.HistoricalPolicy != nil && *v.HistoricalPolicy != "agent" {
-		return fmt.Errorf("invalid historical policy")
-	}
 	if v.NonCurrentTail != nil && (*v.NonCurrentTail < 0 || *v.NonCurrentTail > 5) {
 		return fmt.Errorf("invalid non-current tail")
 	}

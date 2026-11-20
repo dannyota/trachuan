@@ -70,25 +70,20 @@ func (e *policyEngine) CollectWithNotYetEligible(_ context.Context, p retrieval.
 }
 
 func TestValidityOverrides_ReportAndCacheIdentity(t *testing.T) {
-	history, tail := "agent", 1
+	tail := 1
 	tests := []struct {
 		name        string
 		policy      ValidityOverrides
 		count, rank int
-		tag         bool
 	}{
-		{"historical", ValidityOverrides{HistoricalPolicy: &history}, 7, 8, true},
-		{"tail", ValidityOverrides{NonCurrentTail: &tail}, 8, 8, false},
-		{"not_yet", ValidityOverrides{NotYetEligible: true}, 7, 1, false},
+		{"tail", ValidityOverrides{NonCurrentTail: &tail}, 8, 8},
+		{"not_yet", ValidityOverrides{NotYetEligible: true}, 7, 1},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
 			engine := &policyEngine{fakeEngine: fakeEngine{date: date}, primaryCount: tc.count}
 			suite := recordedSuite()
-			if tc.tag {
-				suite.Legacy[0].Tags = []string{"historical"}
-			}
 			opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
 			base, baseCache, err := Run(context.Background(), engine, suite, opts)
 			if err != nil {
@@ -135,15 +130,12 @@ func TestValidityOverrides_ReportAndCacheIdentity(t *testing.T) {
 					}
 				case map[string]any:
 					if _, ok := v["limit"]; ok {
-						var wantHistory any
 						var wantTail any
-						if tc.policy.HistoricalPolicy != nil {
-							wantHistory = *tc.policy.HistoricalPolicy
-						}
 						if tc.policy.NonCurrentTail != nil {
 							wantTail = float64(*tc.policy.NonCurrentTail)
 						}
-						if v["historical_policy"] != wantHistory || v["non_current_tail"] != wantTail || v["not_yet_eligible"] != tc.policy.NotYetEligible {
+						_, history := v["historical_policy"]
+						if history || v["non_current_tail"] != wantTail || v["not_yet_eligible"] != tc.policy.NotYetEligible {
 							t.Errorf("limit record missing policy: %v", v)
 						}
 					}

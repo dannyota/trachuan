@@ -25,7 +25,7 @@ finish() {
 trap finish EXIT
 trap 'exit 1' HUP INT TERM
 cleanup
-podman run --detach --name "$name" --network=pasta:--ipv4-only,--dns-forward,1.1.1.1,--dns-host,1.1.1.1,--no-map-gw,--map-guest-addr,none,--map-host-loopback,none,-t,none,-u,none,-T,none,-U,none --dns=1.1.1.1 --no-hosts --memory=2g --cpus=1 \
+podman run --detach --name "$name" --network=pasta:--ipv4-only,--dns-forward,1.1.1.1,--dns-host,1.1.1.1,--no-map-gw,--map-guest-addr,none,--map-host-loopback,none,-t,none,-u,none,-T,none,-U,none --dns=1.1.1.1 --no-hosts --memory=2g --memory-swap=2g --cpus=1 \
  --user=999:999 --read-only --cap-drop=ALL --security-opt=no-new-privileges --log-driver=k8s-file --log-opt=max-size=1mb \
  --mount type=tmpfs,destination=/run/pgbackrest,tmpfs-mode=0700,U=true,noexec,nosuid,nodev \
  --mount type=tmpfs,destination=/run/restore-check,tmpfs-mode=0700,U=true,noexec,nosuid,nodev \
