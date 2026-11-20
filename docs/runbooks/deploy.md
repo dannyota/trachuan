@@ -8,8 +8,14 @@ bootstrap, the host proofs, and what to do when the updater stops.
 
 ## Release
 
-During a [repository move](../design/repository-move.md#sequence), follow the
-bridge steps before moving the old channel's `production` tag.
+For Release B of a [repository move](../design/repository-move.md#sequence):
+
+- Before tagging, both copied channel packages must be public, linked to the new
+  repository and grant it Actions Write access. Resolve every copied tag
+  anonymously and require the same digest as the original.
+- After B publishes to the new channel, copy its version tag to the old channel.
+  Move the old channel's `production` only after its B version tag resolves to
+  the same digest as B in the new channel.
 
 Merge to `main`, wait for green CI, then tag the merge commit:
 
