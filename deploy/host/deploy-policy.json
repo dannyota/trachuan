@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "release_floor": 61,
+  "release_floor": 63,
   "vault_id": "ocid1.vault.oc1.ap-singapore-1.gzvpqimlaaara.abzwsljrj7hxz2mkqnqxpthkuhxaju36hrry4dpsr4nmmoqukg3ojbrfccwq",
   "region": "ap-singapore-1",
   "secrets": [
@@ -17,8 +17,8 @@
     "backup_s3_key_secret"
   ],
   "repositories": ["dannyota/trachuan", "dntmakers/trachuan"],
-  "release_repository": "ghcr.io/dannyota/trachuan-release",
-  "rollback_repository": "ghcr.io/dannyota/trachuan-rollback",
+  "release_repository": "ghcr.io/dntmakers/trachuan-release",
+  "rollback_repository": "ghcr.io/dntmakers/trachuan-rollback",
   "release_identity": {
     "dannyota/trachuan": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "dntmakers/trachuan": "^https://github\\.com/dntmakers/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$"
@@ -50,7 +50,7 @@
   "upstream": { "caddy": "docker.io/library/caddy" },
   "extensions": ["vector", "ltree"],
   "sigstore_trust_root": "cosign-v3.1.4",
-  "corpus_repository": "ghcr.io/dannyota/trachuan-corpus-release",
+  "corpus_repository": "ghcr.io/dntmakers/trachuan-corpus-release",
   "corpus_identity": {
     "dannyota/trachuan": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/corpus-release\\.yml@refs/heads/main$",
     "dntmakers/trachuan": "^https://github\\.com/dntmakers/trachuan/\\.github/workflows/corpus-release\\.yml@refs/heads/main$"

@@ -47,7 +47,7 @@ never produces a release. The job:
    [`cosign sign-blob --bundle`](https://docs.sigstore.dev/cosign/signing/signing_with_blobs/),
    keyless through GitHub OIDC, with a pinned cosign release.
 6. Pushes `manifest.json`, `manifest.sigstore.json` and the bundle tarball as
-   one OCI artifact to `ghcr.io/dannyota/trachuan-release`, tagged with the
+   one OCI artifact to `ghcr.io/dntmakers/trachuan-release`, tagged with the
    version and `production`, using a pinned `oras`. Tags are discovery hints;
    the host checks content.
 
@@ -55,7 +55,7 @@ never produces a release. The job:
 provenance is an OCI referrer next to the image and the host verifies it
 anonymously. The certificate identity of both the release signature and the
 build attestations is
-`https://github.com/dannyota/trachuan/.github/workflows/images.yml@refs/tags/v<version>`.
+`https://github.com/dntmakers/trachuan/.github/workflows/images.yml@refs/tags/v<version>`.
 Permissions per job are the minimum: `id-token: write`, `packages: write`,
 `attestations: write`, `contents: read`, `actions: read`.
 
@@ -65,14 +65,14 @@ Permissions per job are the minimum: `id-token: write`, `packages: write`,
 {
   "kind": "trachuan.image-release",
   "version": 1,
-  "repository": "dannyota/trachuan",
+  "repository": "dntmakers/trachuan",
   "commit": "<40 hex>",
   "ref": "refs/tags/v0.2.0",
   "release": "v0.2.0",
   "sequence": 1234,
   "target": "production",
   "images": {
-    "server": "ghcr.io/dannyota/trachuan-server@sha256:<64 hex>",
+    "server": "ghcr.io/dntmakers/trachuan-server@sha256:<64 hex>",
     "web": "...",
     "queryembed": "...",
     "postgres": "..."
@@ -100,7 +100,7 @@ inputs `current` and `target` (manifest SHA-256). It fetches both published
 manifests, requires `target` to have a lower sequence and
 `rollback_target: null`, and signs
 `{"kind":"trachuan.rollback","version":1,"current":...,"target":...,"sequence":<run_number>}`
-the same way, published as `ghcr.io/dannyota/trachuan-rollback:<sequence>`. It
+the same way, published as `ghcr.io/dntmakers/trachuan-rollback:<sequence>`. It
 refuses before signing as [repository move](repository-move.md) decision 5 says.
 
 ## Host policy and state
@@ -133,7 +133,7 @@ retries. A run has three phases, each skipped when nothing changed: secrets
 ([deployment](deployment.md#secrets)), images, then
 [corpus](corpus-release.md#host-activation).
 
-1. Fetch: resolve `ghcr.io/dannyota/trachuan-release:production` and the
+1. Fetch: resolve `ghcr.io/dntmakers/trachuan-release:production` and the
    rollback repository's newest tag; download into a fresh staging directory.
    GHCR answers an anonymous request for a package that does not exist yet with
    `denied`, so an unreadable rollback repository means no rollback

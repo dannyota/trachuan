@@ -77,12 +77,13 @@ class PolicyRepositoriesTest(unittest.TestCase):
             path.write_bytes(canonical(value))
             return v.policy(path)
 
-    def test_shipped_policy_lists_both_owners_and_keeps_channels(self):
+    def test_shipped_policy_lists_both_owners_and_switches_channels(self):
         value = v.policy(HOST / 'deploy-policy.json')
         self.assertEqual(value['repositories'], [OLD, NEW])
         self.assertNotIn('repository', value)
-        for name in ('release_repository', 'rollback_repository', 'corpus_repository'):
-            self.assertTrue(value[name].startswith('ghcr.io/dannyota/'), name)
+        self.assertEqual(value['release_repository'], 'ghcr.io/dntmakers/trachuan-release')
+        self.assertEqual(value['rollback_repository'], 'ghcr.io/dntmakers/trachuan-rollback')
+        self.assertEqual(value['corpus_repository'], 'ghcr.io/dntmakers/trachuan-corpus-release')
         for repository in value['repositories']:
             owner = repository.split('/')[0]
             self.assertEqual(value['images'][repository],

@@ -8,6 +8,9 @@ bootstrap, the host proofs, and what to do when the updater stops.
 
 ## Release
 
+During a [repository move](../design/repository-move.md#sequence), follow the
+bridge steps before moving the old channel's `production` tag.
+
 Merge to `main`, wait for green CI, then tag the merge commit:
 
 ```sh
@@ -16,7 +19,7 @@ git push origin v0.1.2
 ```
 
 The `Images` run builds, attests, waits for `ci`, signs and publishes
-`ghcr.io/dannyota/trachuan-release:v0.1.2` and moves `production`. The host
+`ghcr.io/dntmakers/trachuan-release:v0.1.2` and moves `production`. The host
 activates it within about five minutes. Watch `deploy_failed` and the custom log
 `trachuan-host-jobs`.
 
@@ -29,7 +32,7 @@ units the host already runs.
    manifest hash:
 
    ```sh
-   oras pull -o /tmp/rel ghcr.io/dannyota/trachuan-release:<version>
+   oras pull -o /tmp/rel ghcr.io/dntmakers/trachuan-release:<version>
    shasum -a 256 /tmp/rel/manifest.json
    ```
 
@@ -54,7 +57,7 @@ In mode `verify`, run the proofs with an image built by an `Images` dispatch
 from `main`:
 
 ```sh
-sudo /usr/local/libexec/trachuan/proof.sh ghcr.io/dannyota/trachuan-server@sha256:<digest>
+sudo /usr/local/libexec/trachuan/proof.sh ghcr.io/dntmakers/trachuan-server@sha256:<digest>
 ```
 
 Each case (dispatch-build identity, wrong digest, replayed rollback, older
@@ -82,5 +85,5 @@ updater accepts any higher sequence. To return to an older release, dispatch
 `rollback.yml` from `main` with the current and target manifest hashes; it
 applies only when the auth schema is unchanged. After the first rollback
 publish, confirm the package is public: an anonymous
-`oras repo tags ghcr.io/dannyota/trachuan-rollback` must list its tag. Until
+`oras repo tags ghcr.io/dntmakers/trachuan-rollback` must list its tag. Until
 then the host logs `rollback channel unreadable` and withholds rollbacks.

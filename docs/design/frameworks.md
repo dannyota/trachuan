@@ -173,7 +173,7 @@ path from upload to activation is [frameworks release](frameworks-release.md):
   ([access](frameworks-access.md#licensed-material-and-where-it-may-be));
   nothing else computed from body text is (vocabulary sizes, frequencies,
   lengths).
-- **Channel and sequences.** `ghcr.io/dannyota/trachuan-corpus-release` tag
+- **Channel and sequences.** `ghcr.io/dntmakers/trachuan-corpus-release` tag
   `frameworks-production`, with its own sequence history, pointer row, journal
   and retired list on the host, keyed by kind; one kind's pending or failed
   state never blocks or supersedes the other's.
