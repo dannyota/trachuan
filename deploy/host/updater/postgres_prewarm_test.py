@@ -41,7 +41,7 @@ class PostgresPrewarmTest(fixture.ActivationFixture, unittest.TestCase):
     def test_prewarm_runs_as_activator_after_provisioning(self):
         self.host.postgres()
         check = self.index(lambda args, _: 'pgbackrest' in args)
-        provision = self.index(lambda args, _: args[-2:] == ['bash', '-s'])
+        provision = self.index(lambda args, _: '--no-auth-tables' in args)
         prewarm = self.index(lambda _, data: bool(data and b'public.pg_prewarm' in data))
         self.assertLess(check, provision)
         self.assertLess(provision, prewarm)

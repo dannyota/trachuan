@@ -6,6 +6,7 @@ from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_frameworks_steps import SAFE
 from updater.deploy_io import command, CommandError, describe
+from updater.deploy_release_target import LockLost
 from updater.frameworks_steps_test import StepsFixture
 from updater.frameworks_verify_test import rules
 
@@ -63,8 +64,9 @@ class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
     def test_retained_database_passes_the_catalog_check_before_the_release_check(self):
         row = dict(self.row, mode='retained')
         self.steps.smoke(row, 'server-image')
-        self.assertEqual(self.names(), ['schema', 'check', 'release-check'])
+        self.assertEqual(self.names(), ['schema', 'check', 'verify', 'release-check', 'verify'])
         self.assert_activator(self.call('check')[0], self.name)
+        self.assertIn('release_target', self.sql('check'))
         self.assertIn("('extension','vector',NULL)", self.sql('check'))
         self.calls.clear()
         self.responses['check'] = b'setting\n'
@@ -80,7 +82,7 @@ class FrameworksSmokeTest(StepsFixture, unittest.TestCase):
 
     def test_dead_advisory_lock_refuses_smoke(self):
         self.db.holder.poll.return_value = 1
-        with self.assertRaisesRegex(ValueError, 'activation advisory lock lost'):
+        with self.assertRaisesRegex(LockLost, 'activation advisory lock lost'):
             self.steps.smoke(self.row, 'server-image')
         self.assertEqual(self.calls, [])
 

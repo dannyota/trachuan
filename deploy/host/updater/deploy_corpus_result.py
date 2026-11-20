@@ -4,9 +4,10 @@ from .deploy_io import Result, atomic, canonical
 
 
 class ReleaseResult(Result):
-    def __init__(self, paths, clock, name='release'):
+    def __init__(self, paths, clock, name='release', integrity=list):
         super().__init__(paths.result.with_name(name + '.json'), paths.log.with_name(name + '.log'),
                          lambda: datetime.fromtimestamp(clock(), timezone.utc).isoformat().replace('+00:00', 'Z'))
+        self.integrity = integrity
 
     def write(self, status, step, message, digest=None, manifest=None, mode=None):
         manifest = manifest or {}
@@ -23,6 +24,7 @@ class ReleaseResult(Result):
                      sequence=manifest.get('sequence'), extensions=manifest.get('extensions'),
                      started_at=self.started, finished_at=finished,
                      waiting_since=waiting, waiting_manifest_hash=waiting_hash if waiting else None,
+                     integrity=self.integrity(),
                      last_success_at=finished if status in ('ok', 'verified', 'current')
                      else self.previous.get('last_success_at'))
         atomic(self.path, canonical(value) + b'\n', 0o640)

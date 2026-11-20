@@ -8,7 +8,7 @@ from updater.deploy_io import CommandError
 
 
 PROBES = ('/usr/local/bin/postgres-admin.sh', '/run/secrets/activator_db_password')
-FEED = ['/usr/local/bin/postgres-admin.sh', 'bash', '-s']
+FEED = ['/usr/local/bin/postgres-admin.sh', 'bash', '-s', '--', '--no-auth-tables']
 
 
 class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
@@ -18,7 +18,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
                       "WHERE pg_catalog.to_regclass('public.frameworks_release') IS NOT NULL \\gexec", script)
         self.assertNotIn("'retired_release','frameworks_release'", script)
 
-    def provision_input(self):
+    def provision_input(self, *args):
         script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
         with tempfile.NamedTemporaryFile('w', suffix='.secret') as secret:
             secret.write('synthetic-password')
@@ -27,10 +27,63 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             script = script.replace('/run/secrets/auth_db_password', secret.name)
             script = script.replace('/usr/local/bin/postgres-admin.sh', 'postgres_admin')
             fake = ('postgres_admin() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n'
-                    'timeout() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; cat; }\n')
-            result = subprocess.run(['bash', '-s'], input=fake + script, capture_output=True, text=True)
+                    'timeout() { printf "PGOPTIONS=%s\\n" "${PGOPTIONS-}"; printf "ARG=%s\\n" "$@"; cat; }\n')
+            result = subprocess.run(['bash', '-s', '--', *args], input=fake + script, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
+
+    def branches(self, text):
+        session = text[text.index('GRANT CONNECT ON DATABASE auth TO activator;'):]
+        revoke, grant = session.split('\\if :no_auth_tables\n', 1)[1].split('\\else\n', 1)
+        return revoke, grant.split('\\endif', 1)[0]
+
+    def test_the_flag_selects_the_branch_psql_runs(self):
+        self.assertIn('ARG=no_auth_tables=off', self.provision_input())
+        self.assertIn('ARG=no_auth_tables=on', self.provision_input('--no-auth-tables'))
+
+    def test_without_the_flag_the_branch_grants_as_before(self):
+        _, grant = self.branches(self.provision_input())
+        self.assertIn('GRANT USAGE ON SCHEMA public TO activator;', grant)
+        self.assertIn('GRANT SELECT, INSERT, UPDATE, DELETE ON public.%I TO activator', grant)
+        self.assertIn('GRANT USAGE, SELECT ON SEQUENCE public.release_journal_id_seq TO activator', grant)
+        self.assertIn('GRANT SELECT, INSERT, UPDATE ON public.frameworks_release TO activator', grant)
+        self.assertNotIn('REVOKE', grant)
+
+    def test_the_flag_branch_revokes_table_sequence_and_schema_rights_and_keeps_connect(self):
+        text = self.provision_input('--no-auth-tables')
+        revoke, _ = self.branches(text)
+        self.assertIn('GRANT CONNECT ON DATABASE auth TO activator;', text.split('\\if :no_auth_tables')[0])
+        self.assertIn("'REVOKE ALL ON SCHEMA public FROM activator'", revoke)
+        self.assertIn("'REVOKE USAGE ON SCHEMA public FROM PUBLIC'", revoke)
+        self.assertIn("'REVOKE ALL ON public.%I FROM activator, PUBLIC'", revoke)
+        self.assertIn("ARRAY['corpus_release','frameworks_release','release_journal','retired_release']", revoke)
+        self.assertIn('REVOKE ALL ON SEQUENCE public.release_journal_id_seq FROM activator, PUBLIC', revoke)
+        self.assertNotIn('GRANT', revoke)
+
+    def test_the_role_statements_run_with_and_without_the_flag(self):
+        for args in ((), ('--no-auth-tables',)):
+            with self.subTest(args=args):
+                self.assertIn('ALTER ROLE activator RESET ALL;', self.provision_input(*args))
+
+    def test_an_unknown_argument_stops_before_any_session(self):
+        script = (Path(__file__).parents[1] / 'provision-activator.sh').read_text()
+        with tempfile.NamedTemporaryFile('w', suffix='.secret') as secret:
+            secret.write('synthetic-password')
+            secret.flush()
+            script = script.replace('/run/secrets/activator_db_password', secret.name)
+            script = script.replace('/run/secrets/auth_db_password', secret.name)
+            script = script.replace('/usr/local/bin/postgres-admin.sh', 'postgres_admin')
+            fake = 'postgres_admin() { cat; }\ntimeout() { echo called; cat; }\n'
+            for args in (['--unknown'], ['--no-auth-tables', 'extra']):
+                result = subprocess.run(['bash', '-s', '--', *args], input=fake + script, capture_output=True, text=True)
+                with self.subTest(args=args):
+                    self.assertEqual(result.returncode, 2)
+                    self.assertNotIn('called', result.stdout)
+
+    def test_the_new_updater_passes_the_flag_on_every_provisioner_call(self):
+        self.calls.clear()
+        self.assertTrue(self.host.provision_activator())
+        self.assertEqual(self.calls[-1][0][-5:], FEED)
 
     def test_activator_settings_are_reset_except_in_frameworks_databases(self):
         text = self.provision_input()
@@ -71,7 +124,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             with self.subTest(missing=missing):
                 self.host.migrate()
                 args = [call for call, _ in self.calls]
-                self.assertFalse(any(call[-3:] == FEED for call in args))
+                self.assertFalse(any(call[-len(FEED):] == FEED for call in args))
                 self.assertTrue(any('start' in call and 'trachuan-migrate.service' in call for call in args))
                 self.assertEqual(sum(call[-3:-1] == ['test', '-r'] for call in args), 2)
 
@@ -94,7 +147,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
             if args[-3:-1] == ['test', '-r']:
                 self.calls.append((args, kwargs.get('input')))
                 raise CommandError('old unit has no provisioning mount', returncode=1)
-            if args[-3:] == FEED:
+            if args[-len(FEED):] == FEED:
                 raise CommandError('provision script absent', returncode=127)
             return self.runner(args, **kwargs)
         self.host.runner = runner
@@ -109,7 +162,7 @@ class ProvisionTest(fixture.ActivationFixture, unittest.TestCase):
     def test_images_provision_after_postgres_and_before_migrate(self):
         self.engine.activate(self.new)
         args = [call for call, _ in self.calls]
-        provision = next(i for i, a in enumerate(args) if a[-3:] == FEED)
+        provision = next(i for i, a in enumerate(args) if a[-len(FEED):] == FEED)
         migration = next(i for i, a in enumerate(args) if 'trachuan-migrate.service' in a and 'start' in a)
         self.assertLess(provision, migration)
 

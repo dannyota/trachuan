@@ -1,152 +1,254 @@
+import hashlib
 import uuid
 
-from .deploy_corpus_kind import LAW
+from .deploy_activation_reconcile import OWNER
+from .deploy_activation_record import RETENTION_SECONDS, moment
 from .deploy_corpus_sql import JournalRefused
-from .deploy_release_target import Leftover
+from .deploy_io import CommandError, interrupted
+from .deploy_release_target import Held, Waiting
 
 
-COMPLETE = frozenset(('activated', 'reverted', 'aborted', 'pruned'))
+ORDER = dict(new=('started', 'creating', 'created', 'restoring', 'restored', 'validated', 'checked'),
+             retained=('started', 'restored', 'validated', 'checked'))
+POINTER_CHANGED = 'pointer changed'
+ADOPTION_FAILED = 'adoption check failed'
+TERMINAL = ('activated', 'reverted', 'aborted', 'pruned')
+
+
+class Refused(ValueError):
+    pass
 
 
 class Activation:
-    def __init__(self, database, kind=LAW):
-        self.db, self.kind = database, kind
+    def __init__(self, database, kind, records, spend=lambda digest: None):
+        self.db, self.kind, self.records, self.spend = database, kind, records, spend
+        self.tables = database.tables
         self.steps = kind.steps(database)
+        database.guard = records
+        database.remember = self.remember
 
-    def choose(self, manifest):
-        name, country = manifest['database'], self.kind.country(manifest)
-        active = self.db.current(country)
-        if active is None and not self.kind.bootstrap:
-            raise ValueError('active corpus pointer missing')
-        retired = self.db.retirement(name)
-        if retired is not None:
-            if not retired['dump_sha256'] or retired['dump_sha256'] != manifest['dump']['sha256']:
-                raise ValueError('retained database dump digest differs or is unknown')
-            if active is None or not retired['live'] or not self.db.exists(name) or name == active:
-                raise ValueError('retained database unavailable or retention expired')
-            return 'retained', active
-        if active != self.kind.previous(manifest):
-            raise ValueError('new ' + self.kind.label + ' previous does not equal active release')
-        if self.db.exists(name):
-            if self.db.protected(name) or not self.db.owned(name):
-                raise ValueError('new ' + self.kind.label + ' target already exists')
+    @property
+    def record(self):
+        return self.records.own
+
+    def remember(self, operation, oid):
+        current = self.record.operation
+        if current is not None and current['id'] == operation:
+            self.record.set_oid(oid)
+
+    def row(self, operation, manifest):
+        return dict(operation_id=operation['id'], country=self.kind.country(manifest), rel=manifest['rel'],
+                    mode=operation['mode'], database_name=operation['database'],
+                    manifest_hash=operation['manifest_hash'], dump_sha256=operation['dump_sha256'],
+                    expected_active_db=operation['expected'], manifest=manifest, step=operation['step'],
+                    oid=operation['oid'])
+
+    def refuse_other_digest(self, manifest):
+        entry = self.record.entry(manifest['database'])
+        if entry is not None and entry['dump_sha256'] != manifest['dump']['sha256']:
+            raise Refused('retained database dump digest differs')
+        return entry
+
+    def choose(self, manifest, pointer, catalog):
+        name, label = manifest['database'], self.kind.label
+        record, entry = self.record, self.refuse_other_digest(manifest)
+        info = catalog.get(name)
+        fresh = entry is not None and self.records.clock() - moment(entry['retired_at']) < RETENTION_SECONDS
+        if fresh and info is not None and info['oid'] == entry['oid'] and info['owner'] == OWNER:
+            if pointer is None:
+                raise Waiting(label + ' pointer missing')
+            return 'retained', entry['oid']
+        previous, active = self.kind.previous(manifest), record.active
+        if pointer != previous or (active is not None and active['database'] != previous):
+            raise Waiting('new ' + label + ' previous does not equal active release')
+        if entry is not None or (active is not None and active['database'] == name):
+            raise Waiting('new ' + label + ' target is the active or a retired database')
+        if info is not None:
+            if info['owner'] != OWNER:
+                raise ValueError('new ' + label + ' target already exists')
             if self.db.connections(name):
-                raise ValueError('new ' + self.kind.label + ' target has connections')
-        return 'new', active
+                raise Waiting('new ' + label + ' target has connections')
+        return 'new', None
 
-    def begin(self, hash_value, manifest, mode, expected):
-        row = dict(operation_id=uuid.uuid4().hex, country=self.kind.country(manifest), rel=manifest['rel'],
-                   mode=mode, database_name=manifest['database'], manifest_hash=hash_value,
-                   dump_sha256=manifest['dump']['sha256'], expected_active_db=expected,
-                   manifest=manifest)
-        return self.db.append(row, 'started')
+    def operation(self, digest, manifest, mode, expected, oid, step):
+        return dict(id=uuid.uuid4().hex, mode=mode, database=manifest['database'], manifest_hash=digest,
+                    dump_sha256=manifest['dump']['sha256'], expected=expected, oid=oid, step=step)
 
-    def abort(self, row):
-        latest = next((r for r in self.db.operations() if r['operation_id'] == row['operation_id']), row)
-        if latest['step'] in ('activated', 'reverted'):
+    def begin(self, digest, manifest, mode, expected, oid=None):
+        operation = self.record.begin(self.operation(digest, manifest, mode, expected, oid, 'started'))
+        self.tables.append(self.row(operation, manifest), 'started')
+        return operation
+
+    def advance(self, manifest, step):
+        self.db.check_lock()
+        self.record.step(step)
+        self.tables.append(self.row(self.record.operation, manifest), step)
+
+    def catch_up(self, manifest):
+        operation = self.record.operation
+        wanted = 'checked' if operation['step'] == 'swapping' else operation['step']
+        order = ORDER[operation['mode']]
+        if wanted not in order:
             return
-        self.db.append(row, 'aborted')
-        self.abort_cleanup(row)
+        end = order.index(wanted)
+        latest = next((row['step'] for row in self.tables.operations(operation['id'])
+                       if row['operation_id'] == operation['id']), None)
+        if latest in TERMINAL:
+            return
+        if latest is None:
+            start = 0
+        elif latest in order:
+            start = order.index(latest) + 1
+        else:
+            start = end
+        row = self.row(operation, manifest)
+        for step in order[start:end + 1]:
+            self.tables.append(row, step)
+
+    def attempt(self, manifest, action, *args):
+        try:
+            return action(self.row(self.record.operation, manifest), *args)
+        except (Waiting, JournalRefused):
+            raise
+        except Exception as error:
+            if interrupted(error):
+                raise
+            self.abort(manifest)
+            raise
+
+    def resume(self, manifest, dump, image, recheck=False):
+        self.catch_up(manifest)
+        operation, steps = self.record.operation, self.steps
+        if recheck and operation['step'] == 'checked':
+            self.attempt(manifest, steps.validate)
+            self.attempt(manifest, steps.smoke, image)
+        if operation['mode'] == 'new':
+            if operation['step'] == 'started':
+                self.attempt(manifest, steps.inspect, dump, image)
+                self.advance(manifest, 'creating')
+            if operation['step'] == 'creating':
+                self.attempt(manifest, steps.inspect, dump, image)
+                self.attempt(manifest, steps.create)
+                self.advance(manifest, 'created')
+            if operation['step'] == 'created':
+                self.advance(manifest, 'restoring')
+            if operation['step'] == 'restoring':
+                self.attempt(manifest, steps.restore, dump, image)
+                self.advance(manifest, 'restored')
+        elif operation['step'] == 'started':
+            self.advance(manifest, 'restored')
+        if operation['step'] == 'restored':
+            self.attempt(manifest, steps.validate)
+            self.advance(manifest, 'validated')
+        if operation['step'] == 'validated':
+            self.attempt(manifest, steps.smoke, image)
+            self.advance(manifest, 'checked')
+        if operation['step'] != 'checked':
+            raise ValueError('unknown ' + self.kind.label + ' activation step')
+        if self.tables.pointer() != operation['expected']:
+            self.record.raise_alert('pointer_changed')
+            raise Held(POINTER_CHANGED)
+        self.attempt(manifest, self.db.verify_target)
+        self.record.step('swapping')
+        self.finish(manifest)
+
+    def finish(self, manifest):
+        operation, active = self.record.operation, self.record.active
+        target = operation['database']
+        retire = None
+        if active is not None:
+            if active['database'] != target:
+                retire = (active['database'], active['dump_sha256'])
+        elif operation['expected'] not in (None, target):
+            retire = (operation['expected'], None)
+        row = self.row(operation, manifest)
+        self.db.check_lock()
+        try:
+            statement = self.kind.activation(self.db, row, retire)
+        except (ValueError, CommandError) as error:
+            if interrupted(error):
+                raise
+            raise Waiting(self.kind.label + ' swap not ready') from error
+        self.tables.swap(statement, row)
+        self.record.activate()
+
+    def known_oid(self, operation, name):
+        if operation is not None:
+            return operation['oid']
+        active, entry = self.record.active, self.record.entry(name)
+        if active is not None and active['database'] == name:
+            return active['oid']
+        return entry['oid'] if entry else None
+
+    def refuse_adoption(self, cause=None):
+        self.record.raise_alert('adoption_failed')
+        raise Held(ADOPTION_FAILED) from cause
+
+    def adopt(self, digest, manifest, image, pointer, catalog):
+        self.refuse_other_digest(manifest)
+        operation = self.record.operation
+        name = manifest['database']
+        info, known = catalog.get(name), self.known_oid(operation, name)
+        if info is None or info['owner'] != OWNER or (known is not None and info['oid'] != known):
+            self.refuse_adoption()
+        candidate = operation or self.operation(digest, manifest, 'retained', pointer, info['oid'], 'checked')
+        row = dict(self.row(candidate, manifest), mode='retained', oid=info['oid'])
+        try:
+            self.steps.validate(row)
+            self.steps.smoke(row, image)
+        except Waiting:
+            raise
+        except Exception as error:
+            if interrupted(error):
+                raise
+            self.refuse_adoption(error)
+        if operation is None:
+            self.record.begin(candidate)
+        else:
+            self.record.adopt(info['oid'])
+        self.record.step('swapping')
+        self.catch_up(manifest)
+        self.finish(manifest)
+
+    def abort(self, manifest):
+        operation = self.record.operation
+        self.record.step('aborted')
+        row = self.row(operation, manifest)
+        self.tables.append(row, 'aborted')
+        name, oid = row['database_name'], row['oid']
+        info = self.db.catalog().get(name)
+        if (row['mode'] == 'new' and info is not None and info['owner'] == OWNER
+                and (oid is None or info['oid'] == oid) and self.db.droppable(name, row['operation_id'])):
+            self.db.drop_database(name, oid)
         self.db.remove_list(row['operation_id'])
+        self.spend(operation['manifest_hash'])
+        self.record.clear_operation()
         self.db.tidy()
 
-    def guarded(self, row):
-        name = row['database_name']
-        active = self.db.current(row['country'])
-        retired = self.db.retirement(name)
-        if active != row['expected_active_db'] or active == name:
-            return False
-        if active is None and (not self.kind.bootstrap or row['mode'] != 'new'):
-            return False
-        if row['mode'] == 'new':
-            return retired is None
-        return (retired is not None and retired['live'] and retired['dump_sha256'] is not None
-                and retired['dump_sha256'] == row['dump_sha256'] and self.db.exists(name))
+    def prune_row(self, entry):
+        name = entry['database']
+        country, rel = self.kind.parse(name)
+        identity = hashlib.sha256(('prune:' + name + ':' + str(entry['oid'])).encode()).hexdigest()[:32]
+        return dict(operation_id=identity, country=country, rel=rel, mode='prune', database_name=name,
+                    manifest_hash=None, dump_sha256=None, expected_active_db=None, manifest=None)
 
-    def run(self, hash_value, manifest, dump, image):
-        rows = [r for r in self.db.operations() if r['manifest_hash'] == hash_value and r['mode'] != 'prune']
-        if rows:
-            return self.resume(rows[-1], dump, image)
-        mode, expected = self.choose(manifest)
-        return self.resume(self.begin(hash_value, manifest, mode, expected), dump, image)
-
-    def resume(self, row, dump, image, recheck=False):
-        self.kind.sql.journal_row(row)
-        if row['step'] in ('activated', 'reverted'):
-            return row
-        if row['step'] == 'aborted':
-            self.abort_cleanup(row)
-            raise ValueError(self.kind.label + ' activation was aborted')
-        if not self.guarded(row):
-            self.abort(row)
-            return dict(row, step='aborted')
-        try:
-            if recheck and row['step'] == 'checked':
-                self.steps.validate(row)
-                self.steps.smoke(row, image)
-            if row['mode'] == 'new':
-                if row['step'] == 'started':
-                    self.steps.inspect(row, dump, image)
-                    row = self.db.append(row, 'creating')
-                if row['step'] == 'creating':
-                    self.steps.inspect(row, dump, image)
-                    self.steps.create(row)
-                    row = self.db.append(row, 'created')
-                if row['step'] == 'created':
-                    row = self.db.append(row, 'restoring')
-                if row['step'] == 'restoring':
-                    self.steps.restore(row, dump, image)
-                    row = self.db.append(row, 'restored')
-            elif row['step'] == 'started':
-                row = self.db.append(row, 'restored')
-            if row['step'] == 'restored':
-                self.steps.validate(row)
-                row = self.db.append(row, 'validated')
-            if row['step'] == 'validated':
-                self.steps.smoke(row, image)
-                row = self.db.append(row, 'checked')
-            if row['step'] == 'checked':
-                if not self.guarded(row):
-                    raise ValueError(self.kind.label + ' activation guard changed')
-                row = self.db.activate(row)
-                self.db.tidy()
-            if row['step'] != 'activated':
-                raise ValueError('unknown ' + self.kind.label + ' activation step')
-            return row
-        except (JournalRefused, Leftover):
-            raise
-        except Exception:
-            self.abort(row)
-            raise
-
-    def abort_cleanup(self, row):
-        name = row['database_name']
-        if (row['mode'] == 'new' and not self.db.protected(name) and self.db.owned(name)
-                and not self.db.connections(name)):
-            self.db.drop_owned(name)
-
-    def prune_one(self, row):
-        name = row['database_name']
-        if self.db.protected(name) or self.db.connections(name):
-            return
-        if self.db.exists(name):
-            self.db.drop(name)
-        self.db.forget(name)
-        self.db.append(row, 'pruned')
-
-    def prune(self):
-        for row in self.db.operations():
-            if row['step'] == 'pruning':
-                self.prune_one(row)
-            elif row['step'] == 'aborted':
-                self.abort_cleanup(row)
-        open_prunes = {r['database_name'] for r in self.db.operations() if r['step'] == 'pruning'}
-        for name in self.db.expired():
-            if name in open_prunes or self.db.protected(name) or self.db.connections(name):
+    def prune(self, catalog):
+        now = self.records.clock()
+        self.db.check_lock()
+        for entry in list(self.record.retired):
+            if now - moment(entry['retired_at']) < RETENTION_SECONDS:
                 continue
-            country, rel = self.kind.parse(name)
-            row = dict(operation_id=uuid.uuid4().hex, country=country, rel=rel, mode='prune',
-                       database_name=name, manifest_hash=None, dump_sha256=None,
-                       expected_active_db=None, manifest=None)
-            self.prune_one(self.db.append(row, 'pruning'))
-        self.db.forget_targets({r['operation_id'] for r in self.db.operations() if r['step'] not in COMPLETE})
+            name = entry['database']
+            info = catalog.get(name)
+            if info is not None and (info['oid'] != entry['oid'] or info['owner'] != OWNER):
+                self.record.forget(name)
+                continue
+            if info is not None and not self.db.droppable(name, pruning={name}):
+                continue
+            row = self.prune_row(entry)
+            self.tables.append(row, 'pruning')
+            if info is not None:
+                self.db.drop_database(name, entry['oid'])
+            self.tables.forget(name)
+            self.tables.append(row, 'pruned')
+            self.record.forget(name)

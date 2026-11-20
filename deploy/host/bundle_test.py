@@ -108,6 +108,16 @@ class InstallerTest(unittest.TestCase):
                       'PT10M', 'WARNING', 'PT24H', 'docs/runbooks/alarms.md'):
             self.assertIn(value, alarm)
 
+    def test_release_integrity_alarm_is_critical_and_repeats_every_four_hours(self):
+        alarms = (HOST.parent / 'oci/alarms-jobs.tf').read_text()
+        alarm = alarms.split('"release_integrity" {', 1)[1].split('\n}', 1)[0]
+        for value in ('query                                         = "release_integrity[1m].max() > 0"',
+                      'pending_duration                              = "PT1M"',
+                      'repeat_notification_duration                  = "PT4H"',
+                      'severity                                      = "CRITICAL"',
+                      'namespace                                     = "trachuan_host"', 'docs/runbooks/alarms.md'):
+            self.assertIn(value, alarm)
+
     def test_release_results_and_logs_of_both_kinds_are_readable_and_rotated(self):
         source = (HOST / "install.sh").read_text()
         loops = [m for m in re.finditer(r"for file in ([^;]+); do\n(.*?)\ndone", source, re.S)

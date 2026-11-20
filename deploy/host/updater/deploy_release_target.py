@@ -1,38 +1,42 @@
-import json
-from pathlib import Path
 import re
 
 from .deploy_corpus_sql import literal
-from .deploy_io import atomic, canonical
 
 
 MISMATCH = 'target-identity-differs'
 REFUSED = 'activation target database identity changed'
 BACKEND_LEFT = 'leftover backend'
 DATABASE_LEFT = 'leftover database in use'
-CLOSED = "('activated','reverted','aborted','pruned')"
-UNPROTECTED = f"""WITH protected(name) AS (
- SELECT active_db FROM public.corpus_release
- UNION SELECT active_db FROM public.frameworks_release
- UNION SELECT db_name FROM public.retired_release WHERE retain_until > pg_catalog.now()
- UNION SELECT j.database_name FROM (
-  SELECT DISTINCT ON (operation_id) operation_id, database_name, mode, step FROM public.release_journal
-  WHERE operation_id IS NOT NULL ORDER BY operation_id, id DESC
- ) j WHERE j.mode <> 'prune' AND j.step NOT IN {CLOSED}
- UNION SELECT 'corpus_'||country||'_'||rel FROM public.release_journal
-  WHERE operation_id IS NULL AND step NOT IN {CLOSED}
-  AND state NOT IN ('complete','done','activated','reverted','aborted','pruned')
-)
-SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_catalog.pg_get_userbyid(d.datdba)=current_user
-AND NOT EXISTS (SELECT FROM protected p WHERE p.name=d.datname::pg_catalog.text)"""
-STRAYS = ("\\set ON_ERROR_STOP off\n"
-          "SELECT pg_catalog.format('ALTER DATABASE %I IS_TEMPLATE false',s.datname),"
-          "pg_catalog.format('DROP DATABASE %I',s.datname) FROM (" + UNPROTECTED + ") s \\gexec\n"
-          "\\set ON_ERROR_STOP on\n"
-          "SELECT EXISTS(" + UNPROTECTED + ");\n")
+OWNED = 'pg_catalog.pg_get_userbyid(d.datdba)=current_user'
+DROP = ("SELECT pg_catalog.format('ALTER DATABASE %I IS_TEMPLATE false',s.datname),"
+        "pg_catalog.format('DROP DATABASE %I',s.datname) FROM ({source}) s \\gexec\n")
 
 
-class Leftover(Exception):
+class Waiting(Exception):
+    pass
+
+
+class Leftover(Waiting):
+    pass
+
+
+class Held(Waiting):
+    pass
+
+
+class LockBusy(Waiting):
+    pass
+
+
+class LockUnavailable(Waiting):
+    pass
+
+
+class LockLost(Waiting):
+    pass
+
+
+class Unreachable(Waiting):
     pass
 
 
@@ -51,6 +55,26 @@ def end_backends(keep):
             'SELECT EXISTS(SELECT ' + others + ');\n')
 
 
+def unprotected(protected):
+    names = ','.join(literal(name) for name in sorted(protected))
+    return ('SELECT d.datname FROM pg_catalog.pg_database d WHERE ' + OWNED +
+            ' AND d.datname::pg_catalog.text <> ALL(ARRAY[' + names + ']::pg_catalog.text[])')
+
+
+def strays(protected):
+    source = unprotected(protected)
+    return ('\\set ON_ERROR_STOP off\n' + DROP.format(source=source) +
+            '\\set ON_ERROR_STOP on\n'
+            'SELECT EXISTS(' + source + ');\n')
+
+
+def drop(name, oid=None):
+    source = 'SELECT d.datname FROM pg_catalog.pg_database d WHERE d.datname=' + literal(name) + ' AND ' + OWNED
+    if oid is not None:
+        source += ' AND d.oid=' + number(str(oid)) + '::pg_catalog.oid'
+    return '\\set ON_ERROR_STOP off\n' + DROP.format(source=source) + '\\set ON_ERROR_STOP on\n'
+
+
 def target_oid(name):
     return 'SELECT oid AS target_oid FROM pg_catalog.pg_database WHERE datname=' + literal(name) + ';'
 
@@ -63,37 +87,3 @@ def guard(oid, statements=''):
             '\\else\n'
             "SELECT '" + MISMATCH + "';\n"
             '\\endif\n')
-
-
-class Targets:
-    def __init__(self, directory):
-        self.directory = Path(directory)
-
-    def path(self, operation):
-        if not isinstance(operation, str) or not re.fullmatch('[0-9a-f]{32}', operation):
-            raise ValueError('invalid activation operation id')
-        return self.directory / (operation + '.json')
-
-    def read(self, operation, name):
-        try:
-            value = json.loads(self.path(operation).read_bytes())
-        except FileNotFoundError:
-            return None
-        except ValueError:
-            raise ValueError(REFUSED) from None
-        if not isinstance(value, dict) or value.get('database') != name:
-            raise ValueError(REFUSED)
-        return number(value.get('oid'))
-
-    def write(self, operation, name, oid):
-        path = self.path(operation)
-        number(oid)
-        self.directory.mkdir(parents=True, mode=0o700, exist_ok=True)
-        atomic(path, canonical(dict(database=name, oid=oid)))
-
-    def keep(self, operations):
-        if not self.directory.is_dir():
-            return
-        for path in self.directory.glob('*.json'):
-            if path.stem not in operations:
-                path.unlink()

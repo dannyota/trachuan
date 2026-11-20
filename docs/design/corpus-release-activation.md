@@ -22,11 +22,10 @@ privilege:
   begins, before a target is created or a `retained` database is reactivated,
   and after an operation ends, the updater ends every other `activator` backend
   and drops every `activator`-owned database that no kind protects, whatever its
-  name; one it cannot clear makes the phase wait. It records a new target's
-  `pg_database` OID on the host, outside anything `activator` can write, and
-  every later step, the `postgres` one first, refuses a database with another
-  OID under that name. An operation with no record (begun by an older updater)
-  adopts the current OID after the same clearing.
+  name; one it cannot clear makes the phase wait. It keeps a new target's
+  `pg_database` OID in the [activation record](activation-record.md), and every
+  later step, the `postgres` one first, refuses a database with another OID
+  under that name.
 - Every updater session pins `search_path` at connection start (`pg_catalog`, or
   `pg_catalog, public` where its SQL names corpus tables) and names catalog
   objects with their schema.
@@ -58,35 +57,102 @@ step.
 The [manual restore](../runbooks/corpus-restore-manual.md) is for a dump the
 owner already trusts and is outside these rules.
 
+## The updater and `auth`
+
+`auth` belongs to `auth_owner`, the role the internet-facing server connects as
+([database roles](system.md#database-roles)), so its tables, and anything that
+fires on them, are the server's. The updater works from that assumption.
+
+**Sessions.** It reads and writes the release tables (`corpus_release`,
+`frameworks_release`, `release_journal`, `retired_release`) as `auth_owner`, so
+a planted trigger, view or policy runs with rights the server already has. The
+pointer swap of step 4, with its retirement and journal rows, is one transaction
+there. These sessions send SQL on stdin, bound their output, and fix in the
+startup options `search_path`, statement, lock and idle-transaction timeouts,
+`default_transaction_read_only`, `standard_conforming_strings` and
+`client_encoding`, so a planted function or a database default can delay a step
+but not hold the updater's locks. In `auth`, `activator` only holds the
+`activation` advisory lock, with `idle_session_timeout` off in its startup
+options; its catalog reads, the ending of other backends and its drops run from
+database `postgres`, which the server does not own. No `activator` statement in
+`auth` names an object outside `pg_catalog`, and `search_path` is `pg_catalog`
+from startup: that is the control. A lock that another role holds, or a refused
+connection to `auth`, makes the phase wait and raises an
+[alert](activation-record.md#alerts); a lock still held by a leftover
+`activator` session only makes it wait. A refused or lost `activator` session to
+`postgres` or `auth` also waits; a failed session to the target database or a
+failed `pg_restore` aborts, because a signed dump can limit connections to its
+own database and would otherwise stall the phase forever. Its table, sequence
+and schema rights are revoked as well, so an honest missed path fails at once,
+but `auth_owner` can grant them back and nothing relies on the revoke.
+
+**The host holds the operation.** Commands are built from the
+[activation record](activation-record.md) and the manifest verified on the host.
+`release_journal` is a published copy. Of the tables, only the current pointer
+and protection still count, and neither chooses what is activated: that is the
+newest manifest the host verified and accepted. A table that disagrees or cannot
+be read makes the phase wait without spending the manifest, as does a busy
+advisory lock. A server that locks the updater out of `auth` (its own password,
+`ALTER DATABASE auth` limits or defaults) stops deploys and raises the alarm;
+the owner [repairs it](../runbooks/auth-access.md).
+
+**Rollout.** The new updater passes `--no-auth-tables` on every provisioner
+call, and the installed script then revokes the rights; without the flag the
+script grants them as before. This release has no auth migration, because one
+would block rollback.
+
+| Updater                                 | Script it runs                         | Result  |
+| --------------------------------------- | -------------------------------------- | ------- |
+| before PR #425                          | the container's mounted copy, no flag  | grants  |
+| from #425                               | the installed file over stdin, no flag | grants  |
+| this one                                | installed new script, flag             | revokes |
+| this one, recovering to an older bundle | installed old script, flag ignored     | grants  |
+
+- **The deploy that ships this.** The old process installs the bundle,
+  provisions without the flag and finishes its run with its rights. The next run
+  to reach a corpus phase is the new updater, which revokes them.
+- **A crash after install.** The next run is new code, recovers to the old
+  bundle and its script grants, so the run after, old code, has its rights.
+- **A rollback.** The older updater provisions before its first `activator`
+  session, which restores the rights. It reads the journal as before, and the
+  new updater keeps writing every row, so it sees complete history. Rolling
+  forward revokes again.
+- **The lock** is the same key in the same database in every version, so two
+  versions never overlap. The release after this one raises `release_floor` to
+  this sequence and deletes the grant branch, which ends rollback across it.
+
 ## Steps
 
 The host activator lives under `deploy/host/updater/` and works through
 `podman exec` into `trachuan-postgres`. Privileged preparation runs as
-`postgres` through `postgres-admin.sh`; everything else runs as `activator` (ADR
-0003; [system](system.md#database-roles)), which has `CREATEDB`, owns the corpus
-databases it creates, and may write only `corpus_release`, `release_journal` and
-`retired_release` in `auth`. Before its first activator connection, the corpus
-phase requires the installed `provision-activator.sh` on the host, and
-`postgres-admin.sh` and `/run/secrets/activator_db_password` readable in the
-running PostgreSQL container; otherwise it waits with reason
-`activator not provisioned`. It runs the idempotent provisioner before
-connecting and before each activation: as `postgres` in database `postgres` it
-creates the role with `CREATEDB` when missing and sets its password from the
-Vault secret `activator_db_password`; as `auth_owner` it reapplies the table
-grants, even when the auth migrations ran before the role existed.
+`postgres` through `postgres-admin.sh`; work on corpus databases runs as
+`activator` (ADR 0003; [system](system.md#database-roles)), which has
+`CREATEDB`, owns the corpus databases it creates, and in `auth` has only what
+[the updater and `auth`](#the-updater-and-auth) leaves it. Before its first
+activator connection, the corpus phase requires the installed
+`provision-activator.sh` on the host, and `postgres-admin.sh` and
+`/run/secrets/activator_db_password` readable in the running PostgreSQL
+container; otherwise it waits with reason `activator not provisioned`. It runs
+the idempotent provisioner before connecting and before each activation: as
+`postgres` in database `postgres` it creates the role with `CREATEDB` when
+missing and sets its password from the Vault secret `activator_db_password`; as
+`auth_owner` it sets the role's rights in `auth` as
+[above](#the-updater-and-auth), even when the auth migrations ran before the
+role existed.
 
-0. Take the `activation` advisory lock in `auth`; append `release_journal`
+0. Take the `activation` advisory lock in `auth`; write the operation to the
+   [activation record](activation-record.md); append `release_journal`
    (`started`, mode, target database, manifest hash, dump SHA-256, expected
-   current `active_db`). Every later step appends its own row.
+   current `active_db`). Every later step does both, in that order.
 1. `new` only:
    - List the TOC. Refuse functions, event triggers, and extensions other than
      `vector` and `ltree` at the versions in the manifest, which must equal the
      versions the PostgreSQL image provides.
    - As `activator`: create the database. A target that already exists when this
      step starts is dropped and created again if `activator` owns it and the
-     protection rule below allows it, so nothing dump SQL made earlier survives
-     (a target with open connections waits); a target with another owner is
-     refused and left alone.
+     [drop rule](activation-record.md#drops) allows it, so nothing dump SQL made
+     earlier survives (a target with open connections waits); a target with
+     another owner is refused and left alone.
    - As `postgres`, before any byte of the dump: refuse when a role other than
      `postgres` is a superuser or a member of one, create `vector`, `ltree` and
      `pg_prewarm` in `public`, and revoke `PUBLIC`'s rights on the database.
@@ -108,9 +174,9 @@ grants, even when the auth migrations ran before the role existed.
    smoke checks correctness, not serving latency. The restore and prewarm
    sessions set every PostgreSQL timeout to zero.
 4. In one transaction: require the country's pointer row, compare-and-swap
-   `corpus_release.active_db` from the journaled expected value, require exactly
-   one updated row, insert the old database into `retired_release` with its dump
-   SHA-256 and `retain_until` seven days ahead, delete the target from
+   `corpus_release.active_db` from the operation's expected value, require
+   exactly one updated row, insert the old database into `retired_release` with
+   its dump SHA-256 and `retain_until` seven days ahead, delete the target from
    `retired_release` in `retained` mode, and append `activated`.
 5. The server resolves the release once per request, so traffic moves without a
    restart; the postings for the new release load on first use under the
@@ -124,23 +190,10 @@ grants, even when the auth migrations ran before the role existed.
 
 `release_journal` and `retired_release` (with `dump_sha256`) are auth
 migrations. The old active database gets its dump digest from its active corpus
-manifest, or NULL when restored by hand; that row stays protected for seven days
-and cannot be reactivated by the pipeline, so rollback within that window is the
-owner's manual compare-and-swap of `corpus_release.active_db`. Two rules close
-recovery and cleanup:
-
-- A journal whose last row is `activated` or `reverted` is complete; the next
-  run only finishes local bookkeeping.
-- A database is protected when it is `active_db`, the target of an open
-  activation journal, or in `retired_release` with `retain_until` in the future.
-  No step, abort or prune ever drops a protected database, whatever the journal
-  says.
-
-After a crash, an open journal continues from its last step when the guard holds
-(`new`: the target is neither active nor retired; `retained`: it is retired and
-not active). Otherwise the journal is closed as aborted, and a `new` target that
-`activator` owns is dropped subject to the rule above. A daily `prune` under the
-same lock handles each unprotected database in `retired_release` without
-connections: it journals `pruning`, drops the database if it exists, deletes the
-row, and journals `pruned`. An open `pruning` journal is finished the same way
-on the next run.
+manifest, or NULL when restored by hand; such a row stays protected for seven
+days and cannot be reactivated by the pipeline, so rollback within that window
+is the owner's manual compare-and-swap of `corpus_release.active_db`. A database
+is protected in the tables when it is `active_db`, the target of an open
+activation journal, or in `retired_release` with `retain_until` in the future.
+Recovery, the daily prune and every drop follow the
+[activation record](activation-record.md).

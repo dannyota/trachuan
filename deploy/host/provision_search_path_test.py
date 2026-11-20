@@ -46,7 +46,8 @@ class ProvisionSearchPathTest(unittest.TestCase):
                 self.assertIn('ARG=auth_owner', lines)
                 self.assertIn('ARG=auth', lines)
                 self.assertIn('\\getenv activator_password ACTIVATOR_DB_PASSWORD', lines)
-                self.assertEqual(lines[-1], "WHERE pg_catalog.to_regclass('public.frameworks_release') IS NOT NULL \\gexec")
+                self.assertIn("WHERE pg_catalog.to_regclass('public.frameworks_release') IS NOT NULL \\gexec", lines)
+                self.assertEqual(lines[-1], '\\endif')
 
     def test_both_sessions_pin_the_catalog_and_scram(self):
         found = sessions()

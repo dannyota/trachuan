@@ -1,4 +1,3 @@
-import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -6,15 +5,13 @@ import sys
 import unittest
 from unittest import mock
 
-from updater import activation_test as fixture
 from updater import deploy_io
 from updater.deploy_corpus import Corpus
-from updater.deploy_corpus_kind import FRAMEWORKS
 from updater.deploy_corpus_sql import JournalRefused
-from updater.deploy_io import canonical, CommandError
+from updater.deploy_io import CommandError
 from updater.deploy_registry import Registry
-from updater.frameworks_activation_test import Database
-from updater.frameworks_verify_test import BLOCK, NESTED, description, manifest
+from updater.frameworks_verify_test import BLOCK, NESTED, description
+from updater.world_test import FrameworksCase
 
 
 MISSING_TAG = Path(__file__).with_name('fixtures') / 'oras-resolve-missing-tag.txt'
@@ -39,73 +36,53 @@ def interrupted_command():
         return error
 
 
-class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
+class FrameworksRunTest(FrameworksCase, unittest.TestCase):
     def setUp(self):
         super().setUp()
-        self.rules = dict(self.rules, frameworks=dict(BLOCK))
-        self.state.data['release_floor'] = BLOCK['min_release_floor']
-        self.state.save()
-        self.m = manifest()
         self.m['previous'] = None
-        self.directory = self.paths.state / 'frameworks-fixture'
-        self.directory.mkdir()
         self.write_manifest()
-        self.db = Database()
-        self.db.check_extensions = mock.Mock()
-        self.db.describe = mock.Mock(return_value=description(self.m))
-        self.registry = mock.Mock()
-        self.registry.fetch.return_value = self.directory
-        self.prepare = mock.Mock(return_value=True)
-        self.phase = Corpus(self.state, self.store, self.host, self.rules, self.registry, database=self.db,
-                            prepare=self.prepare, clock=lambda: 100000, kind=FRAMEWORKS)
-        self.phase.resources = mock.Mock()
-        self.phase.engine.steps = self.db
         self.staging = self.paths.root / 'srv/trachuan/data/releases' / ('frameworks-' + self.m['rel'])
+        self.phase = self.make_phase()
+
+    def make_phase(self):
+        phase = super().make_phase()
+        del phase.dump_path
         self.downloads = []
         def download():
             self.staging.mkdir(parents=True, exist_ok=True)
             (self.staging / 'frameworks.dump').write_bytes(b'synthetic dump')
             self.downloads.append(self.staging)
             return self.staging / 'frameworks.dump'
-        self.phase.download = mock.Mock(side_effect=download)
+        phase.download = mock.Mock(side_effect=download)
+        return phase
 
     def test_leftovers_wait_before_the_journal_starts(self):
         self.db.leftover = 'leftover database in use'
         self.assertTrue(self.run_phase())
-        result = json.loads(self.phase.result.path.read_bytes())
+        result = self.result()
         self.assertEqual((result['status'], result['step'], result['message']),
                          ('waiting', 'leftovers', 'leftover database in use'))
         self.assertFalse(self.db.rows)
         self.db.leftover = None
         self.assertTrue(self.run_phase())
-        self.assertEqual(self.db.sweeps[-1], 0)
+        self.assertEqual(self.db.sweeps[0], 0)
 
     def test_another_superuser_waits_without_spending_the_manifest(self):
         self.db.superuser = True
         self.assertTrue(self.run_phase())
-        result = json.loads(self.phase.result.path.read_bytes())
+        result = self.result()
         self.assertEqual((result['status'], result['step']), ('waiting', 'superuser'))
         self.assertFalse(self.db.rows)
         self.phase.download.assert_not_called()
 
-    def write_manifest(self):
-        self.directory.joinpath('manifest.json').write_bytes(canonical(self.m))
-        self.directory.joinpath('manifest.sigstore.json').write_bytes(b'{}')
-
-    def run_phase(self, mode='activate'):
-        return self.phase.run(self.paths.state / 'run', mode)
-
-    def result(self):
-        return json.loads(self.paths.result.with_name('release-frameworks.json').read_bytes())
-
     def result_hash(self):
-        return hashlib.sha256(self.directory.joinpath('manifest.json').read_bytes()).hexdigest()
+        return self.digest
 
-    def test_refused_journal_row_is_reported_as_recovery(self):
+    def test_refused_journal_row_waits_at_recovery(self):
         self.db.operations = mock.Mock(side_effect=JournalRefused('invalid release journal row'))
-        self.assertFalse(self.run_phase())
+        self.assertTrue(self.run_phase())
         self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
-                         ('failed', 'recovery', 'invalid release journal row'))
+                         ('waiting', 'recovery', 'invalid release journal row'))
 
     def test_waits_for_release_floor_before_any_host_or_registry_action(self):
         self.state.data['release_floor'] = BLOCK['min_release_floor'] - 1
@@ -146,36 +123,33 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
                          ('ok', 'complete', 'frameworks release activated', 'new'))
         self.assertEqual(self.downloads, [self.staging])
         self.assertFalse((self.staging / 'frameworks.dump').exists())
-        self.assertEqual(self.db.steps, ['inspect', 'inspect', 'create', 'restore', 'validate', 'smoke'])
+        self.assertEqual(self.db.log, ['inspect', 'inspect', 'create', 'restore', 'validate', 'smoke'])
         self.assertEqual([r['step'] for r in self.db.rows][-1], 'activated')
-        self.assertEqual(self.db.active, self.m['database'])
+        self.assertEqual(self.db.pointer_value, self.m['database'])
         self.assertEqual(self.state.decision('frameworks', result['manifest_hash'], self.m['sequence']), 'noop')
         self.assertEqual(json.dumps(self.state.data['accepted']['corpus']), law_before)
 
     def test_recovery_of_an_open_new_journal_downloads_and_resumes(self):
-        digest = self.result_hash()
-        self.phase.hash = digest
-        self.phase.remember(self.directory)
-        self.state.accept('frameworks', digest, self.m['sequence'])
-        row = self.phase.engine.begin(digest, self.m, 'new', None)
-        self.db.append(row, 'restoring')
+        self.accept()
+        oid = self.db.add(self.m['database'])
+        self.write_record(operation=self.operation('restoring', oid, expected=None))
         self.registry.fetch.side_effect = AssertionError('recovery must not fetch')
         self.assertTrue(self.run_phase())
         self.assertEqual((self.result()['status'], self.result()['message']), ('ok', 'frameworks release activated'))
         self.assertEqual(self.downloads, [self.staging])
-        self.assertEqual(self.db.steps, ['restore', 'validate', 'smoke'])
-        self.assertEqual(self.db.active, self.m['database'])
+        self.assertEqual(self.db.log, ['restore', 'validate', 'smoke'])
+        self.assertEqual(self.db.pointer_value, self.m['database'])
 
     def test_smoke_failure_reports_program_exit_and_safe_cause_only(self):
-        self.db.smoke = mock.Mock(side_effect=CommandError(
-            'command failed', detail='podman run: exit 1', safe='frameworks release-check search: SQLSTATE 42P01'))
+        self.db.failures['smoke'] = CommandError(
+            'command failed', detail='podman run: exit 1', safe='frameworks release-check search: SQLSTATE 42P01')
         self.assertFalse(self.run_phase())
         self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
                          ('failed', 'activation', 'frameworks command failed or run interrupted: podman run: exit 1: '
                           'frameworks release-check search: SQLSTATE 42P01'))
         self.assertEqual([r['step'] for r in self.db.rows][-1], 'aborted')
         self.assertEqual(self.db.dropped, [self.m['database']])
-        self.assertIsNone(self.db.active)
+        self.assertIsNone(self.db.pointer_value)
         self.assertIn(self.result()['manifest_hash'], self.state.failed('frameworks'))
 
     def test_restore_and_step_failures_never_log_command_output(self):
@@ -188,7 +162,9 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
                 (ValueError('frameworks log settings refused'), 'frameworks log settings refused')):
             with self.subTest(message=message):
                 self.setUp()
-                self.db.restore = mock.Mock(side_effect=error)
+                self.m['previous'] = None
+                self.write_manifest()
+                self.db.failures['restore'] = error
                 self.assertFalse(self.run_phase())
                 self.assertEqual(self.result()['message'], message)
                 log = self.paths.log.with_name('release-frameworks.log').read_text()
@@ -213,9 +189,11 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.prepare.assert_not_called()
 
     def test_bootstrap_refused_once_a_pointer_exists(self):
-        self.db.active = 'frameworks_20990101'
-        self.assertFalse(self.run_phase())
-        self.assertEqual(self.result()['message'], 'new frameworks previous does not equal active release')
+        self.db.add('frameworks_20990101')
+        self.db.pointer_value = 'frameworks_20990101'
+        self.assertTrue(self.run_phase())
+        self.assertEqual((self.result()['status'], self.result()['message']),
+                         ('waiting', 'new frameworks previous does not equal active release'))
         self.phase.download.assert_not_called()
 
     def test_command_failure_message_keeps_only_program_and_exit(self):
@@ -240,8 +218,7 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
                                 (CommandError('command failed'), False), (ValueError('refused'), False)):
             with self.subTest(error=error):
                 self.registry.fetch.side_effect = error
-                phase = Corpus(self.state, self.store, self.host, self.rules, self.registry, database=self.db,
-                               prepare=self.prepare, clock=lambda: 100000, kind=FRAMEWORKS)
+                phase = self.make_phase()
                 self.assertFalse(phase.run(self.paths.state / 'run', 'activate'))
                 self.assertEqual(phase.interrupted, expected)
                 self.assertEqual(self.result()['status'], 'failed')
@@ -252,7 +229,7 @@ class FrameworksRunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual((self.result()['status'], self.result()['step'], self.result()['message']),
                          ('failed', 'manifest', 'invalid frameworks manifest JSON'))
         self.write_manifest()
-        self.db.describe.side_effect = RecursionError('synthetic recursion')
+        self.db.describe = mock.Mock(side_effect=RecursionError('synthetic recursion'))
         self.assertFalse(self.run_phase())
         self.assertEqual((self.result()['status'], self.result()['step']), ('failed', 'compatibility'))
 

@@ -35,9 +35,9 @@ class LawSmokeTest(LawFixture, unittest.TestCase):
 
     def test_retained_database_is_checked_before_it_becomes_active_again(self):
         self.db.smoke(dict(self.row, mode='retained'), 'server-image')
-        self.assertEqual(self.names(), ['check', 'prewarm', 'release-check'])
+        self.assertEqual(self.names(), ['check', 'prewarm', 'verify', 'release-check', 'verify'])
         self.assert_activator(self.call('check')[0], self.name)
-        self.assertNotIn('release_target', self.sql('check'))
+        self.assertIn('release_target', self.sql('check'))
         self.assertIn("('extension','vector',NULL)", self.sql('check'))
         self.calls.clear()
         self.responses['check'] = b'function\n'
@@ -57,7 +57,7 @@ class LawTidyTest(LawFixture, unittest.TestCase):
 
     def test_tidy_sweeps_without_logging_when_nothing_is_left(self):
         self.db.tidy()
-        self.assertEqual(self.names(), ['end-backends', 'strays'])
+        self.assertEqual(self.names(), ['end-backends', 'protected', 'catalog', 'strays'])
         self.assertFalse(self.db.host.paths.log.exists())
 
     def test_tidy_defers_leftovers_and_command_failures_to_the_next_sweep(self):
@@ -98,19 +98,19 @@ class LawSessionTest(LawFixture, unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIn('search_path=pg_catalog', self.options(args) if name != 'prepare' else args[4])
 
-    def test_superuser_check_from_auth_excludes_only_postgres(self):
+    def test_superuser_check_from_postgres_excludes_only_postgres(self):
         self.responses['exists'] = b''
         self.responses['superuser'] = b't\n'
         self.assertTrue(self.db.other_superuser())
         args, kwargs = next((args, kwargs) for _, args, kwargs in self.calls)
-        self.assert_activator(args, 'auth', 'pg_catalog,public')
+        self.assert_activator(args, 'postgres')
         text = kwargs['input'].decode()
         self.assertIn("r.rolname <> 'postgres'", text)
         self.assertNotIn('current_user', text)
 
-    def test_auth_sessions_pin_catalog_then_public(self):
+    def test_catalog_sessions_run_from_postgres_and_pin_the_catalog_only(self):
         self.db.exists(self.name)
-        self.assert_activator(self.call('exists')[0], 'auth', 'pg_catalog,public')
+        self.assert_activator(self.call('exists')[0], 'postgres')
 
     def test_database_names_are_refused_before_any_session(self):
         for action in (lambda row: self.db.create(row), lambda row: self.db.restore(row, '/synthetic/dump')):

@@ -71,12 +71,11 @@ import uuid
 root, phase = Path(sys.argv[1]), sys.argv[2]
 sys.path.insert(0, str(root / 'deploy/host'))
 
-from updater.deploy_corpus_activate import Activation
-from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_corpus_sql import JournalRefused, STEPS
 from updater.deploy_host import Host
 from updater.deploy_io import command
+from updater.deploy_release_tables import Tables
 from updater.deploy_store import Paths
 
 target = json.load(sys.stdin)
@@ -85,11 +84,6 @@ KINDS = (('law', LAW, 'corpus-manifest.json', 'corpus_vn_20990101_1', 'corpus_vn
           'corpus_vn_20990103_1', 'c' * 32),
          ('frameworks', FRAMEWORKS, 'frameworks-manifest.json', None, 'frameworks_20990101',
           'frameworks_20990103', 'd' * 32))
-
-
-class Held:
-    def poll(self):
-        return None
 
 
 def database(kind, work, log):
@@ -106,71 +100,75 @@ def database(kind, work, log):
         client[position + 1:position + 1] = ['-p', str(target['port'])]
         log.append(options['input'].decode())
         return command(client, **options)
-    db = Database(Host(Paths(Path(work)), runner, user_prefix=[]), {'extensions': ['vector', 'ltree']}, kind)
-    db.holder = Held()
-    db.verify_target = lambda row: None
-    return db
+    return Tables(Host(Paths(Path(work)), runner, user_prefix=[]), kind)
+
+
+def row_for(kind, digest, manifest, mode, expected, operation=None):
+    return dict(operation_id=operation or uuid.uuid4().hex, country=kind.country(manifest), rel=manifest['rel'], mode=mode,
+                database_name=manifest['database'], manifest_hash=digest, dump_sha256=manifest['dump']['sha256'],
+                expected_active_db=expected, manifest=manifest)
 
 
 def latest(db, row, step):
-    found = {item['operation_id']: item for item in db.operations()}
+    found = {item['operation_id']: item for item in db.operations(row['operation_id'])}
     if found[row['operation_id']]['step'] != step:
         raise RuntimeError('journal step was not read back')
 
 
 def roundtrip(kind, db, digest, manifest, expected, pruned):
-    engine, seen = Activation(db, kind), []
+    seen, identities = [], []
     def advance(row, step):
         row = db.append(row, step)
         latest(db, row, step)
         seen.append(step)
         return row
-    row = engine.begin(digest, manifest, 'new', expected)
-    latest(db, row, 'started')
-    seen.append('started')
+    def opened(mode):
+        row = row_for(kind, digest, manifest, mode, expected)
+        identities.append(row['operation_id'])
+        return row
+    row = advance(opened('new'), 'started')
     for step in ('creating', 'created', 'restoring', 'restored', 'validated', 'checked'):
         row = advance(row, step)
-    row = db.activate(row)
+    retire = (expected, None) if expected else None
+    row = db.swap(kind.sql.activate(row, retire=retire), row)
     latest(db, row, 'activated')
     seen.append('activated')
-    advance(engine.begin(digest, manifest, 'retained', expected), 'aborted')
-    advance(engine.begin(digest, manifest, 'new', expected), 'reverted')
+    advance(advance(opened('retained'), 'started'), 'aborted')
+    advance(advance(opened('new'), 'started'), 'reverted')
     country, rel = kind.parse(pruned)
     prune = dict(operation_id=uuid.uuid4().hex, country=country, rel=rel, mode='prune', database_name=pruned,
                  manifest_hash=None, dump_sha256=None, expected_active_db=None, manifest=None)
+    identities.append(prune['operation_id'])
     advance(advance(prune, 'pruning'), 'pruned')
     if set(seen) != set(STEPS):
         raise RuntimeError('journal steps not covered')
+    found = [item for identity in identities for item in db.operations(identity) if item['operation_id'] == identity]
     operations = [dict(mode=item['mode'], step=item['step'], expected_null=item['expected_active_db'] is None,
                        manifest_matches=item['manifest'] == (None if item['mode'] == 'prune' else manifest))
-                  for item in db.operations()]
-    return dict(steps=sorted(seen), operations=sorted(operations, key=lambda item: item['step']),
-                active=db.current('vn'))
+                  for item in found]
+    return dict(steps=sorted(set(seen)), operations=sorted(operations, key=lambda item: item['step']),
+                active=db.pointer())
 
 
 def tampered(kind, db, log, digest, manifest, name, operation):
-    active = db.current('vn')
-    row = dict(operation_id=operation, country=kind.country({'country': 'vn'}), rel=kind.parse(name)[1], mode='new',
-               database_name=name, manifest_hash=digest, dump_sha256=manifest['dump']['sha256'],
-               expected_active_db=active, manifest=manifest, step='created')
+    active = db.pointer()
+    row = dict(row_for(kind, digest, manifest, 'new', active, operation), database_name=name, rel=kind.parse(name)[1])
     refused = False
     log.clear()
     try:
-        Activation(db, kind).resume(row, None, 'image')
+        db.append(row, 'restoring')
     except JournalRefused:
         refused = True
-    inserts = [index for index, text in enumerate(log) if 'INSERT INTO release_journal' in text]
+    inserts = [index for index, text in enumerate(log) if 'INSERT INTO public.release_journal' in text]
     return dict(refused=refused, inserts=len(inserts), after_insert=len(log) - 1 - inserts[-1], operation=operation)
 
 
 def literals(kind, db, digest, manifest, expected, operation):
     body = dict(manifest, probe=target['probe'])
-    row = dict(operation_id=operation, country=kind.country({'country': 'vn'}), rel=manifest['rel'], mode='new',
-               database_name=manifest['database'], manifest_hash=digest, dump_sha256=manifest['dump']['sha256'],
-               expected_active_db=expected, manifest=body)
+    row = row_for(kind, digest, body, 'new', expected, operation)
     row = db.append(db.append(row, 'started'), 'checked')
-    db.activate(row)
-    found = {item['operation_id']: item for item in db.operations()}[operation]
+    db.swap(kind.sql.activate(row), row)
+    found = {item['operation_id']: item for item in db.operations(operation)}[operation]
     if found['manifest'] != body or found['step'] != 'activated':
         raise RuntimeError('journal manifest was misread')
     return dict(operation=operation)

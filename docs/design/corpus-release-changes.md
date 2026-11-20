@@ -40,4 +40,5 @@ it in `corpus_release`. The updater activates the pair in one locked run:
    the previous pair passes loopback readiness, then run the edge probe; a
    failed probe stops Caddy and records the failure. An interrupted pair run is
    recovered by the same rule: its image journal is treated as failed, and a
-   corpus journal ending in `activated` for that pair is reversed first.
+   corpus operation that reached `activated` for that pair is reversed first,
+   restoring `active` in the [activation record](activation-record.md).

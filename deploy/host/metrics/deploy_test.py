@@ -50,7 +50,8 @@ class DeployMetricsTest(unittest.TestCase):
                 path.write_text(json.dumps(dict(status=status, waiting_since='2026-01-01T00:00:00Z')))
                 self.assertEqual(publisher.release(path, now), [
                     ('release_failed', int(status == 'failed')),
-                    ('release_waiting_age_seconds', 86400 if status == 'waiting' else 0)])
+                    ('release_waiting_age_seconds', 86400 if status == 'waiting' else 0),
+                    ('release_integrity', 0)])
             path.write_text('{"status":"waiting"}')
             with self.assertRaises(ValueError):
                 publisher.release(path, now)
@@ -71,21 +72,40 @@ class DeployMetricsTest(unittest.TestCase):
                     return [item for item in publisher.collect('test-host', now) if item[0].startswith('release_')]
             law.write_text(json.dumps(dict(status='ok')))
             self.assertEqual(collect(), [('release_failed', 0, {'host': 'test-host', 'kind': 'law'}),
-                                         ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'law'})])
+                                         ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'law'}),
+                                         ('release_integrity', 0, {'host': 'test-host', 'kind': 'law'})])
             law.write_text(json.dumps(dict(status='failed')))
             frameworks.write_text(json.dumps(dict(status='waiting', waiting_since='2026-01-01T00:00:00Z')))
             self.assertEqual(collect(), [
                 ('release_failed', 1, {'host': 'test-host', 'kind': 'law'}),
                 ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'law'}),
+                ('release_integrity', 0, {'host': 'test-host', 'kind': 'law'}),
                 ('release_failed', 0, {'host': 'test-host', 'kind': 'frameworks'}),
-                ('release_waiting_age_seconds', 86400, {'host': 'test-host', 'kind': 'frameworks'})])
+                ('release_waiting_age_seconds', 86400, {'host': 'test-host', 'kind': 'frameworks'}),
+                ('release_integrity', 0, {'host': 'test-host', 'kind': 'frameworks'})])
             law.unlink()
             frameworks.write_text(json.dumps(dict(status='failed')))
             self.assertEqual(collect(), [('release_failed', 1, {'host': 'test-host', 'kind': 'frameworks'}),
-                                         ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'frameworks'})])
+                                         ('release_waiting_age_seconds', 0, {'host': 'test-host', 'kind': 'frameworks'}),
+                                         ('release_integrity', 0, {'host': 'test-host', 'kind': 'frameworks'})])
             frameworks.write_text(json.dumps(dict(status='bogus')))
             with self.assertRaises(ValueError):
                 collect()
+
+    def test_release_integrity_is_one_while_the_list_is_not_empty(self):
+        now = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'release.json'
+            for integrity, expected in (([], 0), (['pointer_changed'], 1), (['record_rebuilt', 'adoption_failed'], 1)):
+                with self.subTest(integrity=integrity):
+                    path.write_text(json.dumps(dict(status='ok', integrity=integrity)))
+                    self.assertEqual(dict(publisher.release(path, now))['release_integrity'], expected)
+            path.write_text(json.dumps(dict(status='ok')))
+            self.assertEqual(dict(publisher.release(path, now))['release_integrity'], 0)
+            for bad in ('pointer_changed', [1], {'code': 1}):
+                path.write_text(json.dumps(dict(status='ok', integrity=bad)))
+                with self.subTest(bad=bad), self.assertRaises(ValueError):
+                    publisher.release(path, now)
 
     def test_failure_statuses_and_last_success_are_published(self):
         now = datetime(2026, 1, 2, tzinfo=timezone.utc)

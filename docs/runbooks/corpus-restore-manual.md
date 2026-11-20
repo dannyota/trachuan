@@ -48,15 +48,16 @@ GiB memory cap; shared memory is charged to that cap, not an extra allowance.
 Rollback to a hand-restored release within its seven days is the owner's manual
 compare-and-swap of `corpus_release.active_db`.
 
-Prune drops databases listed in `retired_release`. Separately, each activation
-drops every `activator`-owned database that is neither active, retained nor the
-target of an open operation, and ends other `activator` sessions, so a pipeline
-release you rolled away from by hand goes at the next activation unless it is
-listed in `retired_release` with `retain_until` in the future, and a manual
-`activator` prewarm running then is ended. A database restored by hand that
-never became active through the pipeline, such as `corpus_vn_20261112_2`, has no
-row there and stays until it is dropped once by hand. Confirm it is not
-`active_db`, not in `retired_release`, and has no connections, then drop it:
+Prune drops databases the host retired itself, seven days later, unless the
+tables still protect them; others are yours to drop. Separately, each activation
+drops every `activator`-owned database that neither the tables nor the host
+[protect](../design/activation-record.md#drops), and ends other `activator`
+sessions, so a manual `activator` prewarm running then is ended. After a manual
+swap to a pipeline release, re-sign that release the same day so the host adopts
+it. A database restored by hand that never became active through the pipeline,
+such as `corpus_vn_20261112_2`, has no row there and stays until it is dropped
+once by hand. Confirm it is not `active_db`, not in `retired_release`, and has
+no connections, then drop it:
 
 ```sh
 DB=corpus_vn_20261112_2
@@ -69,8 +70,9 @@ podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh dropdb -U postgre
 ```
 
 Drop only when all three counts are 0. The release replaced by the first
-pipeline activation (`corpus_vn_20261114_3`) has a row with a NULL digest, so
-prune drops it after its seven days.
+pipeline activation (`corpus_vn_20261114_3`) has a row with a NULL digest and no
+host record, so prune leaves it: drop it the same way once its seven days have
+passed.
 
 ## Prewarm a corpus database
 

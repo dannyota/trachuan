@@ -12,6 +12,8 @@ AUTH_OUTPUT_LIMIT = 4096
 AUTH_CLIENT_SECONDS = 30
 AUTH_OPTIONS = (SCHEMA_PATH + ' -c statement_timeout=10s -c lock_timeout=5s '
                 '-c idle_in_transaction_session_timeout=10s -c client_connection_check_interval=2s')
+RELEASE_OUTPUT_LIMIT = 4 * 1024 * 1024
+RELEASE_CLIENT_SECONDS = 60
 SCRAM_ONLY = ('--env', 'PGREQUIREAUTH=scram-sha-256')
 CLIENT_SHARED = ('auth', 'postgres')
 SUPERUSER_SHARED = ('postgres',)
@@ -54,6 +56,19 @@ def auth_arguments(sql):
     return secret_arguments('auth_db_password', 'timeout', '--signal=TERM', '--kill-after=2s', '15s',
                             'env', 'PGCONNECT_TIMEOUT=5', 'PGOPTIONS=' + AUTH_OPTIONS, 'psql', '--no-password', '-XqAt',
                             '-h', '127.0.0.1', '-U', 'auth_owner', '-v', 'ON_ERROR_STOP=1', '-d', 'auth', '-c', sql)
+
+
+def release_options(write):
+    return (SCHEMA_PATH + ' -c statement_timeout=30s -c lock_timeout=5s -c idle_in_transaction_session_timeout=30s '
+            '-c default_transaction_read_only=' + ('off' if write else 'on') +
+            ' -c standard_conforming_strings=on -c client_encoding=UTF8 -c client_connection_check_interval=2s')
+
+
+def release_arguments(write):
+    return secret_arguments('auth_db_password', 'timeout', '--signal=TERM', '--kill-after=2s', '45s',
+                            'env', 'PGCONNECT_TIMEOUT=5', 'PGOPTIONS=' + release_options(write), 'psql',
+                            '--no-password', '-XqAt', '-h', '127.0.0.1', '-U', 'auth_owner',
+                            '-v', 'ON_ERROR_STOP=1', '-d', 'auth')
 
 
 class Host:
@@ -101,6 +116,10 @@ class Host:
     def auth_psql(self, sql):
         return self.user(*auth_arguments(sql), stdout_limit=AUTH_OUTPUT_LIMIT,
                          timeout=AUTH_CLIENT_SECONDS).decode().strip()
+
+    def release_sql(self, sql, write=False):
+        return self.user(*release_arguments(write), input=sql.encode(), stdout_limit=RELEASE_OUTPUT_LIMIT,
+                         timeout=RELEASE_CLIENT_SECONDS).decode().strip()
 
     def schema(self):
         raw = self.auth_psql(AUTH_SCHEMA_VERSION)
@@ -186,7 +205,7 @@ class Host:
         if not available:
             return False
         self.user('podman', 'exec', '-i', *SCRAM_ONLY, 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
-                  'bash', '-s', input=script)
+                  'bash', '-s', '--', '--no-auth-tables', input=script)
         return True
 
     def migrate(self):

@@ -1,7 +1,6 @@
 import unittest
 
 from updater import deploy_corpus_sql as law
-from updater.deploy_corpus_activate import Activation
 from updater.journal_row_test import BREAKOUT, KINDS, KindFixture, prune_row, stored
 
 
@@ -39,9 +38,8 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
                     self.calls.clear()
                     self.journal_reply = dict(inserted, **{field: value})
                     with self.assertRaises(law.JournalRefused):
-                        db.activate(row())
-                    self.assertEqual(len(self.calls), 2)
-                    self.assertIn('release_target', self.scripts[-2])
+                        db.swap(kind.sql.activate(row()), row())
+                    self.assertEqual(len(self.calls), 1)
 
     def test_written_fields_must_be_present(self):
         for name, kind, _, row in KINDS:
@@ -64,7 +62,7 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
                     self.assertEqual(str(raised.exception), 'invalid release journal row')
                     self.journal_reply = reply
                     with self.assertRaises(law.JournalRefused):
-                        db.activate(row())
+                        db.swap(kind.sql.activate(row()), row())
 
     def test_null_returned_for_a_supplied_value_is_refused(self):
         for name, kind, _, row in KINDS:
@@ -89,7 +87,7 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
                 self.assertEqual(result, dict(row(), step='restoring'))
                 self.assertNotIn('id', result)
                 self.journal_reply = dict(stored(kind, row(), 'activated'), **STORED)
-                self.assertEqual(db.activate(row()), dict(row(), step='activated'))
+                self.assertEqual(db.swap(kind.sql.activate(row()), row()), dict(row(), step='activated'))
 
     def test_prune_rows_round_trip(self):
         for name, kind, _, row in KINDS:
@@ -97,50 +95,6 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
                 self.journal_reply = dict(stored(kind, prune_row(row()), 'pruned'), **STORED)
                 self.assertEqual(self.database(kind).append(prune_row(row()), 'pruned'),
                                  dict(prune_row(row()), step='pruned'))
-
-
-class TamperedResumeTest(KindFixture, unittest.TestCase):
-    def inserted(self):
-        return [text for text in self.scripts if 'INSERT INTO release_journal' in text]
-
-    def test_changed_insert_stops_resume_without_abort_or_cleanup(self):
-        for name, kind, _, row in KINDS:
-            engine = Activation(self.database(kind), kind)
-            self.active = row()['expected_active_db']
-            start = dict(row(), step='created')
-            for field, value in dict(CHANGES[name], country=BREAKOUT).items():
-                with self.subTest(kind=name, field=field):
-                    self.calls.clear()
-                    self.scripts.clear()
-                    self.journal_reply = dict(stored(kind, start, 'restoring'), **{field: value})
-                    with self.assertRaises(law.JournalRefused):
-                        engine.resume(start, '/d', 'image')
-                    self.assertEqual(len(self.inserted()), 1)
-                    self.assertNotIn("'aborted'", self.inserted()[0])
-                    self.assertFalse(any('dropdb' in args or 'rm' in args for args in self.calls))
-                    self.assertIn('INSERT INTO release_journal', self.scripts[-1])
-
-    def test_changed_abort_insert_stops_before_any_drop(self):
-        for name, kind, _, row in KINDS:
-            engine = Activation(self.database(kind), kind)
-            with self.subTest(kind=name):
-                self.calls.clear()
-                self.scripts.clear()
-                self.journal_reply = dict(stored(kind, row(), 'aborted'), rel=CHANGES[name]['rel'])
-                with self.assertRaises(law.JournalRefused):
-                    engine.abort(row())
-                self.assertFalse(any('dropdb' in args or 'rm' in args for args in self.calls))
-                self.assertIn('INSERT INTO release_journal', self.scripts[-1])
-
-    def test_changed_prune_insert_drops_nothing(self):
-        for name, kind, _, row in KINDS:
-            db = self.database(kind)
-            with self.subTest(kind=name):
-                self.calls.clear()
-                self.journal_reply = dict(stored(kind, prune_row(row()), 'pruning'), rel=CHANGES[name]['rel'])
-                with self.assertRaises(law.JournalRefused):
-                    db.append(prune_row(row()), 'pruning')
-                self.assertEqual(len(self.calls), 1)
 
 
 if __name__ == '__main__':

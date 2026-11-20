@@ -78,8 +78,8 @@ def valid_state(value):
         return False
     if not isinstance(value['signals'], dict) or not isinstance(value['events'], dict):
         return False
-    keys = {'site', 'deploy_stopped', 'deploy_failed', 'release_failed', 'release_waiting',
-            'frameworks_failed', 'frameworks_waiting', 'secrets', 'backup_old', 'memory', 'disk:/', 'disk:/srv/trachuan/data',
+    keys = {'site', 'deploy_stopped', 'deploy_failed', 'release_failed', 'release_waiting', 'release_integrity',
+            'frameworks_failed', 'frameworks_waiting', 'frameworks_integrity', 'secrets', 'backup_old', 'memory', 'disk:/', 'disk:/srv/trachuan/data',
             *('backup_'+job for job in ('full', 'diff', 'verify', 'health', 'restore-check'))}
     for key, item in value['signals'].items():
         if key not in keys or not isinstance(item, dict):

@@ -42,6 +42,28 @@ resource "oci_monitoring_alarm" "corpus_release_waiting" {
   severity                                      = "WARNING"
 }
 
+resource "oci_monitoring_alarm" "release_integrity" {
+  body                                          = "The updater raised a release integrity alert: something in auth or on the host disagrees with its activation record. Treat it as a possible compromise and follow docs/runbooks/alarms.md."
+  compartment_id                                = var.compartment_ocid
+  destinations                                  = [oci_ons_notification_topic.alarms.id]
+  display_name                                  = "trachuan release integrity"
+  evaluation_slack_duration                     = "PT3M"
+  is_enabled                                    = true
+  is_notifications_per_metric_dimension_enabled = false
+  message_format                                = "ONS_OPTIMIZED"
+  metric_compartment_id                         = var.compartment_ocid
+  metric_compartment_id_in_subtree              = false
+  namespace                                     = "trachuan_host"
+  notification_title                            = "trachuan release integrity"
+  notification_version                          = "1.X"
+  pending_duration                              = "PT1M"
+  query                                         = "release_integrity[1m].max() > 0"
+  repeat_notification_duration                  = "PT4H"
+  resolution                                    = "1m"
+  rule_name                                     = "base"
+  severity                                      = "CRITICAL"
+}
+
 resource "oci_monitoring_alarm" "deploy_not_confirmed" {
   body                                          = "The host updater has not confirmed production for over an hour. Read deploy.log in OCI Logging."
   compartment_id                                = var.compartment_ocid

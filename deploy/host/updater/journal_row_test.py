@@ -2,14 +2,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest import mock
 
 from updater import deploy_corpus_sql as law
 from updater import deploy_frameworks_sql as frameworks
-from updater.deploy_corpus_activate import Activation
-from updater.deploy_corpus_database import Database
 from updater.deploy_corpus_kind import FRAMEWORKS, LAW
 from updater.deploy_host import Host
+from updater.deploy_release_tables import Tables
 from updater.deploy_store import Paths
 from updater.frameworks_sql_test import frameworks_row, law_row
 
@@ -45,26 +43,17 @@ class KindFixture:
         text = (kwargs.get('input') or b'').decode()
         self.calls.append(args)
         self.scripts.append(text)
-        if 'INSERT INTO release_journal' in text:
+        if 'INSERT INTO public.release_journal' in text:
             reply = self.journal_reply
             return reply if isinstance(reply, bytes) else json.dumps(reply).encode()
-        if 'json_agg(j ORDER BY id)' in text:
+        if 'json_agg(j ORDER BY j.id)' in text:
             return json.dumps(self.rows).encode()
         if 'SELECT active_db' in text:
             return (self.active or '').encode()
-        if "json_build_object('dump_sha256'" in text:
-            return b''
         return b'f\n'
 
     def database(self, kind):
-        db = Database(Host(Paths(Path(self.work.name)), self.runner, user_prefix=[]),
-                      {'extensions': ['vector', 'ltree']}, kind)
-        db.holder = mock.Mock()
-        db.holder.poll.return_value = None
-        db.backend = 77
-        row = next(make for _, candidate, _, make in KINDS if candidate is kind)()
-        db.targets().write(row['operation_id'], row['database_name'], '16400')
-        return db
+        return Tables(Host(Paths(Path(self.work.name)), self.runner, user_prefix=[]), kind)
 
 
 class DollarBodyTest(unittest.TestCase):
@@ -118,51 +107,26 @@ class DollarBodyTest(unittest.TestCase):
 
 
 class ActivationProcessTest(KindFixture, unittest.TestCase):
-    def test_hostile_activation_starts_no_process_on_either_kind(self):
+    def test_hostile_row_read_from_the_table_is_refused_after_one_read(self):
         for name, kind, _, row in KINDS:
-            db = self.database(kind)
-            base = row()
-            base['manifest'] = dict(base['manifest'], schema_version=8)
-            for field in FIELDS:
-                for value in HOSTILE_SQL:
-                    with self.subTest(kind=name, field=field, value=value):
-                        self.calls.clear()
-                        with self.assertRaises(ValueError):
-                            db.activate(dict(base, **{field: value}))
-                        self.assertEqual(self.calls, [])
-
-    def test_hostile_resumed_row_stops_at_the_read_on_either_kind(self):
-        for name, kind, _, row in KINDS:
-            engine = Activation(self.database(kind), kind)
+            tables = self.database(kind)
             for field in FIELDS:
                 for value in HOSTILE_SQL:
                     with self.subTest(kind=name, field=field, value=value):
                         self.calls.clear()
                         self.rows = [dict(row(), **{field: value})]
                         with self.assertRaises(law.JournalRefused) as raised:
-                            engine.run('a' * 64, row()['manifest'], '/d', 'image')
+                            tables.operations()
                         self.assertEqual(str(raised.exception), REFUSED)
                         self.assertEqual(len(self.calls), 1)
 
-    def test_hostile_row_handed_to_resume_starts_no_process_on_either_kind(self):
-        for name, kind, _, row in KINDS:
-            engine = Activation(self.database(kind), kind)
-            for field in FIELDS:
-                for value in HOSTILE_SQL:
-                    for step in ('started', 'checked', 'aborted', 'activated'):
-                        with self.subTest(kind=name, field=field, value=value, step=step):
-                            self.calls.clear()
-                            with self.assertRaises(law.JournalRefused):
-                                engine.resume(dict(row(), step=step, **{field: value}), '/d', 'image')
-                            self.assertEqual(self.calls, [])
-
-    def test_prune_stops_at_a_refused_row(self):
+    def test_hostile_prune_row_is_refused(self):
         for name, kind, _, row in KINDS:
             with self.subTest(kind=name):
                 self.calls.clear()
                 self.rows = [dict(prune_row(row()), database_name=BREAKOUT)]
                 with self.assertRaises(law.JournalRefused):
-                    Activation(self.database(kind), kind).prune()
+                    self.database(kind).operations()
                 self.assertEqual(len(self.calls), 1)
 
 

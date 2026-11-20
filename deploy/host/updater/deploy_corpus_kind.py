@@ -9,6 +9,7 @@ from .deploy_frameworks_steps import Steps
 
 class Law:
     name, key, label, sql = 'law', 'corpus', 'corpus', deploy_corpus_sql
+    pointer_country = 'vn'
     tag, result, dump = 'vn-production', 'release', 'corpus.dump'
     artifacts, marker = 'corpus-artifacts', 'corpus-prune.json'
     check, bootstrap = (), False
@@ -43,9 +44,9 @@ class Law:
     def steps(self, database):
         return database
 
-    def activation(self, database, row):
+    def activation(self, database, row, retire=None):
         self.sql.activation_values(row)
-        return self.sql.activate(row, database.projection(row))
+        return self.sql.activate(row, database.projection(row), retire)
 
     def cause(self, error):
         return error.detail
@@ -56,6 +57,7 @@ class Law:
 
 class Frameworks:
     name, key, label, sql = 'frameworks', 'frameworks', 'frameworks', deploy_frameworks_sql
+    pointer_country = 'vn'
     tag, result, dump = 'frameworks-production', 'release-frameworks', 'frameworks.dump'
     artifacts, marker = 'frameworks-artifacts', 'frameworks-prune.json'
     check, bootstrap = ('--kind', 'frameworks'), True
@@ -91,8 +93,8 @@ class Frameworks:
     def steps(self, database):
         return Steps(database)
 
-    def activation(self, database, row):
-        return self.sql.activate(row)
+    def activation(self, database, row, retire=None):
+        return self.sql.activate(row, retire)
 
     def cause(self, error):
         found = re.match(r'[^:]*: exit -?[0-9]+', error.detail or '')
