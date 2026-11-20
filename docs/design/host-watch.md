@@ -14,10 +14,10 @@ fire even when the host is down and cannot send anything itself.
 `trachuan-watch`. It keeps the hardening of `trachuan-metrics.service`
 (`ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, `NoNewPrivileges`) and
 adds `ReadWritePaths=/srv/trachuan/state/watch /var/log/trachuan/watch`,
-`LimitCORE=0`, `MemorySwapMax=0`, `TimeoutStartSec=45` and `MemoryMax=128M`. The
-host has a swap file and `systemd-coredump`, so the last two keep the token out
-of swap and core dumps. It uses the Python standard library plus the OCI SDK the
-metrics publisher already uses.
+`LimitCORE=0`, `MemorySwapMax=0`, `TimeoutStartSec=45` and `MemoryMax=128M`.
+`LimitCORE=0` and `MemorySwapMax=0` keep the token out of core dumps and swap,
+as for every [secret holder](deployment.md#secrets). It uses the Python standard
+library plus the OCI SDK the metrics publisher already uses.
 
 `install.sh` creates the user; grants it read ACLs on the result files the
 metrics user reads and traversal (`--x`) on `/srv/trachuan/state` and

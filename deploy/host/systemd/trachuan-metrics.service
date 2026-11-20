@@ -12,3 +12,5 @@ PrivateTmp=yes
 TimeoutStartSec=30
 TimeoutStopSec=5
 MemoryMax=256M
+LimitCORE=0
+MemorySwapMax=0

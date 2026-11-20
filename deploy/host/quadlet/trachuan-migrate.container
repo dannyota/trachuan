@@ -25,3 +25,4 @@ Restart=on-failure
 RestartSec=5
 TimeoutStartSec=180
 LimitCORE=0
+MemorySwapMax=0
