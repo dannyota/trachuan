@@ -54,6 +54,8 @@ def cohort_metrics(rows, cohort):
                 denominator = sum(row['expected'] for row in selected)
             out.append(dict(mode=mode, arms='hybrid', limit=limit, name=name, numerator=numerator,
                             denominator=denominator, value=numerator / denominator if denominator else None))
+        out.append(dict(non_current_tail=None, not_yet_eligible=False, cap_override=None, mode=mode, arms='hybrid',
+                        limit=8, name='current_law_precision', numerator=10., denominator=10, value=1.))
     return out
 
 
@@ -100,7 +102,7 @@ def build_report(version, rel, fixture, ranks, cohorts=None, old_ranks=None):
         cohort = 'development_period' if version >= 3 and 'historical' in case['tags'] else 'development'
         report['cases'] += case_rows(case['id'], (cohorts or {}).get(case['id'], cohort), *ranks[case['id']])
     names = ['legacy', 'old_product', 'development'] + (['development_period'] if version >= 3 else [])
-    report['cohorts'] = {'legacy': dict(case_count=0, metrics=[])}
+    report['cohorts'] = {'legacy': dict(case_count=0, rejection_count=0, metrics=[])}
     for name in names[1:]:
         rows = [row for row in report['cases'] if row['cohort'] == name and row['mode'] == 'exact' and row['limit'] == 8]
         rejections = 3 if name == 'old_product' else 0
@@ -110,8 +112,18 @@ def build_report(version, rel, fixture, ranks, cohorts=None, old_ranks=None):
                                        expected_citations=sum(row['expected'] for row in rows),
                                        metrics=cohort_metrics(report['cases'], name))
     for name in ('old_product', 'development'):
-        if report['cohorts'][name]['case_count']:
-            report['cohorts'][name]['non_regression'] = gated_records(report, name)
+        cohort = report['cohorts'][name]
+        if cohort['case_count']:
+            cohort['non_regression'] = gated_records(report, name)
+        if cohort['case_count']:
+            cohort['floors'] = [dict(metric, floor=.99, status='pass')
+                                for metric in cohort['metrics'] if metric['name'] == 'current_law_precision']
+        else:
+            cohort['metrics'] = [metric for metric in cohort['metrics'] if metric['name'] != 'current_law_precision']
+            cohort['floors'] = [dict(non_current_tail=None, not_yet_eligible=False, cap_override=None, mode=mode,
+                                     arms='hybrid', limit=8, name='current_law_precision', numerator=0, denominator=0,
+                                     value=None, floor=.99, status='not_run') for mode in MODES]
+    report['floors'] = copy.deepcopy(report['cohorts']['old_product']['floors'])
     if version >= 3:
         if report['cohorts']['development_period']['case_count']:
             report['cohorts']['development_period']['non_regression'] = period_records(report)
@@ -231,4 +243,10 @@ def validate_go_reports(directory):
         pair[tampered]['rejections'][0]['passed'] = False
         if not refuses(pair['r1'], pair['r0'], row, history):
             raise AssertionError(f'{tampered} rejection that did not pass accepted')
+    for tampered in ('r1', 'r0'):
+        pair = {name: copy.deepcopy(reports[name]) for name in ('r1', 'r0')}
+        for floors in (pair[tampered]['floors'], pair[tampered]['cohorts']['old_product']['floors']):
+            floors[0]['status'] = 'fail'
+        if not refuses(pair['r1'], pair['r0'], row, history):
+            raise AssertionError(f'{tampered} failed precision floor accepted')
     return ' '.join(name for name, _ in pairs)

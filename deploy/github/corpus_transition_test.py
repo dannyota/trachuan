@@ -2,6 +2,7 @@ import copy
 import unittest
 
 from corpus_comparison_test import reports, validate_comparison
+from corpus_test_support import empty_floors
 
 
 class CorpusTransitionTest(unittest.TestCase):
@@ -17,7 +18,7 @@ class CorpusTransitionTest(unittest.TestCase):
             previous, candidate = reports()
             candidate['cases'] = [case for case in candidate['cases'] if case['cohort'] != 'development']
             candidate['cohorts']['development'].update(case_count=0, positive_count=0, expected_citations=0,
-                                                       metrics=[], non_regression=[])
+                                                       metrics=[], non_regression=[], floors=empty_floors())
             if absent:
                 candidate['cohorts'].pop('development')
             with self.subTest(absent=absent), self.assertRaises(ValueError):
@@ -60,12 +61,15 @@ class CorpusTransitionTest(unittest.TestCase):
                     is_mrr = metric['name'] == 'mrr'
                     metric.update(numerator=matched if is_mrr else 500, denominator=500,
                                   value=matched / 500 if is_mrr else 1.)
+                cohort['floors'] = [dict(metric, floor=.99, status='pass') for metric in cohort['metrics']
+                                    if metric['name'] == 'current_law_precision']
                 for record in cohort['non_regression']:
                     if record['name'] == 'mrr':
                         record.update(value=matched / 500, previous_value=previous_value, previous=previous_value,
                                       high_water=.8, tolerance=.005, within_tolerance=matched / 500 < previous_value,
                                       losses=[dict(case_id=str(i), previous_rank=1, rank=9) for i in losses])
             report['non_regression'] = copy.deepcopy(report['cohorts']['old_product']['non_regression'])
+            report['floors'] = copy.deepcopy(report['cohorts']['old_product']['floors'])
             return report
 
         first = release('20990101_1', 400, .8, [])
@@ -81,5 +85,6 @@ class CorpusTransitionTest(unittest.TestCase):
         for report in (previous, candidate):
             report['cases'] = [row for row in report['cases'] if row['cohort'] != 'development']
             report['cohorts']['development'].update(case_count=0, positive_count=0,
-                                                    expected_citations=0, metrics=[], non_regression=[])
+                                                    expected_citations=0, metrics=[], non_regression=[],
+                                                    floors=empty_floors())
         validate_comparison(candidate, previous)

@@ -146,12 +146,22 @@ rename is a removal: a revision that removes a case is refused.
   both modes at limits 8 and 20, with `expected` equal to its citation count,
   and `rejections` names exactly the rejection IDs. Each rejection record holds
   only `case_id`, `reason` and `passed`, with `passed` true and `reason`
-  `diacritics_required`, the only refusal the evaluator counts as passed. The
-  previous report's `old_product` cohort and `rejections` are checked the same
-  way. An old product fixture whose `legacy_sha256` is not the legacy fixture's
-  hash is refused. The `legacy` cohort is not checked, since no gate reads it.
+  `diacritics_required`, the only refusal the evaluator counts as passed. Each
+  `old_product` and `development` floor is the evaluator's
+  `current_law_precision` record at limit 8, `hybrid`, for `exact` and `ann`,
+  equal to the cohort metric, its value equal to its numerator over its
+  denominator and at least the validators' own floor of 0.99, with status `pass`
+  (for empty `development`, status `not_run`, zero counts, null value, and no
+  matching cohort metric); the top-level `floors` equal the `old_product`
+  floors, and `rejection_count` is 3 in `old_product` and 0 elsewhere. Precision
+  itself is taken as stated, since recomputing it needs the validity of every
+  returned document, which the report does not carry. The previous report's
+  `old_product` cohort, `rejections` and floors are checked the same way. An old
+  product fixture whose `legacy_sha256` is not the legacy fixture's hash is
+  refused. The `legacy` cohort is not checked, since no gate reads it.
 - Version 2 candidates also need three distinct rejection IDs with the same
-  passing records, but do not use the version 3 fixture partition checks.
+  passing records, precision floors, and rejection counts, but do not use the
+  version 3 fixture partition checks.
 
 Accepted costs: a loss on an added or changed case is not gated in the release
 that revises it, and a case moved into `development_period` leaves the gate for

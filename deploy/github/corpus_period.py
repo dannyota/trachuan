@@ -1,6 +1,7 @@
 import re
 
 from corpus_fixture_history import cohort_of, development_cases
+from corpus_floors import check_floors
 from corpus_old_product import old_product_partition
 from corpus_watermark import MRR_FIELDS
 
@@ -77,6 +78,7 @@ def check_old_product(report, root):
     scored, counts = old_product_partition(report, root)
     check_cohorts(report, {'old_product': scored}, counts, 'old_product',
                   'old_product cohort differs from the legacy fixture without its rejections')
+    check_floors(report)
 
 
 def metric_value(report, key):
