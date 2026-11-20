@@ -150,6 +150,8 @@ rename is a removal: a revision that removes a case is refused.
   previous report's `old_product` cohort and `rejections` are checked the same
   way. An old product fixture whose `legacy_sha256` is not the legacy fixture's
   hash is refused. The `legacy` cohort is not checked, since no gate reads it.
+- Version 2 candidates also need three distinct rejection IDs with the same
+  passing records, but do not use the version 3 fixture partition checks.
 
 Accepted costs: a loss on an added or changed case is not gated in the release
 that revises it, and a case moved into `development_period` leaves the gate for

@@ -12,6 +12,7 @@ from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
 from corpus_evidence import RUN_FIELDS, SIDECARS, validate_evidence_field, validate_sidecars
 from corpus_fixture_history import FixtureHistory
+from corpus_old_product import check_rejection_records
 from corpus_period import PERIOD, check_partition, check_period, check_record_fields, no_historical_policy
 from corpus_revision import validate_version_three
 from corpus_rules import DECISION_FIELDS, has_decision, older_shape_allowed, require_status_country
@@ -145,6 +146,8 @@ def validate_report(report, country, rel, previous_report=None, release_row=None
         check_record_fields(report)
         check_period(report)
         fixture = check_partition(report, history)
+    elif report['version'] == 2:
+        check_rejection_records(report['rejections'])
     if previous_report is not None:
         if previous_report.get('country') != country or previous_report.get('rel') != previous['rel']:
             raise ValueError('previous report identity differs from inputs')

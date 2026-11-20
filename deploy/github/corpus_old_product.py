@@ -8,6 +8,17 @@ OLD_PRODUCT = 'apps/corpus/internal/evaluation/testdata/vn/old-product.json'
 REJECTION_FIELDS = {'case_id', 'reason', 'passed'}
 
 
+def check_rejection_records(rows):
+    if not isinstance(rows, list) or len(rows) != 3 or any(not isinstance(row, dict) for row in rows):
+        raise ValueError('rejection records are not three records')
+    ids = [row.get('case_id') for row in rows]
+    if any(not isinstance(case_id, str) or not case_id for case_id in ids) or len(set(ids)) != 3:
+        raise ValueError('rejection records are not three distinct nonempty case ids')
+    if any(set(row) != REJECTION_FIELDS or row['passed'] is not True or row['reason'] != 'diacritics_required'
+           for row in rows):
+        raise ValueError('rejection record is not a passed diacritics_required refusal')
+
+
 def decode(data, name):
     def invalid_constant(value):
         raise ValueError(f'invalid JSON constant in {name} fixture')
@@ -82,8 +93,6 @@ def old_product_partition(report, root):
     rows = report['rejections']
     if sorted(row['case_id'] for row in rows) != sorted(rejected):
         raise ValueError('report rejections differ from the old product fixture rejection_ids')
-    if any(set(row) != REJECTION_FIELDS or row['passed'] is not True or row['reason'] != 'diacritics_required'
-           for row in rows):
-        raise ValueError('rejection record is not a passed diacritics_required refusal')
+    check_rejection_records(rows)
     counts = {case['id']: len(case.get('expected_citations') or ()) for case in cases}
     return {case_id for case_id in counts if case_id not in rejected}, counts

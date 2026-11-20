@@ -10,7 +10,7 @@ def reports():
     previous = dict(version=1, scorer='agent-eval/4', country='vn', rel='20990101_1',
                     retrieval_recipe=row['retrieval_recipe'], recipes=hashes,
                     fixture_hashes=dict(Legacy='a', OldProduct='b', Development='c'),
-                    rejections=[dict(case_id=f'r{i}', passed=True) for i in range(3)],
+                    rejections=[dict(case_id=f'r{i}', reason='diacritics_required', passed=True) for i in range(3)],
                     cohorts={}, cases=[])
     for cohort in ('old_product', 'development'):
         metrics, comparisons = [], []
