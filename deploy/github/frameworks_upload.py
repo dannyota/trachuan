@@ -11,7 +11,7 @@ from frameworks_paths import private_directory, release_directory, source_file
 from frameworks_previous import require_active
 from frameworks_release import BUCKET, object_key, release_id, validate_release
 from object_store import s3_endpoint
-from repositories import workflow
+from repositories import require_listed, write_repository
 
 SOURCES = {'frameworks.dump': 'build/frameworks.dump', 'build.json': 'build/build.json',
            'evaluate.json': 'evaluate/manifest.json', 'report.json': 'evaluate/report.json',
@@ -22,7 +22,7 @@ CONFIG = (f'[profile {PROFILE}]\nregion = ap-singapore-1\ns3 =\n'
 
 
 def dispatch_command(rel, report_sha256, repository):
-    return ['gh', 'workflow', 'run', 'frameworks-release.yml', '--repo', repository, '--ref', 'main',
+    return ['gh', 'workflow', 'run', 'frameworks-release.yml', '--repo', require_listed(repository), '--ref', 'main',
             '-f', f'rel={rel}', '-f', f'report_sha256={report_sha256}']
 
 
@@ -64,6 +64,7 @@ def require_empty_prefix(command, rel):
 
 
 def upload(rel, base, paths, facts, endpoint, repository):
+    require_listed(repository)
     os.umask(0o077)
     with private_directory(base) as directory:
         confine(directory)
@@ -84,6 +85,7 @@ def upload(rel, base, paths, facts, endpoint, repository):
 
 
 def run(rel, dry_run, repository):
+    require_listed(repository)
     release_id(rel)
     endpoint = s3_endpoint()
     base = release_directory(rel)
@@ -102,7 +104,7 @@ def main():
     parser.add_argument('--repository')
     parser.add_argument('rel')
     args = parser.parse_args()
-    guarded(lambda: run(args.rel, args.dry_run, workflow(args.repository)))
+    guarded(lambda: run(args.rel, args.dry_run, write_repository(args.repository)))
 
 
 if __name__ == '__main__':

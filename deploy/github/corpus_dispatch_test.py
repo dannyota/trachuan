@@ -19,7 +19,8 @@ class CorpusDispatchTest(unittest.TestCase):
     def test_upload_and_resign_check_share_a_leaf_module(self):
         import corpus_dispatch
         tree = ast.parse(Path(corpus_dispatch.__file__).read_text())
-        self.assertEqual([node for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+        self.assertEqual([node.module for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))],
+                         ['repositories'])
         self.assertIs(corpus_upload.dispatch_command, corpus_dispatch.dispatch_command)
         self.assertIs(corpus_production.dispatch_command, corpus_dispatch.dispatch_command)
         production = ast.parse(Path(corpus_production.__file__).read_text())

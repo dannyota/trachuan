@@ -5,11 +5,12 @@ import subprocess
 
 from manifest import read_release, require_match, rollback as rollback_document
 from registry import find, production
-from repositories import listed, package, workflow
+from repositories import listed, package, require_listed, write_repository
 from signing import sign
 
 
 def push(directory, channel, tag, artifact_type, repository, host_bundle=False):
+    require_listed(repository)
     layers = ['manifest.json:application/json',
               'manifest.sigstore.json:application/vnd.dev.sigstore.bundle.v0.3+json']
     if host_bundle:
@@ -21,6 +22,7 @@ def push(directory, channel, tag, artifact_type, repository, host_bundle=False):
 
 
 def release(directory, ref, commit, repository):
+    require_listed(repository)
     path = directory / 'manifest.json'
     obj = read_release(path.read_bytes())
     if obj['ref'] != ref or obj['commit'] != commit or obj['repository'] != repository:
@@ -36,6 +38,7 @@ def release(directory, ref, commit, repository):
 
 
 def rollback(directory, current, target, sequence, ref, commit, repository):
+    require_listed(repository)
     if ref != 'refs/heads/main':
         raise ValueError('dispatch rollback from main')
     for digest in (current, target):
@@ -57,7 +60,7 @@ def main():
     parser.add_argument('directory', type=Path)
     args = parser.parse_args()
     args.directory.mkdir(parents=True, exist_ok=True)
-    ref, commit, repository = os.environ['GITHUB_REF'], os.environ['GITHUB_SHA'], workflow()
+    ref, commit, repository = os.environ['GITHUB_REF'], os.environ['GITHUB_SHA'], write_repository()
     if args.kind == 'release':
         release(args.directory, ref, commit, repository)
     else:

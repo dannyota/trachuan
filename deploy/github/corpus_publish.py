@@ -9,11 +9,12 @@ from corpus_production import require_signable
 from corpus_registry import channel
 from manifest import require_match
 from publish import push
-from repositories import workflow
+from repositories import require_listed, write_repository
 from signing import sign
 
 
 def publish(report_sha256, release_sha256, directory, ref, commit, repository):
+    require_listed(repository)
     require_match(r'[0-9a-f]{64}', report_sha256, 'report SHA-256')
     if release_sha256 != '':
         require_match(r'[0-9a-f]{64}', release_sha256, 'release SHA-256')
@@ -50,7 +51,7 @@ def main():
     parser.add_argument('directory', type=Path)
     args = parser.parse_args()
     publish(args.report_sha256, args.release_sha256, args.directory, os.environ['GITHUB_REF'], os.environ['GITHUB_SHA'],
-            workflow())
+            write_repository())
 
 
 if __name__ == '__main__':

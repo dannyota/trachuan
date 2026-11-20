@@ -21,6 +21,10 @@ def workflow(argument=None):
     return checked(environment if argument is None else argument)
 
 
+def write_repository(argument=None):
+    return require_listed(workflow(argument))
+
+
 def listed():
     value = json.loads(POLICY.read_bytes())['repositories']
     if not isinstance(value, list) or not 1 <= len(value) <= 2 or len({checked(name) for name in value}) != len(value):

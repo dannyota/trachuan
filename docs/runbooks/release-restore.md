@@ -141,7 +141,7 @@ be read anonymously or verified (an `oras` or `cosign` error there); sign a new
 release first from its upload, with its pins:
 
 ```sh
-python3 deploy/github/corpus_production.py resign-check vn <active rel> [<upload-dir>]
+python3 deploy/github/corpus_production.py resign-check vn <active rel> [<upload-dir>] --repository "$REPOSITORY"
 ```
 
 Then run the printed `gh workflow run corpus-release.yml ...` line.

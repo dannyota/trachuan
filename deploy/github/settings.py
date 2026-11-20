@@ -3,10 +3,11 @@ import json
 from pathlib import Path
 import subprocess
 
-from repositories import workflow
+from repositories import require_listed, write_repository
 
 
 def apply(config, request, repository, dry_run=False):
+    require_listed(repository)
     base = 'repos/' + repository
     existing = request('GET', base + '/rulesets?includes_parents=false&per_page=100')
     for ruleset in config['rulesets']:
@@ -58,7 +59,7 @@ def main():
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--repository')
     args = parser.parse_args()
-    repository = workflow(args.repository)
+    repository = write_repository(args.repository)
     config = json.loads(Path(__file__).with_name('settings.json').read_text())
     apply(config, lambda method, path, body=None: gh_request(method, path, body, args.dry_run), repository,
           args.dry_run)

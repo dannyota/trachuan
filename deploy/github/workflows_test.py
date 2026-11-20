@@ -81,6 +81,19 @@ class WorkflowsTest(unittest.TestCase):
                          ['${{ env.REGISTRY }}/trachuan-' + name for name in ('server', 'web', 'queryembed', 'postgres')])
         self.assertEqual(len(re.findall(r'\$REGISTRY/trachuan-', images)), 9)
 
+    def test_images_job_checks_the_repository_policy_before_building_or_pushing(self):
+        steps = yaml.safe_load((ROOT / '.github/workflows/images.yml').read_text())['jobs']['images']['steps']
+        guard = [index for index, step in enumerate(steps) if 'write_repository()' in step.get('run', '')]
+        self.assertEqual(len(guard), 1)
+        self.assertEqual(steps[guard[0] - 1].get('uses', '').split('@')[0], 'actions/checkout')
+        self.assertEqual(steps[guard[0]]['run'].strip(),
+                         "PYTHONPATH=deploy/github python3 -c 'from repositories import write_repository; write_repository()'")
+        self.assertFalse(any('secrets.' in str(step.get('env', '')) for step in steps[:guard[0] + 1]))
+        for index, step in enumerate(steps):
+            if any(word in step.get('run', '') for word in ('docker build', 'docker login', 'docker push')) or \
+                    str(step.get('uses', '')).startswith(('actions/attest', 'docker/login')):
+                self.assertGreater(index, guard[0], step.get('name'))
+
     def test_rollback_workflow_publishes_only_through_publish_py_rollback(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/rollback.yml').read_text())
         self.assertEqual(list(workflow), ['name', True, 'permissions', 'concurrency', 'jobs'])

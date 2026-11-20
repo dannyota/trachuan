@@ -10,13 +10,14 @@ from frameworks_previous import require_signed
 from frameworks_registry import PRODUCTION, WORKFLOW, production
 from frameworks_release import LIMITS, report_id, validate_release
 from publish import push
-from repositories import workflow
+from repositories import require_listed, write_repository
 from signing import sign
 
 MAIN = 'refs/heads/main'
 
 
 def prepare(rel, report_sha256, directory, ref, commit, sequence, repository):
+    require_listed(repository)
     if ref != MAIN:
         raise ValueError('dispatch frameworks release from main')
     report_id(report_sha256)
@@ -32,6 +33,7 @@ def prepare(rel, report_sha256, directory, ref, commit, sequence, repository):
 
 
 def publish(directory, current_directory, ref, commit, repository):
+    require_listed(repository)
     if ref != MAIN:
         raise ValueError('dispatch frameworks release from main')
     path = directory / 'manifest.json'
@@ -60,7 +62,7 @@ def main():
     parser.add_argument('directory', type=Path)
     args = parser.parse_args()
     guarded(lambda: release(args.rel, args.report_sha256, args.directory, os.environ['GITHUB_REF'],
-                            os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']), workflow()))
+                            os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']), write_repository()))
 
 
 if __name__ == '__main__':

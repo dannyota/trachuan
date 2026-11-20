@@ -45,6 +45,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Check repository policy
+        run: PYTHONPATH=deploy/github python3 -c 'from repositories import write_repository; write_repository()'
       - name: Check release helpers
         run: |
           bash deploy/host/render-units-test.sh

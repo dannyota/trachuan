@@ -11,7 +11,7 @@ from corpus_manifest import identity, release_files, sha256, validated_inputs
 from corpus_previous import verified_previous
 from corpus_production import require_settled
 from manifest import positive
-from repositories import workflow
+from repositories import require_listed, write_repository
 
 
 def etag(result):
@@ -85,6 +85,7 @@ def verify_receipts(receipts, client, bucket='trachuan-releases'):
 
 
 def upload(country, rel, directory, report, repository):
+    require_listed(repository)
     identity(country, rel)
     command = ['aws', '--profile', 'trachuan-release-upload', '--endpoint-url',
                os.environ['OCI_S3_ENDPOINT'], '--no-cli-pager', 's3api']
@@ -132,7 +133,7 @@ def main():
     parser.add_argument('report', type=Path)
     parser.add_argument('--repository')
     args = parser.parse_args()
-    repository = workflow(args.repository)
+    repository = write_repository(args.repository)
     if args.dry_run:
         print_dispatch(args.country, args.rel, args.directory, args.report, repository)
     else:

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
@@ -63,6 +64,85 @@ class WorkflowRepositoryTest(unittest.TestCase):
         for value in ('attacker/trachuan', None, ['dannyota/trachuan']):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 repositories.require_listed(value)
+
+
+class UnlistedRepositoryWriteTest(unittest.TestCase):
+    UNLISTED = ('dannyota/other', 'dntmakers/other', 'dntmakers/trachuan2')
+
+    def setUp(self):
+        self.work = tempfile.TemporaryDirectory()
+        self.addCleanup(self.work.cleanup)
+        self.path = Path(self.work.name)
+
+    def refused(self, call, *mocks):
+        for name in self.UNLISTED:
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'deploy policy'):
+                call(name)
+            for mock in mocks:
+                mock.assert_not_called()
+
+    def test_dispatch_commands_are_refused(self):
+        corpus_dispatch = importlib.import_module('corpus_dispatch')
+        frameworks_upload = importlib.import_module('frameworks_upload')
+        self.refused(lambda name: corpus_dispatch.dispatch_command(name, 'vn', '20990102_1', 'a' * 64, 'b' * 64))
+        self.refused(lambda name: frameworks_upload.dispatch_command('20990102_1', 'a' * 64, name))
+        for name in (OLD, NEW):
+            self.assertIn(name, corpus_dispatch.dispatch_command(name, 'vn', '20990102_1', 'a' * 64, ''))
+            self.assertIn(name, frameworks_upload.dispatch_command('20990102_1', 'a' * 64, name))
+
+    def test_corpus_upload_is_refused_before_any_work(self):
+        upload = importlib.import_module('corpus_upload')
+        with patch('corpus_upload.validated_inputs') as inputs, patch('corpus_upload.require_settled') as settled, \
+                patch('corpus_upload.subprocess.run') as run, patch.dict(os.environ, OCI_S3_ENDPOINT='https://synthetic.invalid'):
+            self.refused(lambda name: upload.upload('vn', '20990102_1', self.path, self.path / 'report.json', name),
+                         inputs, settled, run)
+
+    def test_frameworks_upload_is_refused_before_any_work(self):
+        upload = importlib.import_module('frameworks_upload')
+        with patch('frameworks_upload.validate_release') as validate, patch('frameworks_upload.subprocess.run') as run, \
+                patch('frameworks_upload.private_directory') as private, patch('frameworks_upload.s3_endpoint') as endpoint:
+            self.refused(lambda name: upload.run('20990102_1', False, name), validate, run, private, endpoint)
+            self.refused(lambda name: upload.upload('20990102_1', self.path, {}, None, 'https://synthetic.invalid', name),
+                         run, private)
+
+    def test_image_publish_and_rollback_are_refused_before_any_write(self):
+        publish = importlib.import_module('publish')
+        with patch('publish.sign') as sign, patch('publish.find') as find, patch('publish.production') as production, \
+                patch('publish.subprocess.run') as run:
+            self.refused(lambda name: publish.release(self.path, 'refs/tags/v1.2.4', 'a' * 40, name), sign, production, run)
+            self.refused(lambda name: publish.rollback(self.path, 'a' * 64, 'b' * 64, 9, 'refs/heads/main', 'c' * 40, name),
+                         find, sign, run)
+            self.refused(lambda name: publish.push(self.path, 'ghcr.io/x/y', 'v1', 'application/json', name), run)
+
+    def test_corpus_publish_is_refused_before_any_write(self):
+        publish = importlib.import_module('corpus_publish')
+        with patch('corpus_publish.sign') as sign, patch('corpus_publish.require_signable') as signable, \
+                patch('corpus_publish.read_manifest') as read, patch('publish.subprocess.run') as run:
+            self.refused(lambda name: publish.publish('a' * 64, 'b' * 64, self.path, 'refs/heads/main', 'a' * 40, name),
+                         sign, signable, read, run)
+
+    def test_frameworks_publish_is_refused_before_any_write(self):
+        module = importlib.import_module('frameworks_publish')
+        with patch('frameworks_publish.sign') as sign, patch('frameworks_publish.validate_release') as validate, \
+                patch('frameworks_publish.require_signed') as signed, patch('frameworks_publish.production') as production, \
+                patch('frameworks_publish.subprocess.run') as run, patch('publish.subprocess.run') as push:
+            self.refused(lambda name: module.prepare('20990102_1', 'a' * 64, self.path, 'refs/heads/main', 'a' * 40, 5, name),
+                         validate, signed)
+            self.refused(lambda name: module.publish(self.path, self.path, 'refs/heads/main', 'a' * 40, name),
+                         sign, production, run, push)
+            self.refused(lambda name: module.release('20990102_1', 'a' * 64, self.path, 'refs/heads/main', 'a' * 40, 5, name),
+                         validate, sign, run, push)
+
+    def test_settings_are_refused_before_any_request(self):
+        settings = importlib.import_module('settings')
+        request = unittest.mock.Mock(return_value=[])
+        self.refused(lambda name: settings.apply(dict(rulesets=[], environments=[]), request, name), request)
+        with patch('settings.apply') as apply, patch.dict(os.environ), patch('sys.argv', ['settings.py', '--dry-run',
+                                                                                          '--repository', 'dannyota/other']):
+            os.environ.pop('GITHUB_REPOSITORY', None)
+            with self.assertRaisesRegex(ValueError, 'deploy policy'):
+                settings.main()
+            apply.assert_not_called()
 
 
 class ImageManifestRepositoryTest(unittest.TestCase):
