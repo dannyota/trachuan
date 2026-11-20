@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from corpus_test_support import digest, save_fixture, write_fixture
+from corpus_test_support import digest, empty_floors, save_fixture, write_fixture
 from manifest import canonical
 
 
@@ -149,6 +149,9 @@ class CorpusManifestTest(unittest.TestCase):
         self.report['cases'] = [case for case in self.report['cases'] if case['cohort'] != 'development']
         for record in self.report['cohorts']['development']['non_regression']:
             record['status'] = 'not_run'
+        development = self.report['cohorts']['development']
+        development['metrics'] = [metric for metric in development['metrics'] if metric['name'] != 'current_law_precision']
+        development['floors'] = empty_floors()
         save_fixture(self.path, self.row, self.report)
         self.validate()
 

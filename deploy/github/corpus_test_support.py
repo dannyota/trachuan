@@ -76,6 +76,12 @@ def recipe_fixture(retrieval=None, chunk=None):
     return row, hashes
 
 
+def empty_floors():
+    return [dict(non_current_tail=None, not_yet_eligible=False, cap_override=None, mode=mode, arms='hybrid', limit=8,
+                 name='current_law_precision', numerator=0, denominator=0, value=None, floor=.99, status='not_run')
+            for mode in ('exact', 'ann')]
+
+
 def write_fixture(path):
     dump = b'synthetic corpus dump\n'
     manifest = (digest(dump) + '  corpus.dump\n').encode()
@@ -95,7 +101,7 @@ def write_fixture(path):
                   previous_diff={'previous': dict(country='vn', rel='20990101_1', report_sha256='b' * 64)},
                   recipes=hashes,
                   non_regression=[item.copy() for item in comparisons],
-                  cohorts={'legacy': {'case_count': 5},
+                  cohorts={'legacy': {'case_count': 5, 'rejection_count': 0},
                            'old_product': {'case_count': 5, 'non_regression': [item.copy() for item in comparisons]},
                            'development': {'case_count': 2, 'non_regression': [item.copy() for item in comparisons]}})
     report['fixture_hashes'] = dict(Legacy='legacy', OldProduct='old', Development='development')
@@ -107,10 +113,14 @@ def write_fixture(path):
         cohort.update(positive_count=count, negative_count=0, rejection_count=3 if name == 'old_product' else 0, expected_citations=count)
         cohort['metrics'] = [dict(mode=mode, arms='hybrid', limit=limit, name=metric,
                                    value=1., numerator=count, denominator=count)
-                             for mode in ('exact', 'ann') for metric, limit in (('mrr', 8), ('recall', 20))]
+                             for mode in ('exact', 'ann') for metric, limit in (('mrr', 8), ('recall', 20),
+                                                                                ('current_law_precision', 8))]
+        cohort['floors'] = [dict(metric, floor=.99, status='pass') for metric in cohort['metrics']
+                            if metric['name'] == 'current_law_precision']
         report['cases'] += [dict(case_id=str(i), cohort=name, mode=mode, arms='hybrid', limit=limit,
                                  expected=1, ranks=[1], mapped_identities=[[dict(country='vn', document_key='d', kind='document')]])
                             for mode in ('exact', 'ann') for limit in (8, 20) for i in range(count)]
+    report['floors'] = copy.deepcopy(report['cohorts']['old_product']['floors'])
     report['cases'] += [case | {'cohort': 'legacy'} for case in report['cases'] if case['cohort'] == 'old_product']
     report['cases'] += [dict(case_id=rejection['case_id'], cohort='legacy', mode=mode, arms='hybrid', limit=limit,
                               expected=1, ranks=[1])

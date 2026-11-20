@@ -27,8 +27,13 @@ def reports():
         previous['cohorts'][cohort] = dict(case_count=100, positive_count=100, negative_count=0,
                                            rejection_count=0, expected_citations=100,
                                            metrics=metrics, non_regression=comparisons)
+        precision = [dict(mode=mode, arms='hybrid', limit=8, name='current_law_precision', numerator=100.,
+                          denominator=100, value=1.) for mode in ('exact', 'ann')]
+        previous['cohorts'][cohort]['metrics'] += precision
+        previous['cohorts'][cohort]['floors'] = [dict(metric, floor=.99, status='pass') for metric in precision]
     previous['cohorts']['old_product'].update(case_count=103, rejection_count=3)
-    previous['cohorts']['legacy'] = dict(case_count=0)
+    previous['cohorts']['legacy'] = dict(case_count=0, rejection_count=0)
+    previous['floors'] = copy.deepcopy(previous['cohorts']['old_product']['floors'])
     previous['non_regression'] = copy.deepcopy(previous['cohorts']['old_product']['non_regression'])
     candidate = copy.deepcopy(previous)
     candidate.update(version=2, scorer='agent-eval/5', rel='20990102_1', status='complete', quality_pass=True,
