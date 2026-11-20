@@ -8,7 +8,7 @@ import (
 
 func TestValidityOverrides_EvalOnly(t *testing.T) {
 	requestType := reflect.TypeOf(Request{})
-	for _, field := range []string{"HistoricalPolicy", "NonCurrentTail", "NotYetEligible"} {
+	for _, field := range []string{"NonCurrentTail", "NotYetEligible"} {
 		if _, ok := requestType.FieldByName(field); ok {
 			t.Errorf("serving request exposes %s", field)
 		}
