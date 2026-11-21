@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "release_floor": 63,
+  "release_floor": 66,
   "vault_id": "ocid1.vault.oc1.ap-singapore-1.gzvpqimlaaara.abzwsljrj7hxz2mkqnqxpthkuhxaju36hrry4dpsr4nmmoqukg3ojbrfccwq",
   "region": "ap-singapore-1",
   "secrets": [
@@ -16,30 +16,21 @@
     "backup_s3_key",
     "backup_s3_key_secret"
   ],
-  "repositories": ["dannyota/trachuan", "dntmakers/trachuan"],
+  "repositories": ["dntmakers/trachuan"],
   "release_repository": "ghcr.io/dntmakers/trachuan-release",
   "rollback_repository": "ghcr.io/dntmakers/trachuan-rollback",
   "release_identity": {
-    "dannyota/trachuan": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "dntmakers/trachuan": "^https://github\\.com/dntmakers/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$"
   },
   "build_identity": {
-    "dannyota/trachuan": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "dntmakers/trachuan": "^https://github\\.com/dntmakers/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$"
   },
   "rollback_identity": {
-    "dannyota/trachuan": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/rollback\\.yml@refs/heads/main$",
     "dntmakers/trachuan": "^https://github\\.com/dntmakers/trachuan/\\.github/workflows/rollback\\.yml@refs/heads/main$"
   },
   "issuer": "https://token.actions.githubusercontent.com",
   "workflow_path": ".github/workflows/images.yml",
   "images": {
-    "dannyota/trachuan": {
-      "server": "ghcr.io/dannyota/trachuan-server",
-      "web": "ghcr.io/dannyota/trachuan-web",
-      "queryembed": "ghcr.io/dannyota/trachuan-queryembed",
-      "postgres": "ghcr.io/dannyota/trachuan-postgres"
-    },
     "dntmakers/trachuan": {
       "server": "ghcr.io/dntmakers/trachuan-server",
       "web": "ghcr.io/dntmakers/trachuan-web",
@@ -52,7 +43,6 @@
   "sigstore_trust_root": "cosign-v3.1.4",
   "corpus_repository": "ghcr.io/dntmakers/trachuan-corpus-release",
   "corpus_identity": {
-    "dannyota/trachuan": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/corpus-release\\.yml@refs/heads/main$",
     "dntmakers/trachuan": "^https://github\\.com/dntmakers/trachuan/\\.github/workflows/corpus-release\\.yml@refs/heads/main$"
   },
   "release_namespace": "axj58m4cpgbr",

@@ -180,13 +180,9 @@ class ListenerTest(unittest.TestCase):
     def test_rendered_services_use_host_network_without_port_forwarding(self):
         with tempfile.TemporaryDirectory(prefix="trachuan-host-test-") as work:
             work = Path(work)
-            repositories = {
-                "SERVER": "ghcr.io/dannyota/trachuan-server",
-                "WEB": "ghcr.io/dannyota/trachuan-web",
-                "QUERYEMBED": "ghcr.io/dannyota/trachuan-queryembed",
-                "CADDY": "docker.io/library/caddy",
-                "POSTGRES": "ghcr.io/dannyota/trachuan-postgres",
-            }
+            policy = json.loads((HOST / 'deploy-policy.json').read_bytes())
+            repositories = {name.upper(): image for name, image in
+                            dict(policy['images'][policy['repositories'][-1]], **policy['upstream']).items()}
             pins = work / "images.env"
             pins.write_text("".join(
                 f"{name}_IMAGE={repo}@sha256:{'1' * 64}\n"

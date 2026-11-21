@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 import importlib
 from pathlib import Path
 import unittest

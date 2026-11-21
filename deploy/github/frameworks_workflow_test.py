@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 import json
 import os
 from pathlib import Path
@@ -120,7 +122,7 @@ class FrameworksWorkflowTest(unittest.TestCase):
             github_env = path / 'github-env'
             env = dict(PATH=str(path / 'bin') + os.pathsep + os.environ['PATH'], HOME=str(path), RUNNER_TEMP=str(runner),
                        GITHUB_REF='refs/heads/main', GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_ENV=str(github_env),
-                       GITHUB_REPOSITORY='dannyota/trachuan',
+                       GITHUB_REPOSITORY='dntmakers/trachuan',
                        REL=REL, REPORT_SHA256=report_hash(value), PYTHONDONTWRITEBYTECODE='1', FAKE_LOG=str(log), FAKE_REMOTE=str(remote),
                        FAKE_REGISTRY=str(registry), OCI_S3_ENDPOINT='https://synthetic.example',
                        GITHUB_TOKEN='synthetic', ACTOR='synthetic')

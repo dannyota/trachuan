@@ -17,6 +17,10 @@ from updater.deploy_io import canonical, CommandError
 FIXTURES = Path(__file__).with_name('fixtures')
 POLICY = Path(__file__).parents[1] / 'deploy-policy.json'
 FIXTURE_POLICY = {key: value for key, value in json.loads(POLICY.read_bytes()).items() if key != 'release_floor'}
+FIXTURE_POLICY['repositories'] = ['dannyota/trachuan', 'dntmakers/trachuan']
+for key in ('release_identity', 'build_identity', 'rollback_identity', 'corpus_identity', 'images'):
+    value = FIXTURE_POLICY[key]['dntmakers/trachuan']
+    FIXTURE_POLICY[key]['dannyota/trachuan'] = json.loads(json.dumps(value).replace('dntmakers', 'dannyota'))
 
 
 def archive(server=b'GOOGLE_CLIENT_ID=public\n', web=b'NITRO_HOST=127.0.0.1\n', policy=None):
@@ -50,7 +54,7 @@ class VerificationTest(unittest.TestCase):
         self.addCleanup(self.work.cleanup)
         self.path = Path(self.work.name)
         self.manifest = json.loads((FIXTURES / 'manifest.json').read_bytes())
-        self.policy = v.policy(POLICY)
+        self.policy = copy.deepcopy(FIXTURE_POLICY)
         self.calls = []
 
     def run_command(self, args, **kwargs):

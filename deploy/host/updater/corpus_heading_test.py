@@ -5,7 +5,7 @@ import unittest
 from updater.deploy_corpus_heading import headings_approved
 from updater.deploy_corpus_kind import LAW
 from updater.corpus_verify_test import manifest as sample_manifest
-from updater.deploy_verify import policy
+from updater.verification_test import FIXTURE_POLICY
 from updater.deploy_corpus_verify import manifest
 from updater.deploy_io import canonical
 
@@ -25,7 +25,7 @@ class HeadingTest(unittest.TestCase):
         self.assertFalse(headings_approved(dict(heading_evidence=evidence)))
 
     def test_signed_manifest_optional_evidence(self):
-        rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
+        rules = copy.deepcopy(FIXTURE_POLICY)
         evidence = dict(projection=1, scan_sha256='a' * 64, exclusions_sha256='b' * 64)
         for fields in ({}, {'heading_evidence': evidence}, {'heading_review': dict(evidence, reviewer='coordinator', date='2026-11-16')}, {'heading_evidence': evidence, 'heading_review': dict(evidence, reviewer='coordinator', date='2026-11-16')}):
             obj = dict(sample_manifest(), schema_version=8 if 'heading_evidence' in fields else 6, **fields)
@@ -49,7 +49,7 @@ class HeadingTest(unittest.TestCase):
         self.assertIn('summary_projection=1,headings_approved=false', activate(row, 1))
 
     def test_evidence_follows_schema_version(self):
-        rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
+        rules = copy.deepcopy(FIXTURE_POLICY)
         evidence = dict(projection=1, scan_sha256='a' * 64, exclusions_sha256='b' * 64)
         for schema, supplied, valid in ((6, False, True), (6, True, False), (8, False, False), (8, True, True)):
             obj = dict(sample_manifest(), schema_version=schema)

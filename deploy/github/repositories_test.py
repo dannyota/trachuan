@@ -30,6 +30,29 @@ def one_repository(directory, name):
     return listing(directory, [name])
 
 
+def legacy_policy_setup():
+    directory = tempfile.TemporaryDirectory()
+    patcher = listing(directory.name, [OLD, NEW])
+    patcher.start()
+    return directory, patcher
+
+
+def legacy_policy_teardown(state):
+    directory, patcher = state
+    patcher.stop()
+    directory.cleanup()
+
+
+class DualPolicyTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.legacy_policy_state = legacy_policy_setup()
+
+    @classmethod
+    def tearDownClass(cls):
+        legacy_policy_teardown(cls.legacy_policy_state)
+
+
 class WorkflowRepositoryTest(unittest.TestCase):
     def test_actions_value_or_required_flag(self):
         with patch.dict(os.environ, GITHUB_REPOSITORY=NEW):
@@ -66,7 +89,7 @@ class WorkflowRepositoryTest(unittest.TestCase):
                 repositories.require_listed(value)
 
 
-class UnlistedRepositoryWriteTest(unittest.TestCase):
+class UnlistedRepositoryWriteTest(DualPolicyTest):
     UNLISTED = ('dannyota/other', 'dntmakers/other', 'dntmakers/trachuan2')
 
     def setUp(self):
@@ -145,7 +168,7 @@ class UnlistedRepositoryWriteTest(unittest.TestCase):
             apply.assert_not_called()
 
 
-class ImageManifestRepositoryTest(unittest.TestCase):
+class ImageManifestRepositoryTest(DualPolicyTest):
     def test_release_from_each_owner_names_that_owners_images(self):
         for name in (OLD, NEW):
             obj = manifest.read_release(manifest.release(name, 'a' * 40, 'refs/tags/v1.2.3', 4, DIGESTS, CADDY, b'b'))
@@ -166,7 +189,7 @@ class ImageManifestRepositoryTest(unittest.TestCase):
             manifest.read_release(manifest.canonical(mixed))
 
 
-class SigningRepositoryTest(unittest.TestCase):
+class SigningRepositoryTest(DualPolicyTest):
     def setUp(self):
         self.signing = importlib.import_module('signing')
 
@@ -209,7 +232,7 @@ class SigningRepositoryTest(unittest.TestCase):
             run.assert_not_called()
 
 
-class EarlierReleaseRepositoryTest(unittest.TestCase):
+class EarlierReleaseRepositoryTest(DualPolicyTest):
     def test_earlier_release_is_verified_with_its_own_repository(self):
         registry = importlib.import_module('registry')
         document = manifest.release(NEW, 'a' * 40, 'refs/tags/v1.2.3', 4, DIGESTS, CADDY, b'b')
@@ -222,7 +245,7 @@ class EarlierReleaseRepositoryTest(unittest.TestCase):
         self.assertEqual(fetch.call_args.args[0], 'ghcr.io/dannyota/trachuan-release')
 
 
-class PublishRepositoryTest(unittest.TestCase):
+class PublishRepositoryTest(DualPolicyTest):
     def setUp(self):
         self.publish = importlib.import_module('publish')
         self.work = tempfile.TemporaryDirectory()
@@ -283,7 +306,7 @@ class PublishRepositoryTest(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][:3], ['oras', 'push', 'ghcr.io/dntmakers/trachuan-rollback:9'])
 
 
-class CorpusRepositoryTest(unittest.TestCase):
+class CorpusRepositoryTest(DualPolicyTest):
     def setUp(self):
         self.work = tempfile.TemporaryDirectory()
         self.addCleanup(self.work.cleanup)
@@ -346,7 +369,7 @@ class CorpusRepositoryTest(unittest.TestCase):
             mock.assert_not_called()
 
 
-class FrameworksChannelTest(unittest.TestCase):
+class FrameworksChannelTest(DualPolicyTest):
     def setUp(self):
         support = importlib.import_module('frameworks_test_support')
         self.support, self.module = support, importlib.import_module('frameworks_publish')
@@ -394,7 +417,7 @@ class FrameworksChannelTest(unittest.TestCase):
         self.assertFalse(any(call['args'][0] in ('sign-blob', 'push', 'tag') for call in self.support.calls(self.log)))
 
 
-class FrameworksRepositoryTest(unittest.TestCase):
+class FrameworksRepositoryTest(DualPolicyTest):
     def test_frameworks_manifest_from_each_owner_is_accepted_and_others_refused(self):
         frameworks = importlib.import_module('frameworks_manifest')
         support = importlib.import_module('frameworks_test_support')

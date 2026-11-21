@@ -11,6 +11,7 @@ from updater import deploy_corpus_verify as v
 from updater import deploy_corpus_download as d
 from updater.deploy_registry import layers
 from updater.deploy_verify import release
+from updater.verification_test import FIXTURE_POLICY
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'corpus-manifest.json'
@@ -29,7 +30,7 @@ def description(m):
 
 class CorpusVerificationTest(unittest.TestCase):
     def setUp(self):
-        self.rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
+        self.rules = json.loads(json.dumps(FIXTURE_POLICY))
         self.m = manifest()
 
     def test_manifest_fields_bind_dump_report_database_and_extensions(self):

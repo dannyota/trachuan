@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 import copy
 import importlib
 import json
@@ -11,7 +13,7 @@ from frameworks_test_support import COMMIT, PREVIOUS, REL, canonical, digest, ma
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT / 'deploy/host'))
 HOST = importlib.import_module('updater.deploy_frameworks_verify')
-POLICY = importlib.import_module('updater.deploy_verify').policy(ROOT / 'deploy/host/deploy-policy.json')
+POLICY = importlib.import_module('updater.verification_test').FIXTURE_POLICY
 IDENTITY = {name: '^https://github\\.com/' + name + '/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$'
             for name in POLICY['repositories']}
 RULES = dict(POLICY, frameworks=dict(repository='ghcr.io/dannyota/trachuan-corpus-release', identity=IDENTITY,

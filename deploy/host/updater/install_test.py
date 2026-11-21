@@ -22,8 +22,8 @@ class ToolInstallTest(unittest.TestCase):
             subprocess.run(['bash', str(helper), str(source), str(target)], check=True)
             previous = (target / 'updater').resolve()
             self.assertTrue((target / 'updater').is_symlink())
-            self.assertEqual((previous / 'fixtures/manifest.json').read_bytes(),
-                             (source / 'fixtures/manifest.json').read_bytes())
+            self.assertEqual((previous / 'fixtures/proof-manifest.json').read_bytes(),
+                             (source / 'fixtures/proof-manifest.json').read_bytes())
             before = (previous / 'deploy_run.py').read_bytes()
             (source / 'deploy_run.py').write_bytes(before + b'\n')
             commands = work / 'commands'
@@ -37,6 +37,25 @@ class ToolInstallTest(unittest.TestCase):
             self.assertEqual((target / 'updater').resolve(), previous)
             self.assertEqual((previous / 'deploy_run.py').read_bytes(), before)
             self.assertEqual(list((target / 'updaters').glob('.staging.*')), [])
+
+    def test_proof_fixture_changes_version_and_existing_fixture_is_checked(self):
+        helper = HOST / 'updater/install-updater.sh'
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            source = work / 'source/updater'
+            shutil.copytree(HOST / 'updater', source)
+            target = work / 'libexec'
+            subprocess.run(['bash', str(helper), str(source), str(target)], check=True)
+            previous = (target / 'updater').resolve()
+            fixture = source / 'fixtures/proof-manifest.json'
+            fixture.write_bytes(fixture.read_bytes() + b' ')
+            subprocess.run(['bash', str(helper), str(source), str(target)], check=True)
+            current = (target / 'updater').resolve()
+            self.assertNotEqual(current, previous)
+            (current / 'fixtures/proof-manifest.json').write_bytes(b'tampered')
+            result = subprocess.run(['bash', str(helper), str(source), str(target)], capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((target / 'updater').resolve(), current)
 
     def test_checksum_failure_never_installs_a_tool(self):
         self.assertTrue((HOST / 'updater/install-tools.sh').is_file())

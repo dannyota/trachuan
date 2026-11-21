@@ -12,6 +12,7 @@ from updater.deploy_host import Host
 from updater.deploy_io import canonical, CommandError
 from updater.deploy_store import Paths
 from updater.deploy_verify import policy
+from updater.verification_test import FIXTURE_POLICY
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'frameworks-manifest.json'
@@ -19,7 +20,7 @@ POLICY = Path(__file__).parents[1] / 'deploy-policy.json'
 NESTED = b'{"kind":' + b'[' * 500000 + b']' * 500000 + b'}'
 BLOCK = dict(repository='ghcr.io/dannyota/trachuan-corpus-release',
              identity={name: '^https://github\\.com/' + name + '/\\.github/workflows/frameworks-release\\.yml@refs/heads/main$'
-                       for name in json.loads(POLICY.read_bytes())['repositories']},
+                       for name in FIXTURE_POLICY['repositories']},
              namespace='syntheticnamespace', bucket='synthetic-frameworks', min_release_floor=40)
 
 
@@ -28,7 +29,7 @@ def manifest():
 
 
 def rules():
-    return dict(policy(POLICY), frameworks=dict(BLOCK))
+    return dict(json.loads(json.dumps(FIXTURE_POLICY)), frameworks=dict(BLOCK))
 
 
 def description(m):
@@ -45,8 +46,8 @@ class FrameworksPolicyTest(unittest.TestCase):
             return policy(path)
 
     def test_block_is_optional_and_validated_as_closed_shape(self):
-        base = json.loads(POLICY.read_bytes())
-        self.assertNotIn('frameworks', self.load(base))
+        self.assertNotIn('frameworks', self.load(json.loads(POLICY.read_bytes())))
+        base = json.loads(json.dumps(FIXTURE_POLICY))
         self.assertEqual(self.load(dict(base, frameworks=BLOCK))['frameworks'], BLOCK)
         changes = [dict(extra=1), dict(identity='.*'), dict(identity=base['corpus_identity']),
                    dict(identity='^(unclosed$'), dict(repository='docker.io/evil/release'),

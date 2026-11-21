@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 import contextlib
 import importlib
 import io
@@ -149,7 +151,7 @@ class FrameworksPublishTest(unittest.TestCase):
 
     def test_log_holds_no_signature_or_release_content(self):
         result = subprocess.run(self.command(),
-                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_REPOSITORY='dannyota/trachuan',
+                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_REPOSITORY='dntmakers/trachuan',
                                                       PYTHONDONTWRITEBYTECODE='1'),
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -161,7 +163,7 @@ class FrameworksPublishTest(unittest.TestCase):
         self.value['report']['quality_pass'] = SENTINEL
         write_objects(self.directory / 'objects', self.value)
         result = subprocess.run(self.command(),
-                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_REPOSITORY='dannyota/trachuan',
+                                env=os.environ | dict(GITHUB_REF=MAIN, GITHUB_SHA=COMMIT, GITHUB_RUN_NUMBER='5', GITHUB_REPOSITORY='dntmakers/trachuan',
                                                       PYTHONDONTWRITEBYTECODE='1'),
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 1)

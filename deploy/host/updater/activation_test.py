@@ -10,7 +10,7 @@ from updater.deploy_state import State
 from updater.deploy_verify import policy
 from updater.deploy_host import Host
 from updater.deploy_store import Candidate, Paths, Store
-from updater.verification_test import FIXTURES, archive
+from updater.verification_test import FIXTURES, FIXTURE_POLICY, archive
 
 
 PROVISIONER = b'#!/usr/bin/env bash\nsynthetic provisioner\n'
@@ -35,8 +35,7 @@ class ActivationFixture:
                      self.paths.bundles, self.paths.result.parent, self.paths.log.parent):
             path.mkdir(parents=True, exist_ok=True)
         self.paths.host.joinpath('provision-activator.sh').write_bytes(PROVISIONER)
-        self.rules = {key: value for key, value in policy(Path(__file__).parents[1] / 'deploy-policy.json').items()
-                      if key != 'release_floor'}
+        self.rules = json.loads(json.dumps(FIXTURE_POLICY))
         self.store = Store(self.paths, self.rules, self.runner)
         self.schema = 7
         self.calls = []

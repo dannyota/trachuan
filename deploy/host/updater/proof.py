@@ -87,7 +87,7 @@ def run(paths, dispatch_image, runner=command):
         main_manifest = dispatch_manifest(dispatch_image, rules, runner)
         stages = []
         stages.append(rejected(lambda: verifier.attestation(main_manifest, dispatch_image), 'identity'))
-        recorded = release(Path(__file__).with_name('fixtures').joinpath('manifest.json').read_bytes(), rules)
+        recorded = release(Path(__file__).with_name('fixtures').joinpath('proof-manifest.json').read_bytes(), rules)
         server = recorded['images']['server']
         wrong = server.split('@')[0] + '@' + recorded['images']['web'].split('@')[1]
         stages.append(rejected(lambda: verifier.attestation(recorded, server, expected_image=wrong), 'subject'))
