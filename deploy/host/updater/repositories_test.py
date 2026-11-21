@@ -77,10 +77,10 @@ class PolicyRepositoriesTest(unittest.TestCase):
             path.write_bytes(canonical(value))
             return v.policy(path)
 
-    def test_shipped_policy_trusts_only_new_owner_at_release_b_floor(self):
+    def test_shipped_policy_trusts_only_new_owner_at_release_c_floor(self):
         value = v.policy(HOST / 'deploy-policy.json')
         self.assertEqual(value['repositories'], [NEW])
-        self.assertEqual(value['release_floor'], 66)
+        self.assertEqual(value['release_floor'], 67)
         self.assertNotIn('frameworks', value)
         for key in ('release_identity', 'build_identity', 'rollback_identity', 'corpus_identity', 'images'):
             self.assertEqual(set(value[key]), {NEW})
