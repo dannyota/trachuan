@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -13,6 +14,17 @@ from updater.verification_test import FIXTURES, statement
 
 
 class ProofTest(fixture.ActivationFixture, unittest.TestCase):
+    def test_release_b_proof_fixture_passes_shipped_policy(self):
+        from updater.deploy_verify import policy, release
+        rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
+        raw = (FIXTURES / 'proof-manifest.json').read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+                         '0480a211c61d9f7da7cabd4f6eed3dca9d67b25051fdc9ed83004826132c33da')
+        recorded = release(raw, rules)
+        self.assertEqual(recorded['repository'], 'dntmakers/trachuan')
+        self.assertEqual(recorded['sequence'], 66)
+        self.assertNotEqual(recorded['images']['server'].split('@')[1], recorded['images']['web'].split('@')[1])
+
     def test_state_snapshot_detects_deployment_hold_changes(self):
         before = proof.snapshot(self.paths)
         self.paths.hold.write_bytes(b'held\n')
@@ -44,9 +56,13 @@ class ProofTest(fixture.ActivationFixture, unittest.TestCase):
                 raise CommandError('identity rejected', reason='identity')
             manifest = {'ref': 'refs/heads/main', 'commit': 'a' * 40}
         else:
-            manifest = json.loads((FIXTURES / 'manifest.json').read_bytes())
+            manifest = json.loads((FIXTURES / 'proof-manifest.json').read_bytes())
             self.assertEqual(args[-1], manifest['images']['server'])
-            return (FIXTURES / 'server-attestation.json').read_bytes()
+            payload = statement(manifest, args[-1])
+            definition = payload['predicate']['buildDefinition']
+            definition['externalParameters']['workflow']['repository'] = 'https://github.com/' + manifest['repository']
+            definition['resolvedDependencies'][0]['uri'] = 'git+https://github.com/' + manifest['repository'] + '@' + manifest['ref']
+            return canonical({'payload': base64.b64encode(canonical(payload)).decode()})
         return canonical({'payload': base64.b64encode(canonical(statement(manifest, args[-1]))).decode()})
 
     def test_proofs_reject_all_four_candidates_and_preserve_live_state(self):

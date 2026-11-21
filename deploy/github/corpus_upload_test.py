@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 import json
 import os
 from pathlib import Path
@@ -184,7 +186,9 @@ class CorpusUploadTest(unittest.TestCase):
         shutil.copyfile(ROOT / 'scripts/corpus-upload.sh', script)
         shutil.copytree(ROOT / 'deploy/github', repo / 'deploy/github', ignore=shutil.ignore_patterns('__pycache__'))
         (repo / 'deploy/host').mkdir()
-        shutil.copyfile(ROOT / 'deploy/host/deploy-policy.json', repo / 'deploy/host/deploy-policy.json')
+        policy = json.loads((ROOT / 'deploy/host/deploy-policy.json').read_bytes())
+        policy['repositories'] = ['dannyota/trachuan', 'dntmakers/trachuan']
+        (repo / 'deploy/host/deploy-policy.json').write_text(json.dumps(policy))
         rules = repo / 'deploy/github/corpus_rules.py'
         text = rules.read_text()
         cutoff = f"LEGACY_CUTOFF = {{'vn': {corpus_rules.LEGACY_CUTOFF['vn']!r}}}"

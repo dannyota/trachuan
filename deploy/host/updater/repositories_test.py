@@ -25,7 +25,7 @@ def frameworks_identity(repository):
 
 
 def rules():
-    value = v.policy(HOST / 'deploy-policy.json')
+    value = keyed_policy(v.policy(HOST / 'deploy-policy.json'), [OLD, NEW])
     return dict(value, frameworks=dict(repository='ghcr.io/dannyota/trachuan-corpus-release',
                                        identity={name: frameworks_identity(name) for name in value['repositories']},
                                        namespace='syntheticnamespace', bucket='synthetic-frameworks', min_release_floor=40))
@@ -69,7 +69,7 @@ class FakeCosign:
 
 class PolicyRepositoriesTest(unittest.TestCase):
     def setUp(self):
-        self.base = json.loads((HOST / 'deploy-policy.json').read_bytes())
+        self.base = keyed_policy(json.loads((HOST / 'deploy-policy.json').read_bytes()), [OLD, NEW])
 
     def load(self, value):
         with tempfile.TemporaryDirectory() as directory:
@@ -77,9 +77,17 @@ class PolicyRepositoriesTest(unittest.TestCase):
             path.write_bytes(canonical(value))
             return v.policy(path)
 
-    def test_shipped_policy_lists_both_owners_and_switches_channels(self):
+    def test_shipped_policy_trusts_only_new_owner_at_release_b_floor(self):
         value = v.policy(HOST / 'deploy-policy.json')
-        self.assertEqual(value['repositories'], [OLD, NEW])
+        self.assertEqual(value['repositories'], [NEW])
+        self.assertEqual(value['release_floor'], 66)
+        self.assertNotIn('frameworks', value)
+        for key in ('release_identity', 'build_identity', 'rollback_identity', 'corpus_identity', 'images'):
+            self.assertEqual(set(value[key]), {NEW})
+
+    def test_shipped_policy_switches_channels(self):
+        value = v.policy(HOST / 'deploy-policy.json')
+        self.assertEqual(value['repositories'], [NEW])
         self.assertNotIn('repository', value)
         self.assertEqual(value['release_repository'], 'ghcr.io/dntmakers/trachuan-release')
         self.assertEqual(value['rollback_repository'], 'ghcr.io/dntmakers/trachuan-rollback')
@@ -156,6 +164,11 @@ class ReleaseRepositoryTest(unittest.TestCase):
     def write(self, obj):
         (self.path / 'manifest.json').write_bytes(canonical(obj))
         (self.path / 'manifest.sigstore.json').write_bytes(b'{}')
+
+    def test_shipped_policy_refuses_dropped_owner_release(self):
+        rules = v.policy(HOST / 'deploy-policy.json')
+        with self.assertRaisesRegex(ValueError, 'repository'):
+            v.release(canonical(self.old), rules)
 
     def test_release_from_each_owner_is_verified_with_that_owners_identity(self):
         for repository in (OLD, NEW):

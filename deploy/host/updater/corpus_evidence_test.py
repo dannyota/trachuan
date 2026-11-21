@@ -7,7 +7,7 @@ from updater import deploy_corpus_sql as sql
 from updater import deploy_corpus_verify as v
 from updater.corpus_verify_test import FIXTURE, description, manifest
 from updater.deploy_io import canonical
-from updater.deploy_verify import policy
+from updater.verification_test import FIXTURE_POLICY
 from updater.world_test import Crash, LawCase
 
 
@@ -18,7 +18,7 @@ HEADINGS = dict(projection=1, scan_sha256='a' * 64, exclusions_sha256='b' * 64)
 
 class CorpusEvidenceTest(unittest.TestCase):
     def setUp(self):
-        self.rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
+        self.rules = json.loads(json.dumps(FIXTURE_POLICY))
         self.m = manifest()
 
     def verified(self, obj):

@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
+from repositories_test_support import enable_dual_policy
 from frameworks_test_support import (OBJECTS, PREVIOUS, REL, SENTINEL, STEPS, bind, calls, digest, encoded, install_fakes,
                                      manifest_object, object_bytes, publish_tag, rebind_build, report_hash, state, write_run)
 
@@ -392,6 +393,23 @@ class FrameworksConfinementTest(UploadCase):
         result = self.upload()
         self.assert_refused(result)
         self.assertEqual(len(result.stderr.strip().splitlines()), 1)
+
+
+def setUpModule():
+    global SCRIPT
+    enable_dual_policy()
+    legacy_checkout = tempfile.TemporaryDirectory()
+    unittest.addModuleCleanup(legacy_checkout.cleanup)
+    repo = Path(legacy_checkout.name)
+    (repo / 'scripts').mkdir()
+    shutil.copyfile(SCRIPT, repo / 'scripts/corpus-upload.sh')
+    shutil.copytree(ROOT / 'deploy/github', repo / 'deploy/github', ignore=shutil.ignore_patterns('__pycache__'))
+    (repo / 'deploy/host').mkdir()
+    policy = json.loads((ROOT / 'deploy/host/deploy-policy.json').read_bytes())
+    policy['repositories'] = ['dannyota/trachuan', 'dntmakers/trachuan']
+    (repo / 'deploy/host/deploy-policy.json').write_text(json.dumps(policy))
+    unittest.addModuleCleanup(globals().__setitem__, 'SCRIPT', SCRIPT)
+    SCRIPT = repo / 'scripts/corpus-upload.sh'
 
 
 if __name__ == '__main__':

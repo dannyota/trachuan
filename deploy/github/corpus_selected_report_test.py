@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 from contextlib import redirect_stdout
 import copy
 import io

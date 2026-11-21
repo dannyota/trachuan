@@ -1,3 +1,5 @@
+from repositories_test_support import enable_dual_policy as setUpModule
+
 import copy
 import importlib
 import json
@@ -70,7 +72,7 @@ class HeadingReviewTest(unittest.TestCase):
 
     def test_existing_manifest_reader_needs_only_standard_library(self):
         self.reviews.write_text('[]')
-        data = self.module.create('dannyota/trachuan', 'a' * 40, 1, 'vn', '20990102_1', self.path,
+        data = self.module.create('dntmakers/trachuan', 'a' * 40, 1, 'vn', '20990102_1', self.path,
                                   self.path / 'report.json', heading_reviews_path=self.reviews)
         script = 'import sys; sys.path.insert(0, sys.argv[1]); from corpus_manifest import read_manifest; read_manifest(sys.stdin.buffer.read())'
         result = subprocess.run([sys.executable, '-S', '-c', script, str(Path(__file__).parent)],

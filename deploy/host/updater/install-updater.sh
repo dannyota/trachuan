@@ -4,7 +4,7 @@ set -euo pipefail
 source_dir=$(cd "$1" && pwd)
 install -d -m 0755 "$2" "$2/updaters"
 target=$(cd "$2" && pwd)
-version=$(cd "$source_dir" && sha256sum __init__.py deploy_*.py main.py proof.py publish.py fixtures/manifest.json | sha256sum | cut -d' ' -f1)
+version=$(cd "$source_dir" && sha256sum __init__.py deploy_*.py main.py proof.py publish.py fixtures/proof-manifest.json | sha256sum | cut -d' ' -f1)
 destination=$target/updaters/$version
 staged=$(mktemp -d "$target/updaters/.staging.XXXXXX")
 pointer=$target/.updater-link.$$
@@ -15,13 +15,13 @@ for module in "$source_dir"/deploy_*.py "$source_dir/__init__.py" "$source_dir/m
  install -m 0644 "$module" "$staged/updater/${module##*/}"
 done
 install -d -m 0755 "$staged/updater/fixtures"
-install -m 0644 "$source_dir/fixtures/manifest.json" "$staged/updater/fixtures/manifest.json"
+install -m 0644 "$source_dir/fixtures/proof-manifest.json" "$staged/updater/fixtures/proof-manifest.json"
 if [[ -e $destination ]]; then
  for module in "$staged"/updater/*; do
   [[ ! -d $module ]] || continue
   cmp -s "$module" "$destination/updater/${module##*/}"
  done
- cmp -s "$source_dir/fixtures/manifest.json" "$destination/updater/fixtures/manifest.json"
+ cmp -s "$source_dir/fixtures/proof-manifest.json" "$destination/updater/fixtures/proof-manifest.json"
 else
  python3 -I "$source_dir/publish.py" tree "$staged"
  mv "$staged" "$destination"
