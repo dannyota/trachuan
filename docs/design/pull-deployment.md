@@ -274,8 +274,8 @@ image digest, an unlisted image, an older sequence, sequence reuse, a replayed
 or consumed rollback, a bundle hash mismatch, and lost state; and the no-op for
 a seen manifest. On the host in mode `verify`, the owner's proof script takes an
 image reference attested by an Images dispatch from `main` and requires its
-rejection at the attestation identity check, verifies the v0.1.1 server
-attestation against that manifest's web digest and requires a subject mismatch,
-and rejects a replayed rollback and an older sequence against isolated state
-copies; each rejection records its stage in `deploy.log` without a host or
+rejection at the attestation identity check, verifies the proof fixture's server
+attestation against the same fixture's web digest and requires a subject
+mismatch, and rejects a replayed rollback and an older sequence against isolated
+state copies; each rejection records its stage in `deploy.log` without a host or
 deployment state change.

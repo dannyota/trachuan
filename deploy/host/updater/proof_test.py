@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -16,7 +17,10 @@ class ProofTest(fixture.ActivationFixture, unittest.TestCase):
     def test_release_b_proof_fixture_passes_shipped_policy(self):
         from updater.deploy_verify import policy, release
         rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
-        recorded = release((FIXTURES / 'proof-manifest.json').read_bytes(), rules)
+        raw = (FIXTURES / 'proof-manifest.json').read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+                         '0480a211c61d9f7da7cabd4f6eed3dca9d67b25051fdc9ed83004826132c33da')
+        recorded = release(raw, rules)
         self.assertEqual(recorded['repository'], 'dntmakers/trachuan')
         self.assertEqual(recorded['sequence'], 66)
         self.assertNotEqual(recorded['images']['server'].split('@')[1], recorded['images']['web'].split('@')[1])
